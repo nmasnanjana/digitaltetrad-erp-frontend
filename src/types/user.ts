@@ -1,8 +1,12 @@
+export type Role = 'admin' | 'user' | 'viewer' | 'developer';
+
 export interface User {
   id: string;
-  name?: string;
-  avatar?: string;
+  firstName: string;
+  lastName?: string;
+  username: string;
+  role: Role;
   email?: string;
-
-  [key: string]: unknown;
+  isActive: boolean;
+  lastLogin?: Date;
 }

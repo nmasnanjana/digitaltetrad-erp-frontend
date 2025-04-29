@@ -7,6 +7,8 @@ export const paths = {
     customers: '/dashboard/customers',
     integrations: '/dashboard/integrations',
     settings: '/dashboard/settings',
+    user: '/dashboard/user',
+    userCreation: '/dashboard/userCreation',
   },
   errors: { notFound: '/errors/not-found' },
 } as const;
