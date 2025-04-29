@@ -9,6 +9,10 @@ export const paths = {
     settings: '/dashboard/settings',
     user: '/dashboard/user',
     userCreation: '/dashboard/userCreation',
+    userEdit: (id: string) => `/dashboard/user/${id}`,
+    team: '/dashboard/team',
+    teamCreation: '/dashboard/teamCreation',
+    teamEdit: (id: string) => `/dashboard/team/${id}`,
   },
   errors: { notFound: '/errors/not-found' },
 } as const;
