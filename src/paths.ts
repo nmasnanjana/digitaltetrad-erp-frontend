@@ -1,10 +1,9 @@
 export const paths = {
   home: '/',
-  auth: { signIn: '/auth/sign-in', signUp: '/auth/sign-up', resetPassword: '/auth/reset-password' },
+  auth: { signIn: '/auth/sign-in', signUp: '/auth/sign-up', resetPassword: '/auth/reset-password', jwt: { login: '/auth/jwt/login', register: '/auth/jwt/register' } },
   dashboard: {
     overview: '/dashboard',
     account: '/dashboard/account',
-    customers: '/dashboard/customers',
     integrations: '/dashboard/integrations',
     settings: '/dashboard/settings',
     user: '/dashboard/user',
@@ -13,6 +12,8 @@ export const paths = {
     team: '/dashboard/team',
     teamCreation: '/dashboard/teamCreation',
     teamEdit: (id: string) => `/dashboard/team/${id}`,
+    customer: '/dashboard/customer',
+    job: '/dashboard/job',
   },
-  errors: { notFound: '/errors/not-found' },
+  errors: { notFound: '/errors/404' },
 } as const;
