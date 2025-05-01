@@ -1,0 +1,10 @@
+import { Metadata } from 'next';
+import { config } from '@/config';
+
+export const metadata = {
+  title: `Create User | Dashboard | ${config.site.name}`,
+} satisfies Metadata;
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return children;
+} 
