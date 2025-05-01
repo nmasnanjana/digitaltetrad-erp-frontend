@@ -48,11 +48,11 @@ export function MainNav(): React.JSX.Element {
             >
               <ListIcon />
             </IconButton>
-            <Tooltip title="Search">
-              <IconButton>
-                <MagnifyingGlassIcon />
-              </IconButton>
-            </Tooltip>
+            {/*<Tooltip title="Search">*/}
+            {/*  <IconButton>*/}
+            {/*    <MagnifyingGlassIcon />*/}
+            {/*  </IconButton>*/}
+            {/*</Tooltip>*/}
           </Stack>
           <Stack sx={{ alignItems: 'center' }} direction="row" spacing={2}>
             <Tooltip title="Contacts">
