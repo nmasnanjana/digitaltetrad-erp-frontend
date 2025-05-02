@@ -21,7 +21,7 @@ import {
   DialogActions,
   Alert,
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Visibility as ViewIcon } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 
 export const ListUser: React.FC = () => {
@@ -100,6 +100,12 @@ export const ListUser: React.FC = () => {
                   </Typography>
                 </TableCell>
                 <TableCell align="right">
+                  <IconButton
+                    color="primary"
+                    onClick={() => router.push(`/dashboard/user/${user.id}/view`)}
+                  >
+                    <ViewIcon />
+                  </IconButton>
                   <IconButton
                     color="primary"
                     onClick={() => router.push(`/dashboard/user/${user.id}`)}
