@@ -22,10 +22,12 @@ import {
   Alert,
   Chip,
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
 import JobForm from './JobForm';
+import { useRouter } from 'next/navigation';
 
 export const ListJob: React.FC = () => {
+  const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -160,6 +162,12 @@ export const ListJob: React.FC = () => {
                 <TableCell>{job.team?.name || '-'}</TableCell>
                 <TableCell>{job.customer?.name || '-'}</TableCell>
                 <TableCell align="right">
+                  <IconButton
+                    color="primary"
+                    onClick={() => router.push(`/dashboard/job/${job.id}/view`)}
+                  >
+                    <VisibilityIcon />
+                  </IconButton>
                   <IconButton
                     color="primary"
                     onClick={() => handleEdit(job)}
