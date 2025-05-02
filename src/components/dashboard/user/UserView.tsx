@@ -102,14 +102,6 @@ export const UserView: React.FC<UserViewProps> = ({
                 color={user.isActive ? 'success' : 'error'}
                 size="small"
               />
-              <Button
-                variant="outlined"
-                size="small"
-                color={user.isActive ? 'error' : 'success'}
-                onClick={handleStatusToggle}
-              >
-                {user.isActive ? 'Deactivate' : 'Activate'}
-              </Button>
             </Box>
           </Grid>
 
@@ -137,6 +129,13 @@ export const UserView: React.FC<UserViewProps> = ({
             onClick={onUpdatePassword}
           >
             Update Password
+          </Button>
+          <Button
+            variant="contained"
+            color={user.isActive ? 'error' : 'success'}
+            onClick={handleStatusToggle}
+          >
+            {user.isActive ? 'Deactivate User' : 'Activate User'}
           </Button>
           <Button
             variant="outlined"
