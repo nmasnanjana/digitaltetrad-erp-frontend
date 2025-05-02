@@ -24,6 +24,16 @@ export const updateUser = (id: string, data: Partial<User>) =>
 export const deleteUser = (id: string) =>
     API.delete(`http://localhost:4575/api/users/${id}`);
 
+export const updateUserPassword = async (userId: string, data: { currentPassword: string; newPassword: string; newPasswordConfirm: string }) => {
+  const response = await API.put(`/users/${userId}/password`, data);
+  return response.data;
+};
+
+export const updateUserActivity = async (userId: string, data: { isActive: boolean }) => {
+  const response = await API.put(`/users/${userId}/activity`, data);
+  return response.data;
+};
+
 // Add error handling
 API.interceptors.response.use(
     (response) => response,
