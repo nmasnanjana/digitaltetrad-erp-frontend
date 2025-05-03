@@ -132,7 +132,6 @@ const JobForm: React.FC<JobFormProps> = ({
       } else if (job) {
         await updateJob(job.id.toString(), { 
           name: name.trim(), 
-          status, 
           type, 
           team_id: teamId, 
           customer_id: customerId 
@@ -178,6 +177,7 @@ const JobForm: React.FC<JobFormProps> = ({
               label="Status"
               onChange={(e) => setStatus(e.target.value as Job['status'])}
               required
+              disabled={mode === 'edit'}
             >
               <MenuItem value="open">Open</MenuItem>
               <MenuItem value="in progress">In Progress</MenuItem>
