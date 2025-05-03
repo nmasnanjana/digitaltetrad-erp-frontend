@@ -15,7 +15,7 @@ import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 import { paths } from '@/paths';
 import { authClient } from '@/lib/auth/client';
 import { logger } from '@/lib/default-logger';
-import { useUser } from '@/hooks/use-user';
+import { useUser } from '@/contexts/user-context';
 
 export interface UserPopoverProps {
   anchorEl: Element | null;

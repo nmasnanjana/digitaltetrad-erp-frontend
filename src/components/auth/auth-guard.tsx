@@ -3,10 +3,9 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import Alert from '@mui/material/Alert';
-
+import { useUser } from '@/contexts/user-context';
 import { paths } from '@/paths';
-import { logger } from '@/lib/default-logger';
-import { useUser } from '@/hooks/use-user';
+import { logger } from '@/lib/logger';
 
 export interface AuthGuardProps {
   children: React.ReactNode;

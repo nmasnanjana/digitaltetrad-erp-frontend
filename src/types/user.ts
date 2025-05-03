@@ -1,12 +1,11 @@
-export type Role = 'admin' | 'user' | 'viewer' | 'developer';
-
 export interface User {
   id: string;
-  firstName: string;
-  lastName?: string;
   username: string;
-  role: Role;
-  email?: string;
-  isActive: boolean;
-  lastLogin?: Date;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatar?: string;
+  role: 'admin' | 'user';
+  createdAt: string;
+  updatedAt: string;
 }

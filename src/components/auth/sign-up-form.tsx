@@ -20,7 +20,7 @@ import { z as zod } from 'zod';
 
 import { paths } from '@/paths';
 import { authClient } from '@/lib/auth/client';
-import { useUser } from '@/hooks/use-user';
+import { useUser } from '@/contexts/user-context';
 
 const schema = zod.object({
   firstName: zod.string().min(1, { message: 'First name is required' }),
