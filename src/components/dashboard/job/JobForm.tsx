@@ -124,7 +124,7 @@ const JobForm: React.FC<JobFormProps> = ({
       if (mode === 'create') {
         await createJob({ 
           name: name.trim(), 
-          status, 
+          status: 'open', // Always set to 'open' for new jobs
           type, 
           team_id: teamId, 
           customer_id: customerId 
@@ -177,7 +177,7 @@ const JobForm: React.FC<JobFormProps> = ({
               label="Status"
               onChange={(e) => setStatus(e.target.value as Job['status'])}
               required
-              disabled={mode === 'edit'}
+              disabled={true}
             >
               <MenuItem value="open">Open</MenuItem>
               <MenuItem value="in progress">In Progress</MenuItem>
