@@ -6,6 +6,7 @@ import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import { XSquare } from '@phosphor-icons/react/dist/ssr/XSquare';
 import { Briefcase } from '@phosphor-icons/react/dist/ssr/Briefcase';
+import { Money } from '@phosphor-icons/react/dist/ssr/Money';
 
 export const navIcons = {
   'chart-pie': ChartPieIcon,
@@ -15,4 +16,5 @@ export const navIcons = {
   user: UserIcon,
   users: UsersIcon,
   'WorkOutlineIcon': Briefcase,
+  'Money': Money,
 } as Record<string, Icon>;
