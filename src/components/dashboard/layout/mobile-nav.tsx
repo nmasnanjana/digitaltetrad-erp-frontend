@@ -71,11 +71,26 @@ export function MobileNav({ open, onClose }: MobileNavProps): React.JSX.Element 
   );
 }
 
-function renderNavItems({ items = [], pathname }: { items?: NavItemConfig[]; pathname: string }): React.JSX.Element {
+function renderNavItems({
+                          items = [],
+                          pathname,
+                        }: {
+  items?: NavItemConfig[];
+  pathname: string;
+}): React.JSX.Element {
   const children = items.reduce((acc: React.ReactNode[], curr: NavItemConfig): React.ReactNode[] => {
-    const { key, ...item } = curr;
+    const { key, items: subItems, ...item } = curr;
 
-    acc.push(<NavItem key={key} pathname={pathname} {...item} />);
+    acc.push(
+      <React.Fragment key={key}>
+        <NavItem key={key} pathname={pathname} {...item} />
+        {subItems && subItems.length > 0 && (
+          <Box sx={{ pl: 4 }}>
+            {renderNavItems({ items: subItems, pathname })}
+          </Box>
+        )}
+      </React.Fragment>
+    );
 
     return acc;
   }, []);
@@ -100,11 +115,11 @@ function NavItem({ disabled, external, href, icon, matcher, pathname, title }: N
       <Box
         {...(href
           ? {
-              component: external ? 'a' : RouterLink,
-              href,
-              target: external ? '_blank' : undefined,
-              rel: external ? 'noreferrer' : undefined,
-            }
+            component: external ? 'a' : RouterLink,
+            href,
+            target: external ? '_blank' : undefined,
+            rel: external ? 'noreferrer' : undefined,
+          }
           : { role: 'button' })}
         sx={{
           alignItems: 'center',
