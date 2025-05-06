@@ -21,7 +21,7 @@ import {
   DialogActions,
   Alert,
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Visibility as ViewIcon } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 
 export const ListUser: React.FC = () => {
@@ -51,7 +51,7 @@ export const ListUser: React.FC = () => {
     try {
       await deleteUser(selectedUser.id);
       setDeleteDialogOpen(false);
-      loadUsers();
+    loadUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete user');
     }
@@ -70,17 +70,17 @@ export const ListUser: React.FC = () => {
       )}
 
       <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Username</TableCell>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Name</TableCell>
+            <TableCell>Username</TableCell>
               <TableCell>Email</TableCell>
-              <TableCell>Role</TableCell>
+            <TableCell>Role</TableCell>
               <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+          </TableRow>
+        </TableHead>
+        <TableBody>
             {users.map((user) => (
               <TableRow key={user.id}>
                 <TableCell>
@@ -88,7 +88,7 @@ export const ListUser: React.FC = () => {
                 </TableCell>
                 <TableCell>{user.username}</TableCell>
                 <TableCell>{user.email}</TableCell>
-                <TableCell>
+              <TableCell>
                   <Typography
                     variant="body2"
                     sx={{
@@ -100,6 +100,12 @@ export const ListUser: React.FC = () => {
                   </Typography>
                 </TableCell>
                 <TableCell align="right">
+                  <IconButton
+                    color="primary"
+                    onClick={() => router.push(`/dashboard/user/${user.id}/view`)}
+                  >
+                    <ViewIcon />
+                  </IconButton>
                   <IconButton
                     color="primary"
                     onClick={() => router.push(`/dashboard/user/${user.id}`)}
@@ -115,11 +121,11 @@ export const ListUser: React.FC = () => {
                   >
                     <DeleteIcon />
                   </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
       </TableContainer>
 
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>

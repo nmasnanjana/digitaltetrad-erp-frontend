@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
 import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
 import InputLabel from '@mui/material/InputLabel';
 import Link from '@mui/material/Link';
@@ -20,24 +22,23 @@ import { z as zod } from 'zod';
 
 import { paths } from '@/paths';
 import { authClient } from '@/lib/auth/client';
-import { useUser } from '@/hooks/use-user';
+import { useUser } from '@/contexts/user-context';
 
 const schema = zod.object({
-  email: zod.string().min(1, { message: 'Email is required' }).email(),
+  username: zod.string().min(1, { message: 'Username is required' }),
   password: zod.string().min(1, { message: 'Password is required' }),
+  rememberMe: zod.boolean().optional(),
 });
 
 type Values = zod.infer<typeof schema>;
 
-const defaultValues = { email: 'sofia@devias.io', password: 'Secret1' } satisfies Values;
+const defaultValues = { username: '', password: '', rememberMe: false } satisfies Values;
 
 export function SignInForm(): React.JSX.Element {
   const router = useRouter();
-
   const { checkSession } = useUser();
 
   const [showPassword, setShowPassword] = React.useState<boolean>();
-
   const [isPending, setIsPending] = React.useState<boolean>(false);
 
   const {
@@ -62,9 +63,8 @@ export function SignInForm(): React.JSX.Element {
       // Refresh the auth state
       await checkSession?.();
 
-      // UserProvider, for this case, will not refresh the router
-      // After refresh, GuestGuard will handle the redirect
-      router.refresh();
+      // Redirect to dashboard
+      router.push(paths.dashboard.overview);
     },
     [checkSession, router, setError]
   );
@@ -84,12 +84,12 @@ export function SignInForm(): React.JSX.Element {
         <Stack spacing={2}>
           <Controller
             control={control}
-            name="email"
+            name="username"
             render={({ field }) => (
-              <FormControl error={Boolean(errors.email)}>
-                <InputLabel>Email address</InputLabel>
-                <OutlinedInput {...field} label="Email address" type="email" />
-                {errors.email ? <FormHelperText>{errors.email.message}</FormHelperText> : null}
+              <FormControl error={Boolean(errors.username)}>
+                <InputLabel>Username</InputLabel>
+                <OutlinedInput {...field} label="Username" />
+                {errors.username ? <FormHelperText>{errors.username.message}</FormHelperText> : null}
               </FormControl>
             )}
           />
@@ -125,6 +125,16 @@ export function SignInForm(): React.JSX.Element {
                 />
                 {errors.password ? <FormHelperText>{errors.password.message}</FormHelperText> : null}
               </FormControl>
+            )}
+          />
+          <Controller
+            control={control}
+            name="rememberMe"
+            render={({ field }) => (
+              <FormControlLabel
+                control={<Checkbox {...field} />}
+                label="Remember me"
+              />
             )}
           />
           <div>

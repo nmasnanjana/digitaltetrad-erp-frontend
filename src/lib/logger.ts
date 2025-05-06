@@ -16,7 +16,6 @@ export class Logger {
   protected prefix: string;
   protected level: keyof typeof LogLevel;
   protected showLevel: boolean;
-
   private levelNumber: number;
 
   constructor({ prefix = '', level = LogLevel.ALL, showLevel = true }: LoggerOptions) {
@@ -26,39 +25,49 @@ export class Logger {
     this.showLevel = showLevel;
   }
 
-  debug = (...args: unknown[]): void => {
+  debug(message: string, ...args: unknown[]): void {
     if (this.canWrite(LogLevel.DEBUG)) {
-      this.write(LogLevel.DEBUG, ...args);
+      this.write(LogLevel.DEBUG, message, ...args);
     }
-  };
+  }
 
-  warn = (...args: unknown[]): void => {
+  info(message: string, ...args: unknown[]): void {
+    if (this.canWrite(LogLevel.ALL)) {
+      this.write(LogLevel.ALL, message, ...args);
+    }
+  }
+
+  warn(message: string, ...args: unknown[]): void {
     if (this.canWrite(LogLevel.WARN)) {
-      this.write(LogLevel.WARN, ...args);
+      this.write(LogLevel.WARN, message, ...args);
     }
-  };
+  }
 
-  error = (...args: unknown[]): void => {
+  error(message: string, ...args: unknown[]): void {
     if (this.canWrite(LogLevel.ERROR)) {
-      this.write(LogLevel.ERROR, ...args);
+      this.write(LogLevel.ERROR, message, ...args);
     }
-  };
+  }
 
   private canWrite(level: keyof typeof LogLevel): boolean {
     return this.levelNumber >= LogLevelNumber[level];
   }
 
-  private write(level: keyof typeof LogLevel, ...args: unknown[]): void {
+  private write(level: keyof typeof LogLevel, message: string, ...args: unknown[]): void {
     let prefix = this.prefix;
 
     if (this.showLevel) {
-      prefix = `- ${level} ${prefix}`;
+      prefix = `[${level}] ${prefix}`;
     }
 
     if (level === LogLevel.ERROR) {
-      console.error(prefix, ...args);
+      console.error(prefix, message, ...args);
+    } else if (level === LogLevel.WARN) {
+      console.warn(prefix, message, ...args);
+    } else if (level === LogLevel.DEBUG) {
+      console.debug(prefix, message, ...args);
     } else {
-      console.log(prefix, ...args);
+      console.info(prefix, message, ...args);
     }
   }
 }
@@ -69,3 +78,5 @@ export class Logger {
 export function createLogger({ prefix, level }: LoggerOptions = {}): Logger {
   return new Logger({ prefix, level });
 }
+
+export const logger = new Logger({});

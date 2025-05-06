@@ -4,13 +4,14 @@ import * as React from 'react';
 
 import type { User } from '@/types/user';
 import { authClient } from '@/lib/auth/client';
-import { logger } from '@/lib/default-logger';
+import { logger } from '@/lib/logger';
 
 export interface UserContextValue {
   user: User | null;
   error: string | null;
   isLoading: boolean;
-  checkSession?: () => Promise<void>;
+  checkSession: () => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 export const UserContext = React.createContext<UserContextValue | undefined>(undefined);
@@ -38,20 +39,33 @@ export function UserProvider({ children }: UserProviderProps): React.JSX.Element
 
       setState((prev) => ({ ...prev, user: data ?? null, error: null, isLoading: false }));
     } catch (err) {
-      logger.error(err);
+      logger.error(err instanceof Error ? err.message : 'Unknown error');
       setState((prev) => ({ ...prev, user: null, error: 'Something went wrong', isLoading: false }));
     }
   }, []);
 
+  const signOut = React.useCallback(async (): Promise<void> => {
+    await authClient.signOut();
+    setState((prev) => ({ ...prev, user: null, error: null, isLoading: false }));
+  }, []);
+
   React.useEffect(() => {
-    checkSession().catch((err: unknown) => {
-      logger.error(err);
+    checkSession().catch((err) => {
+      logger.error(err instanceof Error ? err.message : 'Unknown error');
       // noop
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Expected
   }, []);
 
-  return <UserContext.Provider value={{ ...state, checkSession }}>{children}</UserContext.Provider>;
+  return <UserContext.Provider value={{ ...state, checkSession, signOut }}>{children}</UserContext.Provider>;
 }
 
-export const UserConsumer = UserContext.Consumer;
+export function useUser(): UserContextValue {
+  const value = React.useContext(UserContext);
+
+  if (value === undefined) {
+    throw new Error('useUser must be used within a UserProvider');
+  }
+
+  return value;
+}

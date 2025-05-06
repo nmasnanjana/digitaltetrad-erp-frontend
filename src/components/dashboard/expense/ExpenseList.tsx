@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getAllJobs, deleteJob } from '@/api/jobApi';
-import { Job } from '@/types/job';
+import { getAllExpenses, deleteExpense } from '@/api/expenseApi';
+import { Expense } from '@/types/expense';
 import {
   Box,
   Button,
@@ -23,103 +23,75 @@ import {
   Chip,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
-import JobForm from './JobForm';
+import ExpenseForm from './ExpenseForm';
 import { useRouter } from 'next/navigation';
 
-export const ListJob: React.FC = () => {
+export const ExpenseList: React.FC = () => {
   const router = useRouter();
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
 
-  const loadJobs = async () => {
+  const loadExpenses = async () => {
     try {
       setLoading(true);
-      const response = await getAllJobs();
-      setJobs(response.data);
+      const response = await getAllExpenses();
+      // Sort expenses by createdAt in descending order (newest first)
+      const sortedExpenses = response.data.sort((a: Expense, b: Expense) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setExpenses(sortedExpenses);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load jobs');
+      setError(err instanceof Error ? err.message : 'Failed to load expenses');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!selectedJob) return;
+    if (!selectedExpense) return;
     
     try {
-      await deleteJob(selectedJob.id.toString());
+      await deleteExpense(selectedExpense.id.toString());
       setDeleteDialogOpen(false);
-      loadJobs();
+      loadExpenses();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete job');
+      setError(err instanceof Error ? err.message : 'Failed to delete expense');
     }
   };
 
-  const handleEdit = (job: Job) => {
-    setSelectedJob(job);
+  const handleEdit = (expense: Expense) => {
+    setSelectedExpense(expense);
     setFormMode('edit');
     setFormOpen(true);
   };
 
   const handleCreate = () => {
-    setSelectedJob(null);
+    setSelectedExpense(null);
     setFormMode('create');
     setFormOpen(true);
   };
 
   useEffect(() => {
-    loadJobs();
+    loadExpenses();
   }, []);
-
-  const getStatusColor = (status: Job['status']) => {
-    switch (status) {
-      case 'open':
-        return 'default';
-      case 'in progress':
-        return 'primary';
-      case 'installed':
-        return 'info';
-      case 'qc':
-        return 'warning';
-      case 'pat':
-        return 'secondary';
-      case 'closed':
-        return 'success';
-      default:
-        return 'default';
-    }
-  };
-
-  const getTypeColor = (type: Job['type']) => {
-    switch (type) {
-      case 'supply and installation':
-        return 'primary';
-      case 'installation':
-        return 'secondary';
-      case 'maintenance':
-        return 'info';
-      default:
-        return 'default';
-    }
-  };
 
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h5">Jobs</Typography>
+        <Typography variant="h5">Expenses</Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
           onClick={handleCreate}
         >
-          Add Job
+          Add Expense
         </Button>
       </Box>
 
@@ -133,51 +105,43 @@ export const ListJob: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Team</TableCell>
-              <TableCell>Customer</TableCell>
+              <TableCell>Expense Type</TableCell>
+              <TableCell>Category</TableCell>
+              <TableCell>Amount</TableCell>
+              <TableCell>Created At</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {jobs.map((job) => (
-              <TableRow key={job.id}>
-                <TableCell>{job.name}</TableCell>
+            {expenses.map((expense) => (
+              <TableRow key={expense.id}>
+                <TableCell>{expense.expenseType?.name || '-'}</TableCell>
                 <TableCell>
                   <Chip
-                    label={job.status}
-                    color={getStatusColor(job.status)}
+                    label={expense.operations ? 'Operation' : 'Job'}
+                    color={expense.operations ? 'primary' : 'secondary'}
                     size="small"
                   />
                 </TableCell>
-                <TableCell>
-                  <Chip
-                    label={job.type}
-                    color={getTypeColor(job.type)}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>{job.team?.name || '-'}</TableCell>
-                <TableCell>{job.customer?.name || '-'}</TableCell>
+                <TableCell>${expense.amount.toFixed(2)}</TableCell>
+                <TableCell>{new Date(expense.createdAt).toLocaleDateString()}</TableCell>
                 <TableCell align="right">
                   <IconButton
                     color="primary"
-                    onClick={() => router.push(`/dashboard/job/${job.id}/view`)}
+                    onClick={() => router.push(`/dashboard/expense/${expense.id}/view`)}
                   >
                     <VisibilityIcon />
                   </IconButton>
                   <IconButton
                     color="primary"
-                    onClick={() => handleEdit(job)}
+                    onClick={() => handleEdit(expense)}
                   >
                     <EditIcon />
                   </IconButton>
                   <IconButton
                     color="error"
                     onClick={() => {
-                      setSelectedJob(job);
+                      setSelectedExpense(expense);
                       setDeleteDialogOpen(true);
                     }}
                   >
@@ -191,9 +155,9 @@ export const ListJob: React.FC = () => {
       </TableContainer>
 
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete Job</DialogTitle>
+        <DialogTitle>Delete Expense</DialogTitle>
         <DialogContent>
-          Are you sure you want to delete job {selectedJob?.name}?
+          Are you sure you want to delete this expense?
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
@@ -203,11 +167,11 @@ export const ListJob: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <JobForm
+      <ExpenseForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        onSuccess={loadJobs}
-        job={selectedJob}
+        onSuccess={loadExpenses}
+        expense={selectedExpense}
         mode={formMode}
       />
     </Box>

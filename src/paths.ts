@@ -14,6 +14,7 @@ export const paths = {
     teamEdit: (id: string) => `/dashboard/team/${id}`,
     customer: '/dashboard/customer',
     job: '/dashboard/job',
+    expense: '/dashboard/expense',
   },
   errors: { notFound: '/errors/404' },
 } as const;
