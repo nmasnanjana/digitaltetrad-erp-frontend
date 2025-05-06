@@ -23,6 +23,7 @@ import { getAllJobs } from '@/api/jobApi';
 import { Expense, ExpenseType } from '@/types/expense';
 import { Job } from '@/types/job';
 import { useUser } from '@/contexts/user-context';
+import { authClient } from '@/lib/auth/client';
 
 interface ExpenseFormProps {
   open: boolean;
@@ -45,10 +46,24 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   const [job_id, setJobId] = useState<number | undefined>(undefined);
   const [description, setDescription] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
+  const [reason_to_edit, setReasonToEdit] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [expenseTypes, setExpenseTypes] = useState<ExpenseType[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+
+  // Get user ID from JWT token
+  const getUserIdFromToken = () => {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) return null;
+    try {
+      const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+      return tokenPayload.id;
+    } catch (error) {
+      console.error('Error decoding token:', error);
+      return null;
+    }
+  };
 
   // Load expense types and jobs
   useEffect(() => {
@@ -79,12 +94,14 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
         setJobId(expense.job_id);
         setDescription(expense.description);
         setAmount(expense.amount.toString());
+        setReasonToEdit('');
       } else {
         setExpensesTypeId(0);
         setOperations(false);
         setJobId(undefined);
         setDescription('');
         setAmount('');
+        setReasonToEdit('');
       }
       setError(null);
     }
@@ -96,6 +113,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     setJobId(undefined);
     setDescription('');
     setAmount('');
+    setReasonToEdit('');
     setError(null);
     onClose();
   };
@@ -130,8 +148,15 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       return;
     }
 
-    if (!user?.id) {
+    const userId = getUserIdFromToken();
+    if (!userId) {
       setError('User not authenticated');
+      setLoading(false);
+      return;
+    }
+
+    if (mode === 'edit' && !reason_to_edit.trim()) {
+      setError('Please provide a reason for editing');
       setLoading(false);
       return;
     }
@@ -150,8 +175,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       } else if (expense) {
         await updateExpense(expense.id.toString(), {
           ...data,
-          edited_by: user.id,
-          reason_to_edit: 'Updated via web interface'
+          edited_by: userId,
+          reason_to_edit: reason_to_edit.trim()
         });
       }
       onSuccess();
@@ -249,6 +274,22 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 inputProps={{ min: 0, step: 0.01 }}
               />
             </Grid>
+            {mode === 'edit' && (
+              <Grid item xs={12}>
+                <TextField
+                  margin="dense"
+                  label="Reason for Edit"
+                  type="text"
+                  fullWidth
+                  value={reason_to_edit}
+                  onChange={(e) => setReasonToEdit(e.target.value)}
+                  required
+                  multiline
+                  rows={2}
+                  helperText="Please provide a reason for editing this expense"
+                />
+              </Grid>
+            )}
           </Grid>
         </DialogContent>
         <DialogActions>

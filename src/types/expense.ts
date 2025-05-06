@@ -34,8 +34,13 @@ export interface Job {
 
 export interface User {
     id: string;
-    name: string;
-    email: string;
+    firstName: string;
+    lastName?: string;
+    username: string;
+    email?: string;
+    role: 'admin' | 'user' | 'viewer' | 'developer';
+    isActive: boolean;
+    lastLogin?: string;
     createdAt: string;
     updatedAt: string;
 }

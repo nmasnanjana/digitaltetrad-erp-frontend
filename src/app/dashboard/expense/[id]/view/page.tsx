@@ -145,20 +145,42 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
             </Typography>
             <Typography variant="body1">{expense.description}</Typography>
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Created By
-            </Typography>
-            <Typography variant="body1">{expense.editor?.name || '-'}</Typography>
-          </Grid>
+          {expense.editor && (
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Updated By
+              </Typography>
+              <Typography variant="body1">
+                {`${expense.editor.firstName} ${expense.editor.lastName || ''}`}
+              </Typography>
+            </Grid>
+          )}
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">
               Created At
             </Typography>
             <Typography variant="body1">
-              {new Date(expense.createdAt).toLocaleString()}
+              {expense.createdAt ? new Date(expense.createdAt).toLocaleString() : '-'}
             </Typography>
           </Grid>
+          {expense.updatedAt && expense.updatedAt !== expense.createdAt && (
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Updated At
+              </Typography>
+              <Typography variant="body1">
+                {new Date(expense.updatedAt).toLocaleString()}
+              </Typography>
+            </Grid>
+          )}
+          {expense.reason_to_edit && (
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Reason for Update
+              </Typography>
+              <Typography variant="body1">{expense.reason_to_edit}</Typography>
+            </Grid>
+          )}
         </Grid>
       </Paper>
 
