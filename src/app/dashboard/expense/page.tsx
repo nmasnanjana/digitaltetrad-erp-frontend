@@ -4,6 +4,7 @@ import React from 'react';
 import { Box, Tabs, Tab } from '@mui/material';
 import { ExpenseList } from '@/components/dashboard/expense/ExpenseList';
 import { ExpenseTypeList } from '@/components/dashboard/expense/ExpenseTypeList';
+import { OperationTypeList } from '@/components/dashboard/expense/OperationTypeList';
 
 const ExpensePage = () => {
   const [activeTab, setActiveTab] = React.useState(0);
@@ -17,9 +18,11 @@ const ExpensePage = () => {
       <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
         <Tab label="Expenses" />
         <Tab label="Expense Types" />
+        <Tab label="Operation Types" />
       </Tabs>
       {activeTab === 0 && <ExpenseList />}
       {activeTab === 1 && <ExpenseTypeList />}
+      {activeTab === 2 && <OperationTypeList />}
     </Box>
   );
 };

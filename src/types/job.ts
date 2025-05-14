@@ -2,12 +2,13 @@ import { Team } from './team';
 import { Customer } from './customer';
 
 export interface Job {
-    id: number;
+    id: string;
     name: string;
     status: 'open' | 'in progress' | 'installed' | 'qc' | 'pat' | 'closed';
     type: 'supply and installation' | 'installation' | 'maintenance';
     team_id: number;
     customer_id: number;
+    completed_at?: string;
     team?: Team;
     customer?: Customer;
     createdAt?: Date;

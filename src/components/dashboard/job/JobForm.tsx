@@ -41,6 +41,7 @@ const JobForm: React.FC<JobFormProps> = ({
   const [type, setType] = useState<Job['type']>('supply and installation');
   const [teamId, setTeamId] = useState<number>(0);
   const [customerId, setCustomerId] = useState<number>(0);
+  const [jobId, setJobId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -75,12 +76,14 @@ const JobForm: React.FC<JobFormProps> = ({
         setType(job.type);
         setTeamId(job.team_id);
         setCustomerId(job.customer_id);
+        setJobId(job.id);
       } else {
         setName('');
         setStatus('open');
         setType('supply and installation');
         setTeamId(0);
         setCustomerId(0);
+        setJobId('');
       }
       setError(null);
     }
@@ -92,6 +95,7 @@ const JobForm: React.FC<JobFormProps> = ({
     setType('supply and installation');
     setTeamId(0);
     setCustomerId(0);
+    setJobId('');
     setError(null);
     onClose();
   };
@@ -102,6 +106,12 @@ const JobForm: React.FC<JobFormProps> = ({
     setLoading(true);
 
     // Validate form
+    if (!jobId.trim() && mode === 'create') {
+      setError('Job ID is required');
+      setLoading(false);
+      return;
+    }
+
     if (!name.trim()) {
       setError('Job name is required');
       setLoading(false);
@@ -123,6 +133,7 @@ const JobForm: React.FC<JobFormProps> = ({
     try {
       if (mode === 'create') {
         await createJob({ 
+          id: jobId.trim(),
           name: name.trim(), 
           status: 'open', // Always set to 'open' for new jobs
           type, 
@@ -130,7 +141,7 @@ const JobForm: React.FC<JobFormProps> = ({
           customer_id: customerId 
         });
       } else if (job) {
-        await updateJob(job.id.toString(), { 
+        await updateJob(job.id, { 
           name: name.trim(), 
           type, 
           team_id: teamId, 
@@ -159,8 +170,20 @@ const JobForm: React.FC<JobFormProps> = ({
               {error}
             </Alert>
           )}
+          {mode === 'create' && (
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Job ID"
+              type="text"
+              fullWidth
+              value={jobId}
+              onChange={(e) => setJobId(e.target.value)}
+              required
+              sx={{ mb: 2 }}
+            />
+          )}
           <TextField
-            autoFocus
             margin="dense"
             label="Name"
             type="text"

@@ -15,6 +15,9 @@ export const paths = {
     customer: '/dashboard/customer',
     job: '/dashboard/job',
     expense: '/dashboard/expense',
+    expenseDashboard: '/dashboard/expenseDashboard',
+    expenseApproval: '/dashboard/expenseApproval',
+    expensePayment: '/dashboard/expensePayment',
   },
   errors: { notFound: '/errors/404' },
 } as const;

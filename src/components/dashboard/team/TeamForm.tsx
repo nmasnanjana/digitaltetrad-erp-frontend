@@ -2,164 +2,201 @@
 
 import React, { useState, useEffect } from 'react';
 import { Team } from '@/types/team';
-import { Box, Button, Grid, TextField, MenuItem, Alert, Typography, Paper } from '@mui/material';
+import { Box, Button, Grid, TextField, MenuItem, Alert, Typography, Paper, Dialog, DialogTitle, DialogContent, DialogActions, FormControl, InputLabel, Select } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { getAllUsers } from '@/api/userApi';
 import { User } from '@/types/user';
+import { createTeam, updateTeam } from '@/api/teamApi';
 
-interface Props {
-  onSubmit: (data: any) => void;
-  initialData?: Partial<Team>;
-  mode?: 'create' | 'edit';
+interface TeamFormProps {
+  open: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  team?: Team | null;
+  mode: 'create' | 'edit';
 }
 
-const TeamForm: React.FC<Props> = ({ onSubmit, initialData = {}, mode = 'create' }) => {
+const TeamForm: React.FC<TeamFormProps> = ({
+  open,
+  onClose,
+  onSuccess,
+  team,
+  mode,
+}) => {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    name: initialData.name || '',
-    type: initialData.type || 'internal',
-    company: initialData.company || '',
-    leader_id: initialData.leader_id || '',
-  });
+  const [name, setName] = useState('');
+  const [type, setType] = useState<Team['type']>('internal');
+  const [company, setCompany] = useState('');
+  const [leaderId, setLeaderId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
 
+  // Load users
   useEffect(() => {
-    const fetchUsers = async () => {
+    const loadUsers = async () => {
       try {
         const response = await getAllUsers();
         setUsers(response.data);
-        setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load users');
-      } finally {
-        setLoading(false);
+        setError('Failed to load users');
       }
     };
 
-    fetchUsers();
-  }, []);
+    if (open) {
+      loadUsers();
+    }
+  }, [open]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => {
-      const newData = { ...prev, [name]: value };
-      if (name === 'type' && value === 'internal') {
-        newData.company = '';
+  // Reset form when opened/closed
+  useEffect(() => {
+    if (open) {
+      if (team) {
+        setName(team.name);
+        setType(team.type);
+        setCompany(team.company || '');
+        setLeaderId(team.leader_id || '');
+      } else {
+        setName('');
+        setType('internal');
+        setCompany('');
+        setLeaderId('');
       }
-      return newData;
-    });
+      setError(null);
+    }
+  }, [open, team]);
+
+  const handleClose = () => {
+    setName('');
+    setType('internal');
+    setCompany('');
+    setLeaderId('');
     setError(null);
+    onClose();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
 
-    if (!formData.name || !formData.type || !formData.leader_id) {
-      setError('Name, type, and leader are required');
+    // Validate form
+    if (!name.trim()) {
+      setError('Team name is required');
+      setLoading(false);
       return;
     }
 
-    if (formData.type === 'external' && !formData.company) {
-      setError('Company is required for external teams');
+    if (type === 'external' && !company.trim()) {
+      setError('Company name is required for external teams');
+      setLoading(false);
+      return;
+    }
+
+    if (type === 'internal' && !leaderId) {
+      setError('Team leader is required for internal teams');
+      setLoading(false);
       return;
     }
 
     try {
-      await onSubmit(formData);
-      router.push('/dashboard/team');
+      if (mode === 'create') {
+        await createTeam({
+          name: name.trim(),
+          type,
+          company: type === 'external' ? company.trim() : undefined,
+          leader_id: type === 'internal' ? leaderId : undefined
+        });
+      } else if (team) {
+        await updateTeam(team.id.toString(), {
+          name: name.trim(),
+          type,
+          company: type === 'external' ? company.trim() : undefined,
+          leader_id: type === 'internal' ? leaderId : undefined
+        });
+      }
+      onSuccess();
+      handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Error creating/updating team:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred while saving the team');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) {
-    return <Box>Loading users...</Box>;
-  }
-
   return (
-    <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
-      <Typography variant="h5" fontWeight="bold" gutterBottom>
-        {mode === 'create' ? 'Create New Team' : 'Edit Team'}
-      </Typography>
-
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-      <Box component="form" onSubmit={handleSubmit} noValidate>
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              required
-              fullWidth
-              label="Team Name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              variant="outlined"
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              required
-              fullWidth
-              select
-              label="Team Type"
-              name="type"
-              value={formData.type}
-              onChange={handleChange}
-              variant="outlined"
-            >
-              {['internal', 'external'].map((type) => (
-                <MenuItem key={type} value={type}>
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-          {formData.type === 'external' && (
-            <Grid item xs={12} sm={6}>
-              <TextField
-                required
-                fullWidth
-                label="Company"
-                name="company"
-                value={formData.company}
-                onChange={handleChange}
-                variant="outlined"
-              />
-            </Grid>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <form onSubmit={handleSubmit}>
+        <DialogTitle>
+          {mode === 'create' ? 'Create Team' : 'Edit Team'}
+        </DialogTitle>
+        <DialogContent>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
           )}
-          <Grid item xs={12} sm={6}>
-            <TextField
+          <TextField
+            margin="dense"
+            label="Name"
+            type="text"
+            fullWidth
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            sx={{ mb: 2 }}
+          />
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Type</InputLabel>
+            <Select
+              value={type}
+              label="Type"
+              onChange={(e) => setType(e.target.value as Team['type'])}
               required
-              fullWidth
-              select
-              label="Team Leader"
-              name="leader_id"
-              value={formData.leader_id}
-              onChange={handleChange}
-              variant="outlined"
             >
-              {users.map((user) => (
-                <MenuItem key={user.id} value={user.id}>
-                  {user.firstName} {user.lastName} ({user.username})
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-        </Grid>
-
-        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-          <Button variant="outlined" color="secondary" onClick={() => router.push('/dashboard/team')}>
-            Cancel
+              <MenuItem value="internal">Internal</MenuItem>
+              <MenuItem value="external">External</MenuItem>
+            </Select>
+          </FormControl>
+          {type === 'external' && (
+            <TextField
+              margin="dense"
+              label="Company"
+              type="text"
+              fullWidth
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              required
+              sx={{ mb: 2 }}
+            />
+          )}
+          {type === 'internal' && (
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>Team Leader</InputLabel>
+              <Select
+                value={leaderId}
+                label="Team Leader"
+                onChange={(e) => setLeaderId(e.target.value)}
+                required
+              >
+                {users.map((user) => (
+                  <MenuItem key={user.id} value={user.id}>
+                    {user.firstName} {user.lastName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Cancel</Button>
+          <Button type="submit" variant="contained" disabled={loading}>
+            {mode === 'create' ? 'Create' : 'Update'}
           </Button>
-          <Button type="submit" variant="contained" color="primary">
-            {mode === 'create' ? 'Create Team' : 'Update Team'}
-          </Button>
-        </Box>
-      </Box>
-    </Paper>
+        </DialogActions>
+      </form>
+    </Dialog>
   );
 };
 

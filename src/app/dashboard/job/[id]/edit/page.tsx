@@ -5,12 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Unstable_Grid2';
-import { getJobById, deleteJob, updateJob } from '@/api/jobApi';
-import { JobView } from '@/components/dashboard/job/JobView';
+import { getJobById, updateJob } from '@/api/jobApi';
+import JobForm from '@/components/dashboard/job/JobForm';
 import { Job } from '@/types/job';
 import { Alert } from '@mui/material';
 
-export default function ViewJobPage(): React.JSX.Element {
+export default function EditJobPage(): React.JSX.Element {
   const params = useParams();
   const router = useRouter();
   const jobId = params.id as string;
@@ -34,29 +34,12 @@ export default function ViewJobPage(): React.JSX.Element {
     fetchJob();
   }, [jobId]);
 
-  const handleDelete = async () => {
-    if (!job) return;
-
+  const handleSubmit = async (data: Partial<Job>) => {
     try {
-      await deleteJob(job.id.toString());
-      router.push('/dashboard/job');
+      await updateJob(jobId, data);
+      router.push(`/dashboard/job/${jobId}/view`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete job');
-    }
-  };
-
-  const handleEdit = () => {
-    router.push(`/dashboard/job/${jobId}/edit`);
-  };
-
-  const handleUpdateStatus = async (newStatus: Job['status']) => {
-    if (!job) return;
-
-    try {
-      await updateJob(job.id.toString(), { status: newStatus });
-      await fetchJob(); // Refresh the job data
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update job status');
+      setError(err instanceof Error ? err.message : 'Failed to update job');
     }
   };
 
@@ -76,19 +59,20 @@ export default function ViewJobPage(): React.JSX.Element {
     <Stack spacing={3}>
       <Grid container spacing={3} alignItems="center" justifyContent="space-between">
         <Grid xs="auto">
-          <Typography variant="h4">{job.id}</Typography>
+          <Typography variant="h4">Edit Job</Typography>
         </Grid>
       </Grid>
       <Grid container spacing={3}>
         <Grid xs={12}>
-          <JobView
+          <JobForm
+            open={true}
+            onClose={() => router.push(`/dashboard/job/${jobId}/view`)}
+            onSuccess={() => router.push(`/dashboard/job/${jobId}/view`)}
             job={job}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onUpdateStatus={handleUpdateStatus}
+            mode="edit"
           />
         </Grid>
       </Grid>
     </Stack>
   );
-}
+} 
