@@ -90,6 +90,13 @@ export const JobView: React.FC<JobViewProps> = ({
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6}>
             <Typography variant="subtitle2" color="text.secondary">
+              Job ID
+            </Typography>
+            <Typography variant="body1">{job.id}</Typography>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
               Job Name
             </Typography>
             <Typography variant="body1">{job.name}</Typography>
