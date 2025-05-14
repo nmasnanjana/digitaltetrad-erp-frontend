@@ -63,3 +63,8 @@ export const deleteExpense = async (id: string) => {
     const response = await axios.delete(`${API_URL}/expenses/${id}`);
     return response;
 };
+
+export const getExpensesByJob = async (jobId: string) => {
+    const response = await axios.get(`${API_URL}/expenses/job/${jobId}`);
+    return response;
+};
