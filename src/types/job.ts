@@ -8,6 +8,7 @@ export interface Job {
     type: 'supply and installation' | 'installation' | 'maintenance';
     team_id: number;
     customer_id: number;
+    completed_at?: string;
     team?: Team;
     customer?: Customer;
     createdAt?: Date;

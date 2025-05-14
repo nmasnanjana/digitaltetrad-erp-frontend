@@ -193,6 +193,17 @@ export const JobView: React.FC<JobViewProps> = ({
               {job.updatedAt ? new Date(job.updatedAt).toLocaleString() : '-'}
             </Typography>
           </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Completion Status
+            </Typography>
+            <Typography variant="body1">
+              {job.completed_at 
+                ? `Completed on ${new Date(job.completed_at).toLocaleString()}`
+                : 'Not completed yet'}
+            </Typography>
+          </Grid>
         </Grid>
 
         {loading && (
