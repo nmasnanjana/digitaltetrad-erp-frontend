@@ -123,7 +123,7 @@ export const ExpenseList: React.FC = () => {
                     size="small"
                   />
                 </TableCell>
-                <TableCell>${expense.amount.toFixed(2)}</TableCell>
+                <TableCell>LKR {expense.amount.toFixed(2)}</TableCell>
                 <TableCell>{new Date(expense.createdAt).toLocaleDateString()}</TableCell>
                 <TableCell align="right">
                   <IconButton

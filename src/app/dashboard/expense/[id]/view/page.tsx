@@ -137,7 +137,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
             <Typography variant="subtitle2" color="text.secondary">
               Amount
             </Typography>
-            <Typography variant="body1">${expense.amount.toFixed(2)}</Typography>
+            <Typography variant="body1">LKR {expense.amount.toFixed(2)}</Typography>
           </Grid>
           <Grid item xs={12}>
             <Typography variant="subtitle2" color="text.secondary">
