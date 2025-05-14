@@ -46,7 +46,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   const [expenses_type_id, setExpensesTypeId] = useState<number>(0);
   const [operations, setOperations] = useState<boolean>(false);
   const [operation_type_id, setOperationTypeId] = useState<number | undefined>(undefined);
-  const [job_id, setJobId] = useState<number | undefined>(undefined);
+  const [job_id, setJobId] = useState<string | undefined>(undefined);
   const [description, setDescription] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [reason_to_edit, setReasonToEdit] = useState<string>('');
@@ -98,7 +98,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
         setExpensesTypeId(expense.expenses_type_id);
         setOperations(expense.operations);
         setOperationTypeId(expense.operation_type_id);
-        setJobId(expense.job_id);
+        setJobId(expense.job_id?.toString());
         setDescription(expense.description);
         setAmount(expense.amount.toString());
         setReasonToEdit('');
@@ -272,7 +272,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                   <Select
                     value={job_id || ''}
                     label="Job"
-                    onChange={(e) => setJobId(Number(e.target.value))}
+                    onChange={(e) => setJobId(e.target.value)}
                     required={!operations}
                   >
                     {jobs.map((job) => (

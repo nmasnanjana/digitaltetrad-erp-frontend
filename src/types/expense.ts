@@ -16,7 +16,7 @@ export interface Expense {
     expenses_type_id: number;
     operations: boolean;
     operation_type_id?: number;
-    job_id?: number;
+    job_id?: string;
     description: string;
     amount: number;
     edited_by?: string;
@@ -30,7 +30,7 @@ export interface Expense {
 }
 
 export interface Job {
-    id: number;
+    id: string;
     name: string;
     description?: string;
     isActive: boolean;
@@ -50,3 +50,4 @@ export interface User {
     createdAt: string;
     updatedAt: string;
 }
+
