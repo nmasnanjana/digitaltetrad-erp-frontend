@@ -36,7 +36,7 @@ export default function ViewJobPage(): React.JSX.Element {
 
   const handleDelete = async () => {
     if (!job) return;
-    
+
     try {
       await deleteJob(job.id.toString());
       router.push('/dashboard/job');
@@ -51,7 +51,7 @@ export default function ViewJobPage(): React.JSX.Element {
 
   const handleUpdateStatus = async (newStatus: Job['status']) => {
     if (!job) return;
-    
+
     try {
       await updateJob(job.id.toString(), { status: newStatus });
       await fetchJob(); // Refresh the job data
@@ -76,7 +76,7 @@ export default function ViewJobPage(): React.JSX.Element {
     <Stack spacing={3}>
       <Grid container spacing={3} alignItems="center" justifyContent="space-between">
         <Grid xs="auto">
-          <Typography variant="h4">View Job</Typography>
+          <Typography variant="h4">{job.id}</Typography>
         </Grid>
       </Grid>
       <Grid container spacing={3}>
@@ -91,4 +91,4 @@ export default function ViewJobPage(): React.JSX.Element {
       </Grid>
     </Stack>
   );
-} 
+}

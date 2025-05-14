@@ -155,7 +155,7 @@ export const UserView: React.FC<UserViewProps> = ({
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
-            <Button 
+            <Button
               onClick={handleConfirmStatusToggle}
               color={user.isActive ? 'error' : 'success'}
               variant="contained"
@@ -167,4 +167,4 @@ export const UserView: React.FC<UserViewProps> = ({
       </CardContent>
     </Card>
   );
-}; 
+};

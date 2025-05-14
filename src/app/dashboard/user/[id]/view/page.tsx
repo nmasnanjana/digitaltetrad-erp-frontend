@@ -36,7 +36,7 @@ export default function ViewUserPage(): React.JSX.Element {
 
   const handleDelete = async () => {
     if (!user) return;
-    
+
     try {
       await deleteUser(user.id);
       router.push('/dashboard/user');
@@ -55,7 +55,7 @@ export default function ViewUserPage(): React.JSX.Element {
 
   const handleToggleStatus = async () => {
     if (!user) return;
-    
+
     try {
       await updateUserActivity(user.id, { isActive: !user.isActive });
       await fetchUser(); // Refresh user data
@@ -80,7 +80,7 @@ export default function ViewUserPage(): React.JSX.Element {
     <Stack spacing={3}>
       <Grid container spacing={3} alignItems="center" justifyContent="space-between">
         <Grid xs="auto">
-          <Typography variant="h4">View User</Typography>
+          <Typography variant="h4">{user.firstName} {user.lastName}</Typography>
         </Grid>
       </Grid>
       <Grid container spacing={3}>
@@ -96,4 +96,4 @@ export default function ViewUserPage(): React.JSX.Element {
       </Grid>
     </Stack>
   );
-} 
+}
