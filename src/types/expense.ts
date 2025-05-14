@@ -21,12 +21,18 @@ export interface Expense {
     amount: number;
     edited_by?: string;
     reason_to_edit?: string;
+    status: 'on_progress' | 'approved' | 'rejected';
+    reviewed_by?: string;
+    reviewer_comment?: string;
+    reviewed_at?: string;
+    paid: boolean;
     createdAt: string;
     updatedAt: string;
     expenseType?: ExpenseType;
     operationType?: OperationType;
     job?: Job;
     editor?: User;
+    reviewer?: User;
 }
 
 export interface Job {

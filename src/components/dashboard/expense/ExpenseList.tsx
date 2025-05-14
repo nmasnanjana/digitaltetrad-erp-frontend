@@ -108,6 +108,8 @@ export const ExpenseList: React.FC = () => {
               <TableCell>Expense Type</TableCell>
               <TableCell>Category</TableCell>
               <TableCell>Amount</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Payment</TableCell>
               <TableCell>Created At</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
@@ -124,6 +126,24 @@ export const ExpenseList: React.FC = () => {
                   />
                 </TableCell>
                 <TableCell>LKR {expense.amount.toFixed(2)}</TableCell>
+                <TableCell>
+                  <Chip
+                    label={expense.status.charAt(0).toUpperCase() + expense.status.slice(1).replace('_', ' ')}
+                    color={
+                      expense.status === 'approved' ? 'success' :
+                      expense.status === 'rejected' ? 'error' :
+                      'warning'
+                    }
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={expense.paid ? 'Paid' : 'Unpaid'}
+                    color={expense.paid ? 'success' : 'warning'}
+                    size="small"
+                  />
+                </TableCell>
                 <TableCell>{new Date(expense.createdAt).toLocaleDateString()}</TableCell>
                 <TableCell align="right">
                   <IconButton
@@ -132,21 +152,25 @@ export const ExpenseList: React.FC = () => {
                   >
                     <VisibilityIcon />
                   </IconButton>
-                  <IconButton
-                    color="primary"
-                    onClick={() => handleEdit(expense)}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    color="error"
-                    onClick={() => {
-                      setSelectedExpense(expense);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                  {expense.status !== 'approved' && (
+                    <>
+                      <IconButton
+                        color="primary"
+                        onClick={() => handleEdit(expense)}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        color="error"
+                        onClick={() => {
+                          setSelectedExpense(expense);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

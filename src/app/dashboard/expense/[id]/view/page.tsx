@@ -83,23 +83,27 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
           Back to Expenses
         </Button>
         <Box>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<EditIcon />}
-            onClick={() => setFormOpen(true)}
-            sx={{ mr: 1 }}
-          >
-            Edit
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            startIcon={<DeleteIcon />}
-            onClick={() => setDeleteDialogOpen(true)}
-          >
-            Delete
-          </Button>
+          {expense.status !== 'approved' && (
+            <>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<EditIcon />}
+                onClick={() => setFormOpen(true)}
+                sx={{ mr: 1 }}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                Delete
+              </Button>
+            </>
+          )}
         </Box>
       </Box>
 
@@ -153,6 +157,28 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
             </Typography>
             <Typography variant="body1">{expense.description}</Typography>
           </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Status
+            </Typography>
+            <Chip
+              label={expense.status.charAt(0).toUpperCase() + expense.status.slice(1).replace('_', ' ')}
+              color={
+                expense.status === 'approved' ? 'success' :
+                expense.status === 'rejected' ? 'error' :
+                'warning'
+              }
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Payment Status
+            </Typography>
+            <Chip
+              label={expense.paid ? 'Paid' : 'Unpaid'}
+              color={expense.paid ? 'success' : 'warning'}
+            />
+          </Grid>
           {expense.editor && (
             <Grid item xs={12} sm={6}>
               <Typography variant="subtitle2" color="text.secondary">
@@ -187,6 +213,34 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
                 Reason for Update
               </Typography>
               <Typography variant="body1">{expense.reason_to_edit}</Typography>
+            </Grid>
+          )}
+          {expense.reviewer && (
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Reviewed By
+              </Typography>
+              <Typography variant="body1">
+                {`${expense.reviewer.firstName} ${expense.reviewer.lastName || ''}`}
+              </Typography>
+            </Grid>
+          )}
+          {expense.reviewed_at && (
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Reviewed At
+              </Typography>
+              <Typography variant="body1">
+                {new Date(expense.reviewed_at).toLocaleString()}
+              </Typography>
+            </Grid>
+          )}
+          {expense.reviewer_comment && (
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Reviewer Comment
+              </Typography>
+              <Typography variant="body1">{expense.reviewer_comment}</Typography>
             </Grid>
           )}
         </Grid>
