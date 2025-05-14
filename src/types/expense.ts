@@ -1,3 +1,7 @@
+import { OperationType } from './operationType';
+import { Job } from './job';
+import { User } from './user';
+
 export interface ExpenseType {
     id: number;
     name: string;
@@ -11,6 +15,7 @@ export interface Expense {
     id: number;
     expenses_type_id: number;
     operations: boolean;
+    operation_type_id?: number;
     job_id?: number;
     description: string;
     amount: number;
@@ -19,6 +24,7 @@ export interface Expense {
     createdAt: string;
     updatedAt: string;
     expenseType?: ExpenseType;
+    operationType?: OperationType;
     job?: Job;
     editor?: User;
 }

@@ -19,8 +19,10 @@ import {
 } from '@mui/material';
 import { createExpense, updateExpense } from '@/api/expenseApi';
 import { getAllExpenseTypes } from '@/api/expenseApi';
+import { getAllOperationTypes } from '@/api/operationTypeApi';
 import { getAllJobs } from '@/api/jobApi';
 import { Expense, ExpenseType } from '@/types/expense';
+import { OperationType } from '@/types/operationType';
 import { Job } from '@/types/job';
 import { useUser } from '@/contexts/user-context';
 import { authClient } from '@/lib/auth/client';
@@ -43,6 +45,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   const { user } = useUser();
   const [expenses_type_id, setExpensesTypeId] = useState<number>(0);
   const [operations, setOperations] = useState<boolean>(false);
+  const [operation_type_id, setOperationTypeId] = useState<number | undefined>(undefined);
   const [job_id, setJobId] = useState<number | undefined>(undefined);
   const [description, setDescription] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
@@ -50,6 +53,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [expenseTypes, setExpenseTypes] = useState<ExpenseType[]>([]);
+  const [operationTypes, setOperationTypes] = useState<OperationType[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
 
   // Get user ID from JWT token
@@ -65,18 +69,20 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     }
   };
 
-  // Load expense types and jobs
+  // Load expense types, operation types, and jobs
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [expenseTypesResponse, jobsResponse] = await Promise.all([
+        const [expenseTypesResponse, operationTypesResponse, jobsResponse] = await Promise.all([
           getAllExpenseTypes(),
+          getAllOperationTypes(),
           getAllJobs(),
         ]);
         setExpenseTypes(expenseTypesResponse.data);
+        setOperationTypes(operationTypesResponse.data);
         setJobs(jobsResponse.data);
       } catch (err) {
-        setError('Failed to load expense types and jobs');
+        setError('Failed to load data');
       }
     };
 
@@ -91,6 +97,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       if (expense) {
         setExpensesTypeId(expense.expenses_type_id);
         setOperations(expense.operations);
+        setOperationTypeId(expense.operation_type_id);
         setJobId(expense.job_id);
         setDescription(expense.description);
         setAmount(expense.amount.toString());
@@ -98,6 +105,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       } else {
         setExpensesTypeId(0);
         setOperations(false);
+        setOperationTypeId(undefined);
         setJobId(undefined);
         setDescription('');
         setAmount('');
@@ -110,6 +118,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   const handleClose = () => {
     setExpensesTypeId(0);
     setOperations(false);
+    setOperationTypeId(undefined);
     setJobId(undefined);
     setDescription('');
     setAmount('');
@@ -142,6 +151,12 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       return;
     }
 
+    if (operations && !operation_type_id) {
+      setError('Please select an operation type');
+      setLoading(false);
+      return;
+    }
+
     if (!operations && !job_id) {
       setError('Please select either operation or job');
       setLoading(false);
@@ -165,6 +180,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       const data = {
         expenses_type_id: expenses_type_id,
         operations,
+        operation_type_id: operations ? operation_type_id : undefined,
         job_id: operations ? undefined : job_id,
         description: description.trim(),
         amount: Number(amount)
@@ -230,6 +246,25 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 label="Operation Expense"
               />
             </Grid>
+            {operations && (
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>Operation Type</InputLabel>
+                  <Select
+                    value={operation_type_id || ''}
+                    label="Operation Type"
+                    onChange={(e) => setOperationTypeId(Number(e.target.value))}
+                    required={operations}
+                  >
+                    {operationTypes.map((type) => (
+                      <MenuItem key={type.id} value={type.id}>
+                        {type.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
             {!operations && (
               <Grid item xs={12}>
                 <FormControl fullWidth>

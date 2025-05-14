@@ -125,6 +125,14 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
               color={expense.operations ? 'primary' : 'secondary'}
             />
           </Grid>
+          {expense.operations && expense.operationType && (
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Operation Type
+              </Typography>
+              <Typography variant="body1">{expense.operationType.name}</Typography>
+            </Grid>
+          )}
           {!expense.operations && expense.job && (
             <Grid item xs={12} sm={6}>
               <Typography variant="subtitle2" color="text.secondary">
