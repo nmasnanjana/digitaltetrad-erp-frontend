@@ -6,8 +6,18 @@ const API = axios.create({
     withCredentials: true,
 });
 
-export const getAllJobs = () =>
-    API.get<Job[]>('/jobs');
+export interface JobFilters {
+    createdStartDate?: string;
+    createdEndDate?: string;
+    completedStartDate?: string;
+    completedEndDate?: string;
+    status?: string;
+    type?: string;
+    customer_id?: number;
+}
+
+export const getAllJobs = (filters?: JobFilters) =>
+    API.get<Job[]>('/jobs', { params: filters });
 
 export const getJobById = (id: string) =>
     API.get<Job>(`/jobs/${id}`);
