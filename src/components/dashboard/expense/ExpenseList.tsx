@@ -28,7 +28,7 @@ import {
   Alert,
   Chip,
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
 import ExpenseForm from './ExpenseForm';
 import { ExpenseFilters, ExpenseFilters as ExpenseFiltersType } from './ExpenseFilters';
 import { useRouter } from 'next/navigation';
@@ -201,6 +201,12 @@ export const ExpenseList: React.FC = () => {
                   {new Date(expense.createdAt).toLocaleDateString()}
                 </TableCell>
                 <TableCell align="right">
+                  <IconButton
+                    color="primary"
+                    onClick={() => router.push(`/dashboard/expense/${expense.id}/view`)}
+                  >
+                    <VisibilityIcon />
+                  </IconButton>
                   <IconButton
                     color="primary"
                     onClick={() => handleEdit(expense)}
