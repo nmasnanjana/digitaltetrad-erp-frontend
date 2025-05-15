@@ -21,7 +21,7 @@ export interface Expense {
     amount: number;
     edited_by?: string;
     reason_to_edit?: string;
-    status: 'on_progress' | 'approved' | 'rejected';
+    status: 'on_progress' | 'approved' | 'denied';
     reviewed_by?: string;
     reviewer_comment?: string;
     reviewed_at?: string;
@@ -33,27 +33,5 @@ export interface Expense {
     job?: Job;
     editor?: User;
     reviewer?: User;
-}
-
-export interface Job {
-    id: string;
-    name: string;
-    description?: string;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
-}
-
-export interface User {
-    id: string;
-    firstName: string;
-    lastName?: string;
-    username: string;
-    email?: string;
-    role: 'admin' | 'user' | 'viewer' | 'developer';
-    isActive: boolean;
-    lastLogin?: string;
-    createdAt: string;
-    updatedAt: string;
 }
 

@@ -1,7 +1,18 @@
 import axios from 'axios';
+import { authClient } from '@/lib/auth/client';
 import { Expense, ExpenseType } from '@/types/expense';
 
 const API_URL = 'http://localhost:4575/api';
+
+export interface ExpenseFilters {
+    createdStartDate?: string;
+    createdEndDate?: string;
+    expenseTypeId?: number;
+    category?: 'job' | 'operation';
+    jobId?: string;
+    operationTypeId?: number;
+    status?: string;
+}
 
 // Expense Type API
 export const getAllExpenseTypes = async () => {
@@ -25,9 +36,37 @@ export const deleteExpenseType = async (id: string) => {
 };
 
 // Expense API
-export const getAllExpenses = async () => {
-    const response = await axios.get(`${API_URL}/expenses`);
-    return response;
+export const getAllExpenses = async (filters?: ExpenseFilters) => {
+    const queryParams = new URLSearchParams();
+    
+    if (filters) {
+        if (filters.createdStartDate) {
+            queryParams.append('createdStartDate', filters.createdStartDate);
+        }
+        if (filters.createdEndDate) {
+            queryParams.append('createdEndDate', filters.createdEndDate);
+        }
+        if (filters.expenseTypeId) {
+            queryParams.append('expenseTypeId', filters.expenseTypeId.toString());
+        }
+        if (filters.category) {
+            queryParams.append('operations', filters.category === 'operation' ? 'true' : 'false');
+        }
+        if (filters.jobId) {
+            queryParams.append('jobId', filters.jobId);
+        }
+        if (filters.operationTypeId) {
+            queryParams.append('operationTypeId', filters.operationTypeId.toString());
+        }
+        if (filters.status) {
+            queryParams.append('status', filters.status);
+        }
+    }
+
+    const queryString = queryParams.toString();
+    const url = queryString ? `${API_URL}/expenses?${queryString}` : `${API_URL}/expenses`;
+    
+    return axios.get(url);
 };
 
 export const getExpenseById = async (id: string) => {

@@ -2,7 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { getAllExpenses, deleteExpense } from '@/api/expenseApi';
+import { getAllExpenseTypes } from '@/api/expenseApi';
+import { getAllJobs } from '@/api/jobApi';
+import { getAllOperationTypes } from '@/api/operationTypeApi';
 import { Expense } from '@/types/expense';
+import { ExpenseType } from '@/types/expense';
+import { Job } from '@/types/job';
+import { OperationType } from '@/types/operationType';
 import {
   Box,
   Button,
@@ -22,8 +28,9 @@ import {
   Alert,
   Chip,
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import ExpenseForm from './ExpenseForm';
+import { ExpenseFilters, ExpenseFilters as ExpenseFiltersType } from './ExpenseFilters';
 import { useRouter } from 'next/navigation';
 
 export const ExpenseList: React.FC = () => {
@@ -35,40 +42,39 @@ export const ExpenseList: React.FC = () => {
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+  const [filters, setFilters] = useState<ExpenseFiltersType>({});
+  const [expenseTypes, setExpenseTypes] = useState<ExpenseType[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [operationTypes, setOperationTypes] = useState<OperationType[]>([]);
 
-  const loadExpenses = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const response = await getAllExpenses();
-      // Sort expenses by createdAt in descending order (newest first)
-      const sortedExpenses = response.data.sort((a: Expense, b: Expense) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      setExpenses(sortedExpenses);
+      const [expensesResponse, expenseTypesResponse, jobsResponse, operationTypesResponse] = await Promise.all([
+        getAllExpenses(filters),
+        getAllExpenseTypes(),
+        getAllJobs(),
+        getAllOperationTypes()
+      ]);
+      setExpenses(expensesResponse.data);
+      setExpenseTypes(expenseTypesResponse.data);
+      setJobs(jobsResponse.data);
+      setOperationTypes(operationTypesResponse.data);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load expenses');
+      setError('Failed to load data');
+      console.error('Error loading data:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!selectedExpense) return;
-    
-    try {
-      await deleteExpense(selectedExpense.id.toString());
-      setDeleteDialogOpen(false);
-      loadExpenses();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete expense');
-    }
-  };
+  useEffect(() => {
+    loadData();
+  }, [filters]);
 
-  const handleEdit = (expense: Expense) => {
-    setSelectedExpense(expense);
-    setFormMode('edit');
-    setFormOpen(true);
+  const handleFilterChange = (newFilters: ExpenseFiltersType) => {
+    setFilters(newFilters);
   };
 
   const handleCreate = () => {
@@ -77,9 +83,52 @@ export const ExpenseList: React.FC = () => {
     setFormOpen(true);
   };
 
-  useEffect(() => {
-    loadExpenses();
-  }, []);
+  const handleDelete = async (expense: Expense) => {
+    if (expense.status === 'approved') {
+      setError('Cannot delete an approved expense');
+      return;
+    }
+    setSelectedExpense(expense);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedExpense) return;
+    
+    try {
+      await deleteExpense(selectedExpense.id.toString());
+      setDeleteDialogOpen(false);
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete expense');
+    }
+  };
+
+  const handleEdit = (expense: Expense) => {
+    if (expense.status === 'approved') {
+      setError('Cannot edit an approved expense');
+      return;
+    }
+    setSelectedExpense(expense);
+    setFormMode('edit');
+    setFormOpen(true);
+  };
+
+  const handleFormSuccess = () => {
+    setFormOpen(false);
+    loadData();
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'success';
+      case 'denied':
+        return 'error';
+      default:
+        return 'warning';
+    }
+  };
 
   return (
     <Box>
@@ -100,6 +149,14 @@ export const ExpenseList: React.FC = () => {
           {error}
         </Alert>
       )}
+
+      <ExpenseFilters
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        expenseTypes={expenseTypes}
+        jobs={jobs}
+        operationTypes={operationTypes}
+      />
 
       <TableContainer component={Paper}>
         <Table>
@@ -128,49 +185,36 @@ export const ExpenseList: React.FC = () => {
                 <TableCell>LKR {expense.amount.toFixed(2)}</TableCell>
                 <TableCell>
                   <Chip
-                    label={expense.status.charAt(0).toUpperCase() + expense.status.slice(1).replace('_', ' ')}
-                    color={
-                      expense.status === 'approved' ? 'success' :
-                      expense.status === 'rejected' ? 'error' :
-                      'warning'
-                    }
+                    label={expense.status}
+                    color={getStatusColor(expense.status)}
                     size="small"
                   />
                 </TableCell>
                 <TableCell>
                   <Chip
                     label={expense.paid ? 'Paid' : 'Unpaid'}
-                    color={expense.paid ? 'success' : 'warning'}
+                    color={expense.paid ? 'success' : 'default'}
                     size="small"
                   />
                 </TableCell>
-                <TableCell>{new Date(expense.createdAt).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  {new Date(expense.createdAt).toLocaleDateString()}
+                </TableCell>
                 <TableCell align="right">
                   <IconButton
                     color="primary"
-                    onClick={() => router.push(`/dashboard/expense/${expense.id}/view`)}
+                    onClick={() => handleEdit(expense)}
+                    disabled={expense.status === 'approved'}
                   >
-                    <VisibilityIcon />
+                    <EditIcon />
                   </IconButton>
-                  {expense.status !== 'approved' && (
-                    <>
-                      <IconButton
-                        color="primary"
-                        onClick={() => handleEdit(expense)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        color="error"
-                        onClick={() => {
-                          setSelectedExpense(expense);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </>
-                  )}
+                  <IconButton
+                    color="error"
+                    onClick={() => handleDelete(expense)}
+                    disabled={expense.status === 'approved'}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
                 </TableCell>
               </TableRow>
             ))}
@@ -185,7 +229,7 @@ export const ExpenseList: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDelete} color="error">
+          <Button onClick={handleDeleteConfirm} color="error">
             Delete
           </Button>
         </DialogActions>
@@ -194,7 +238,7 @@ export const ExpenseList: React.FC = () => {
       <ExpenseForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        onSuccess={loadExpenses}
+        onSuccess={handleFormSuccess}
         expense={selectedExpense}
         mode={formMode}
       />
