@@ -138,13 +138,13 @@ const UserForm: React.FC<Props> = ({ onSubmit, initialData = {}, mode = 'create'
                 name="roleId"
                 value={formData.roleId}
                 onChange={handleSelectChange}
-                label="Role"
+              label="Role"
               >
                 {roles.map((role) => (
                   <MenuItem key={role.id} value={role.id}>
                     {role.name}
-                  </MenuItem>
-                ))}
+                </MenuItem>
+              ))}
               </Select>
             </FormControl>
           </Grid>
