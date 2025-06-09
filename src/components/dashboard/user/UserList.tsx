@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogActions,
   Alert,
+  Chip,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Visibility as ViewIcon } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
@@ -36,7 +37,28 @@ export const ListUser: React.FC = () => {
     try {
       setLoading(true);
       const response = await getAllUsers();
-      setUsers(response.data);
+      if (response.data) {
+        // Format the user data to ensure proper structure
+        const formattedUsers = response.data.map((user: any) => ({
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName || '',
+          username: user.username,
+          email: user.email || '',
+          roleId: user.roleId,
+          isActive: user.isActive,
+          lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
+          createdAt: user.createdAt ? new Date(user.createdAt) : undefined,
+          updatedAt: user.updatedAt ? new Date(user.updatedAt) : undefined,
+          role: user.role ? {
+            id: user.role.id,
+            name: user.role.name,
+            description: user.role.description || '',
+            isActive: user.role.isActive,
+          } : undefined,
+        }));
+        setUsers(formattedUsers);
+      }
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load users');
@@ -77,6 +99,7 @@ export const ListUser: React.FC = () => {
             <TableCell>Username</TableCell>
               <TableCell>Email</TableCell>
             <TableCell>Role</TableCell>
+              <TableCell>Status</TableCell>
               <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
@@ -87,17 +110,28 @@ export const ListUser: React.FC = () => {
                   {user.firstName} {user.lastName}
                 </TableCell>
                 <TableCell>{user.username}</TableCell>
-                <TableCell>{user.email}</TableCell>
+                <TableCell>{user.email || '-'}</TableCell>
               <TableCell>
+                  {user.role ? (
                   <Typography
                     variant="body2"
                     sx={{
                       textTransform: 'capitalize',
-                      color: user.role === 'admin' ? 'primary.main' : 'text.primary',
+                        color: user.role.name.toLowerCase() === 'admin' ? 'primary.main' : 'text.primary',
                     }}
                   >
-                    {user.role}
+                      {user.role.name}
                   </Typography>
+                  ) : (
+                    '-'
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={user.isActive ? 'Active' : 'Inactive'}
+                    color={user.isActive ? 'success' : 'error'}
+                    size="small"
+                  />
                 </TableCell>
                 <TableCell align="right">
                   <IconButton

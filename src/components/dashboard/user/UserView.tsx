@@ -13,6 +13,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  TableCell,
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 
@@ -85,11 +86,12 @@ export const UserView: React.FC<UserViewProps> = ({
             <Typography variant="subtitle2" color="text.secondary">
               Role
             </Typography>
+            <TableCell>
             <Chip
-              label={user.role}
-              color={user.role === 'admin' ? 'primary' : 'default'}
-              size="small"
+                label={user.role?.name || 'Unknown'}
+                color={user.role?.name === 'admin' ? 'primary' : 'default'}
             />
+            </TableCell>
           </Grid>
 
           <Grid item xs={12} sm={6}>
