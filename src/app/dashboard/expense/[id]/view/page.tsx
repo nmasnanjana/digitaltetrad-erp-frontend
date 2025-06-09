@@ -85,23 +85,23 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
         <Box>
           {expense.status !== 'approved' && (
             <>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<EditIcon />}
-                onClick={() => setFormOpen(true)}
-                sx={{ mr: 1 }}
-              >
-                Edit
-              </Button>
-              <Button
-                variant="contained"
-                color="error"
-                startIcon={<DeleteIcon />}
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                Delete
-              </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<EditIcon />}
+            onClick={() => setFormOpen(true)}
+            sx={{ mr: 1 }}
+          >
+            Edit
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<DeleteIcon />}
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            Delete
+          </Button>
             </>
           )}
         </Box>

@@ -51,6 +51,7 @@ class AuthClientImpl implements AuthClient {
 
   async signInWithPassword({ username, password, rememberMe }: SignInWithPasswordParams) {
     try {
+      console.log('Attempting login...');
       const response = await fetch(`${this.baseUrl}/api/users/login`, {
         method: 'POST',
         headers: {
@@ -60,37 +61,26 @@ class AuthClientImpl implements AuthClient {
         body: JSON.stringify({ username, password, rememberMe }),
       });
 
+      console.log('Login response status:', response.status);
+      const responseData = await response.json();
+      console.log('Login response data:', responseData);
+
       if (!response.ok) {
-        const error = await response.json();
-        return { data: null, error: error.error || 'Failed to sign in' };
+        return { data: null, error: responseData.error || 'Failed to sign in' };
       }
 
-      const { token } = await response.json();
+      const { token, user } = responseData;
       
       if (!token) {
+        console.log('No token received');
         return { data: null, error: 'No token received from server' };
       }
 
+      console.log('Token received:', token);
+      console.log('User data received:', user);
+
+      // Store the token
       this.setToken(token, rememberMe);
-
-      // Get user ID from token
-      const tokenPayload = JSON.parse(atob(token.split('.')[1]));
-      const userId = tokenPayload.id;
-
-      // Get user data
-      const userResponse = await fetch(`${this.baseUrl}/api/users/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        credentials: 'include',
-      });
-
-      if (!userResponse.ok) {
-        this.removeToken();
-        return { data: null, error: 'Failed to get user info' };
-      }
-
-      const user = await userResponse.json();
 
       // Generate avatar if not provided
       if (!user.avatar) {
@@ -99,6 +89,7 @@ class AuthClientImpl implements AuthClient {
 
       return { data: user, error: null };
     } catch (error) {
+      console.error('Login error:', error);
       this.removeToken();
       return { data: null, error: error instanceof Error ? error.message : 'Failed to sign in' };
     }
@@ -292,6 +283,97 @@ class AuthClientImpl implements AuthClient {
       return { error: null, info };
     } catch (error) {
       return { error: error instanceof Error ? error.message : 'Failed to delete user' };
+    }
+  }
+
+  async getAllRoles() {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/roles`, {
+        headers: {
+          Authorization: `Bearer ${this.getToken()}`,
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        return { data: null, error: error.error || 'Failed to get roles' };
+      }
+
+      const roles = await response.json();
+      return { data: roles, error: null };
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error.message : 'Failed to get roles' };
+    }
+  }
+
+  async createRole(data: { name: string; description?: string }) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/roles`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.getToken()}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        return { data: null, error: error.error || 'Failed to create role' };
+      }
+
+      const { data: role, info } = await response.json();
+      return { data: role, error: null, info };
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error.message : 'Failed to create role' };
+    }
+  }
+
+  async updateRole(id: string, data: { name: string; description?: string; isActive?: boolean }) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/roles/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.getToken()}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        return { data: null, error: error.error || 'Failed to update role' };
+      }
+
+      const { data: role, info } = await response.json();
+      return { data: role, error: null, info };
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error.message : 'Failed to update role' };
+    }
+  }
+
+  async deleteRole(id: string) {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/roles/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${this.getToken()}`,
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        return { error: error.error || 'Failed to delete role' };
+      }
+
+      const { info } = await response.json();
+      return { error: null, info };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Failed to delete role' };
     }
   }
 }

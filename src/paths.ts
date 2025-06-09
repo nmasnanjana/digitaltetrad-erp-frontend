@@ -7,6 +7,7 @@ export const paths = {
     integrations: '/dashboard/integrations',
     settings: '/dashboard/settings',
     user: '/dashboard/user',
+    role: '/dashboard/role',
     userCreation: '/dashboard/userCreation',
     userEdit: (id: string) => `/dashboard/user/${id}`,
     team: '/dashboard/team',
@@ -16,8 +17,8 @@ export const paths = {
     job: '/dashboard/job',
     expense: '/dashboard/expense',
     expenseDashboard: '/dashboard/expenseDashboard',
-    expenseApproval: '/dashboard/expenseApproval',
-    expensePayment: '/dashboard/expensePayment',
+    expenseApproval: '/dashboard/expense/approval',
+    expensePayment: '/dashboard/expense/payment',
   },
   errors: { notFound: '/errors/404' },
 } as const;

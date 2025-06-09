@@ -1,4 +1,5 @@
 import type { User } from '@/types/user';
+import type { Role } from '@/types/role';
 
 export interface SignInResponse {
   data: User | null;
@@ -27,7 +28,8 @@ export interface SignUpParams {
   firstName: string;
   lastName: string;
   email: string;
-  role: string;
+  roleId: string;
+  password_confirmation: string;
 }
 
 export interface AuthClient {
@@ -40,4 +42,8 @@ export interface AuthClient {
   updateActivity: (id: string, isActive: boolean) => Promise<{ error: string | null; info?: string }>;
   getAllUsers: () => Promise<{ data: User[] | null; error: string | null }>;
   deleteUser: (id: string) => Promise<{ error: string | null; info?: string }>;
+  getAllRoles: () => Promise<{ data: Role[] | null; error: string | null }>;
+  createRole: (data: { name: string; description?: string }) => Promise<{ data: Role | null; error: string | null; info?: string }>;
+  updateRole: (id: string, data: { name: string; description?: string; isActive?: boolean }) => Promise<{ data: Role | null; error: string | null; info?: string }>;
+  deleteRole: (id: string) => Promise<{ error: string | null; info?: string }>;
 } 
