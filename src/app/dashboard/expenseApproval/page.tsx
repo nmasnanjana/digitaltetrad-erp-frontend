@@ -25,33 +25,14 @@ import {
   Alert,
 } from '@mui/material';
 import { CheckCircle } from '@phosphor-icons/react/dist/ssr/CheckCircle';
-
-// API base URL - using the correct backend URL
-const API_BASE_URL = 'http://localhost:4575/api';
-
-interface Expense {
-  id: number;
-  description: string;
-  amount: number;
-  status: 'on_progress' | 'approved' | 'denied';
-  reviewer_comment?: string;
-  operations: boolean;
-  job_id?: string;
-  job?: {
-    id: string;
-    name: string;
-  };
-  expenseType: {
-    id: number;
-    name: string;
-  };
-}
+import { getAllExpenses, approveExpense, rejectExpense } from '@/api/expenseApi';
+import { Expense } from '@/types/expense';
 
 export default function ExpenseApprovalPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
-  const [reviewStatus, setReviewStatus] = useState<'approved' | 'denied'>('approved');
+  const [reviewStatus, setReviewStatus] = useState<'approved' | 'rejected'>('approved');
   const [reviewComment, setReviewComment] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,23 +45,8 @@ export default function ExpenseApprovalPage() {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch(`${API_BASE_URL}/expenses`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Fetched expenses:', data); // Debug log
-      setExpenses(data);
+      const response = await getAllExpenses();
+      setExpenses(response.data);
     } catch (error) {
       console.error('Error fetching expenses:', error);
       setError(error instanceof Error ? error.message : 'Failed to load expenses. Please try again later.');
@@ -100,39 +66,15 @@ export default function ExpenseApprovalPage() {
     try {
       setError(null);
       
-      // Get the user ID from the JWT token
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication token not found. Please log in again.');
-      }
-
-      // Decode the JWT token to get the user ID
-      const tokenPayload = JSON.parse(atob(token.split('.')[1]));
-      const userId = tokenPayload.id;
-
-      if (!userId) {
-        throw new Error('User ID not found in token. Please log in again.');
-      }
-
-      const response = await fetch(`${API_BASE_URL}/expenses/${selectedExpense.id}/review`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          status: reviewStatus,
-          reviewer_comment: reviewComment,
-          reviewed_by: userId,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        if (errorData?.error?.includes('foreign key constraint')) {
-          throw new Error('Authentication error. Please log in again.');
-        }
-        throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
+      if (reviewStatus === 'approved') {
+        await approveExpense(selectedExpense.id, {
+          approved: true,
+          comment: reviewComment
+        });
+      } else {
+        await rejectExpense(selectedExpense.id, {
+          comment: reviewComment
+        });
       }
 
       await fetchExpenses();
@@ -149,7 +91,7 @@ export default function ExpenseApprovalPage() {
     switch (status) {
       case 'approved':
         return 'success.main';
-      case 'denied':
+      case 'rejected':
         return 'error.main';
       default:
         return 'warning.main';
@@ -158,7 +100,7 @@ export default function ExpenseApprovalPage() {
 
   // Filter job-related expenses
   const jobRelatedExpenses = expenses.filter(expense => 
-    !expense.operations && expense.job_id && expense.status === 'on_progress'
+    !expense.operations && expense.job_id && expense.status === 'pending'
   );
 
   return (
@@ -221,7 +163,7 @@ export default function ExpenseApprovalPage() {
                       </Typography>
                     </TableCell>
                   </TableRow>
-                ) : (
+                ) :
                   jobRelatedExpenses.map((expense) => (
                     <TableRow key={expense.id}>
                       <TableCell>{expense.job?.name || 'N/A'}</TableCell>
@@ -252,7 +194,7 @@ export default function ExpenseApprovalPage() {
                       </TableCell>
                     </TableRow>
                   ))
-                )}
+                }
               </TableBody>
             </Table>
           </Card>
@@ -268,10 +210,10 @@ export default function ExpenseApprovalPage() {
               <Select
                 value={reviewStatus}
                 label="Status"
-                onChange={(e) => setReviewStatus(e.target.value as 'approved' | 'denied')}
+                onChange={(e) => setReviewStatus(e.target.value as 'approved' | 'rejected')}
               >
                 <MenuItem value="approved">Approve</MenuItem>
-                <MenuItem value="denied">Deny</MenuItem>
+                <MenuItem value="rejected">Reject</MenuItem>
               </Select>
             </FormControl>
             <TextField

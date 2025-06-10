@@ -29,9 +29,8 @@ import {
     Grid,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
-
-// API base URL
-const API_BASE_URL = 'http://localhost:4575/api';
+import { getAllInventory, createInventory, updateInventory, deleteInventory } from '@/api/inventoryApi';
+import { Inventory } from '@/types/inventory';
 
 // Return cause enum
 enum ReturnCause {
@@ -40,13 +39,8 @@ enum ReturnCause {
     SURPLUS = 'surplus'
 }
 
-interface InventoryItem {
-    id: string;
-    name: string;
-    description?: string;
+interface InventoryItem extends Inventory {
     serialNumber?: string;
-    quantity: number;
-    unitPrice: number;
     isReturnItem: boolean;
     returnCause?: ReturnCause;
     arStatus: string;
@@ -80,12 +74,8 @@ export default function InventoryPage() {
 
     const fetchInventory = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/inventory`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch inventory');
-            }
-            const data = await response.json();
-            setInventory(data);
+            const response = await getAllInventory();
+            setInventory(response.data);
             setError(null);
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Failed to fetch inventory');
@@ -123,24 +113,11 @@ export default function InventoryPage() {
 
     const handleSubmit = async () => {
         try {
-            const url = selectedItem 
-                ? `${API_BASE_URL}/inventory/${selectedItem.id}`
-                : `${API_BASE_URL}/inventory`;
-            
-            const method = selectedItem ? 'PUT' : 'POST';
-            
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to save inventory item');
+            if (selectedItem) {
+                await updateInventory(selectedItem.id, formData);
+            } else {
+                await createInventory(formData);
             }
-
             await fetchInventory();
             handleClose();
             setError(null);
@@ -152,14 +129,7 @@ export default function InventoryPage() {
     const handleDelete = async (id: string) => {
         if (window.confirm('Are you sure you want to delete this item?')) {
             try {
-                const response = await fetch(`${API_BASE_URL}/inventory/${id}`, {
-                    method: 'DELETE',
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to delete inventory item');
-                }
-
+                await deleteInventory(id);
                 await fetchInventory();
                 setError(null);
             } catch (error) {

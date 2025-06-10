@@ -22,32 +22,8 @@ import {
   Chip,
 } from '@mui/material';
 import { CheckCircle, XCircle } from '@phosphor-icons/react/dist/ssr';
-
-// API base URL
-const API_BASE_URL = 'http://localhost:4575/api';
-
-interface Expense {
-  id: number;
-  description: string;
-  amount: number;
-  status: 'on_progress' | 'approved' | 'denied';
-  paid: boolean;
-  job_id?: string;
-  job?: {
-    id: string;
-    name: string;
-  };
-  expenseType: {
-    id: number;
-    name: string;
-  };
-  reviewer?: {
-    id: number;
-    firstName: string;
-    lastName: string;
-  };
-  reviewed_at?: string;
-}
+import { getAllExpenses, markAsPaid } from '@/api/expenseApi';
+import { Expense } from '@/types/expense';
 
 export default function ExpensePaymentPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -64,22 +40,8 @@ export default function ExpensePaymentPage() {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch(`${API_BASE_URL}/expenses`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setExpenses(data);
+      const response = await getAllExpenses();
+      setExpenses(response.data);
     } catch (error) {
       console.error('Error fetching expenses:', error);
       setError(error instanceof Error ? error.message : 'Failed to load expenses. Please try again later.');
@@ -98,21 +60,11 @@ export default function ExpensePaymentPage() {
 
     try {
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/expenses/${selectedExpense.id}/payment`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          paid: true,
-        }),
+      await markAsPaid(selectedExpense.id, {
+        paymentDate: new Date().toISOString(),
+        paymentMethod: 'Bank Transfer',
+        reference: `PAY-${selectedExpense.id}`
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
-      }
 
       await fetchExpenses();
       setPaymentDialogOpen(false);
@@ -203,12 +155,12 @@ export default function ExpensePaymentPage() {
                       <TableCell>{expense.description}</TableCell>
                       <TableCell>${expense.amount.toFixed(2)}</TableCell>
                       <TableCell>
-                        {expense.reviewer 
-                          ? `${expense.reviewer.firstName} ${expense.reviewer.lastName || ''}`
+                        {expense.approved_by 
+                          ? `${expense.approved_by}`
                           : 'N/A'
                         }
                       </TableCell>
-                      <TableCell>{formatDate(expense.reviewed_at)}</TableCell>
+                      <TableCell>{formatDate(expense.approved_at)}</TableCell>
                       <TableCell>
                         <Chip
                           label={expense.paid ? 'Paid' : 'Pending'}
