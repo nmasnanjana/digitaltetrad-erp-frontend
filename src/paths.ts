@@ -1,6 +1,6 @@
 export const paths = {
   home: '/',
-  auth: { signIn: '/auth/sign-in', signUp: '/auth/sign-up', resetPassword: '/auth/reset-password', jwt: { login: '/auth/jwt/login', register: '/auth/jwt/register' } },
+  auth: { signIn: '/auth/sign-in', signUp: '/auth/sign-up', resetPassword: '/auth/reset-password', jwt: { login: '/auth/jwt/login', register: '/auth/jwt/register' }, login: '/auth/login', register: '/auth/register', forgotPassword: '/auth/forgot-password' },
   dashboard: {
     overview: '/dashboard',
     account: '/dashboard/account',
@@ -8,6 +8,7 @@ export const paths = {
     settings: '/dashboard/settings',
     user: '/dashboard/user',
     role: '/dashboard/role',
+    permission: '/dashboard/permission',
     userCreation: '/dashboard/userCreation',
     userEdit: (id: string) => `/dashboard/user/${id}`,
     team: '/dashboard/team',

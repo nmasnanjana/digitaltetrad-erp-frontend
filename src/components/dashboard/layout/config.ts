@@ -9,6 +9,7 @@ export const navItems = [
   },
   { key: 'user', title: 'User Management', href: paths.dashboard.user, icon: 'user' },
   { key: 'role', title: 'Role Management', href: paths.dashboard.role, icon: 'shield' },
+  { key: 'permission', title: 'Permission Management', href: paths.dashboard.permission, icon: 'fingerprint' },
   { key: 'team', title: 'Team Management', href: paths.dashboard.team, icon: 'users' },
   { key: 'customer', title: 'Customer Management', href: paths.dashboard.customer, icon: 'users' },
   { key: 'job', title: 'Job Management', href: paths.dashboard.job, icon: 'WorkOutlineIcon' },

@@ -11,6 +11,7 @@ import { CheckCircle } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { CreditCard } from "@phosphor-icons/react/dist/ssr/CreditCard";
 import { Shield } from '@phosphor-icons/react/dist/ssr/Shield';
 import { TreasureChest }  from "@phosphor-icons/react/dist/ssr/TreasureChest";
+import { Fingerprint } from "@phosphor-icons/react/dist/ssr/Fingerprint";
 
 export const navIcons = {
   'chart-pie': ChartPieIcon,
@@ -25,4 +26,5 @@ export const navIcons = {
   'CreditCard': CreditCard,
   'shield':Shield,
   'TreasureChest': TreasureChest,
+  'fingerprint': Fingerprint,
 } as Record<string, Icon>;
