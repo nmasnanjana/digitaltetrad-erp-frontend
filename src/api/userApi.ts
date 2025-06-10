@@ -6,23 +6,32 @@ const API = axios.create({
     withCredentials: true,
 });
 
+// Add request interceptor to include token
+API.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
 export const login = (username: string, password: string) =>
-    API.post('http://localhost:4575/api/users/login', { username, password });
+    API.post('/users/login', { username, password });
 
 export const getAllUsers = () =>
-    API.get<User[]>('http://localhost:4575/api/users/all');
+    API.get<User[]>('/users/all');
 
 export const getUserById = (id: string) =>
-    API.get<User>(`http://localhost:4575/api/users/${id}`);
+    API.get<User>(`/users/${id}`);
 
 export const createUser = (userData: Partial<User> & { password: string, password_confirmation: string }) =>
-    API.post('http://localhost:4575/api/users/register', userData);
+    API.post('/users/register', userData);
 
 export const updateUser = (id: string, data: Partial<User>) =>
-    API.put(`http://localhost:4575/api/users/${id}`, data);
+    API.put(`/users/${id}`, data);
 
 export const deleteUser = (id: string) =>
-    API.delete(`http://localhost:4575/api/users/${id}`);
+    API.delete(`/users/${id}`);
 
 export const updateUserPassword = async (userId: string, data: { currentPassword: string; newPassword: string; newPasswordConfirm: string }) => {
   const response = await API.put(`/users/${userId}/password`, data);

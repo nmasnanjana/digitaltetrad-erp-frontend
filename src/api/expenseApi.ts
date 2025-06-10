@@ -1,8 +1,36 @@
 import axios from 'axios';
-import { authClient } from '@/lib/auth/client';
-import { Expense, ExpenseType } from '@/types/expense';
+import { Expense, ExpenseType, OperationType } from '@/types/expense';
 
-const API_URL = 'http://localhost:4575/api';
+const API = axios.create({
+    baseURL: 'http://localhost:4575/api',
+    withCredentials: true,
+});
+
+// Add request interceptor to include token
+API.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
+// Add error handling
+API.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response) {
+            console.error('Error response:', error.response.data);
+            return Promise.reject(error.response.data);
+        } else if (error.request) {
+            console.error('Error request:', error.request);
+            return Promise.reject(new Error('No response received from server'));
+        } else {
+            console.error('Error message:', error.message);
+            return Promise.reject(error);
+        }
+    }
+);
 
 export interface ExpenseFilters {
     createdStartDate?: string;
@@ -14,96 +42,69 @@ export interface ExpenseFilters {
     status?: string;
 }
 
-// Expense Type API
-export const getAllExpenseTypes = async () => {
-    const response = await axios.get(`${API_URL}/expense-types`);
-    return response;
-};
+// Expense Types
+export const getAllExpenseTypes = () =>
+    API.get<ExpenseType[]>('/expense-types');
 
-export const createExpenseType = async (data: Partial<ExpenseType>) => {
-    const response = await axios.post(`${API_URL}/expense-types`, data);
-    return response;
-};
+export const getExpenseTypeById = (id: string) =>
+    API.get<ExpenseType>(`/expense-types/${id}`);
 
-export const updateExpenseType = async (id: string, data: Partial<ExpenseType>) => {
-    const response = await axios.put(`${API_URL}/expense-types/${id}`, data);
-    return response;
-};
+export const createExpenseType = (data: Partial<ExpenseType>) =>
+    API.post('/expense-types', data);
 
-export const deleteExpenseType = async (id: string) => {
-    const response = await axios.delete(`${API_URL}/expense-types/${id}`);
-    return response;
-};
+export const updateExpenseType = (id: string, data: Partial<ExpenseType>) =>
+    API.put(`/expense-types/${id}`, data);
 
-// Expense API
-export const getAllExpenses = async (filters?: ExpenseFilters) => {
-    const queryParams = new URLSearchParams();
-    
-    if (filters) {
-        if (filters.createdStartDate) {
-            queryParams.append('createdStartDate', filters.createdStartDate);
-        }
-        if (filters.createdEndDate) {
-            queryParams.append('createdEndDate', filters.createdEndDate);
-        }
-        if (filters.expenseTypeId) {
-            queryParams.append('expenseTypeId', filters.expenseTypeId.toString());
-        }
-        if (filters.category) {
-            queryParams.append('operations', filters.category === 'operation' ? 'true' : 'false');
-        }
-        if (filters.jobId) {
-            queryParams.append('jobId', filters.jobId);
-        }
-        if (filters.operationTypeId) {
-            queryParams.append('operationTypeId', filters.operationTypeId.toString());
-        }
-        if (filters.status) {
-            queryParams.append('status', filters.status);
-        }
-    }
+export const deleteExpenseType = (id: string) =>
+    API.delete(`/expense-types/${id}`);
 
-    const queryString = queryParams.toString();
-    const url = queryString ? `${API_URL}/expenses?${queryString}` : `${API_URL}/expenses`;
-    
-    return axios.get(url);
-};
+// Operation Types
+export const getAllOperationTypes = () =>
+    API.get<OperationType[]>('/operation-types');
 
-export const getExpenseById = async (id: string) => {
-    const response = await axios.get(`${API_URL}/expenses/${id}`);
-    return response;
-};
+export const getOperationTypeById = (id: string) =>
+    API.get<OperationType>(`/operation-types/${id}`);
 
-export const createExpense = async (data: {
-    expenses_type_id: number;
-    operations: boolean;
-    job_id?: number;
-    description: string;
-    amount: number;
-}) => {
-    const response = await axios.post(`${API_URL}/expenses`, data);
-    return response;
-};
+export const createOperationType = (data: Partial<OperationType>) =>
+    API.post('/operation-types', data);
 
-export const updateExpense = async (id: string, data: {
-    expenses_type_id: number;
-    operations: boolean;
-    job_id?: number;
-    description: string;
-    amount: number;
-    edited_by: string;
-    reason_to_edit: string;
-}) => {
-    const response = await axios.put(`${API_URL}/expenses/${id}`, data);
-    return response;
-};
+export const updateOperationType = (id: string, data: Partial<OperationType>) =>
+    API.put(`/operation-types/${id}`, data);
 
-export const deleteExpense = async (id: string) => {
-    const response = await axios.delete(`${API_URL}/expenses/${id}`);
-    return response;
-};
+export const deleteOperationType = (id: string) =>
+    API.delete(`/operation-types/${id}`);
+
+// Expenses
+export const getAllExpenses = () =>
+    API.get<Expense[]>('/expenses');
+
+export const getExpenseById = (id: string) =>
+    API.get<Expense>(`/expenses/${id}`);
+
+export const createExpense = (data: Partial<Expense>) =>
+    API.post('/expenses', data);
+
+export const updateExpense = (id: string, data: Partial<Expense>) =>
+    API.put(`/expenses/${id}`, data);
+
+export const deleteExpense = (id: string) =>
+    API.delete(`/expenses/${id}`);
+
+// Expense Approvals
+export const approveExpense = (id: string, data: { approved: boolean; comment?: string }) =>
+    API.post(`/expenses/${id}/approve`, data);
+
+export const rejectExpense = (id: string, data: { comment: string }) =>
+    API.post(`/expenses/${id}/reject`, data);
+
+// Expense Payments
+export const markAsPaid = (id: string, data: { paymentDate: string; paymentMethod: string; reference?: string }) =>
+    API.post(`/expenses/${id}/pay`, data);
+
+export const getExpensePayments = (id: string) =>
+    API.get(`/expenses/${id}/payments`);
 
 export const getExpensesByJob = async (jobId: string) => {
-    const response = await axios.get(`${API_URL}/expenses/job/${jobId}`);
+    const response = await API.get(`/expenses/job/${jobId}`);
     return response;
 };

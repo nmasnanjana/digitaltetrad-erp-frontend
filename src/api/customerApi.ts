@@ -6,20 +6,14 @@ const API = axios.create({
     withCredentials: true,
 });
 
-export const getAllCustomers = () =>
-    API.get<Customer[]>('/customers');
-
-export const getCustomerById = (id: string) =>
-    API.get<Customer>(`/customers/${id}`);
-
-export const createCustomer = (customerData: Partial<Customer>) =>
-    API.post('/customers', customerData);
-
-export const updateCustomer = (id: string, data: Partial<Customer>) =>
-    API.put(`/customers/${id}`, data);
-
-export const deleteCustomer = (id: string) =>
-    API.delete(`/customers/${id}`);
+// Add request interceptor to include token
+API.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
 
 // Add error handling
 API.interceptors.response.use(
@@ -36,4 +30,19 @@ API.interceptors.response.use(
             return Promise.reject(error);
         }
     }
-); 
+);
+
+export const getAllCustomers = () =>
+    API.get<Customer[]>('/customers');
+
+export const getCustomerById = (id: string) =>
+    API.get<Customer>(`/customers/${id}`);
+
+export const createCustomer = (customerData: Partial<Customer>) =>
+    API.post('/customers', customerData);
+
+export const updateCustomer = (id: string, data: Partial<Customer>) =>
+    API.put(`/customers/${id}`, data);
+
+export const deleteCustomer = (id: string) =>
+    API.delete(`/customers/${id}`); 
