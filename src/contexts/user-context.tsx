@@ -37,7 +37,19 @@ export function UserProvider({ children }: UserProviderProps): React.JSX.Element
         return;
       }
 
-      setState((prev) => ({ ...prev, user: data ?? null, error: null, isLoading: false }));
+      if (!data) {
+        setState((prev) => ({ ...prev, user: null, error: null, isLoading: false }));
+        return;
+      }
+
+      // Ensure role and permissions are properly loaded
+      if (!data.role) {
+        logger.error('User role not loaded');
+        setState((prev) => ({ ...prev, user: null, error: 'User role not loaded', isLoading: false }));
+        return;
+      }
+
+      setState((prev) => ({ ...prev, user: data, error: null, isLoading: false }));
     } catch (err) {
       logger.error(err instanceof Error ? err.message : 'Unknown error');
       setState((prev) => ({ ...prev, user: null, error: 'Something went wrong', isLoading: false }));

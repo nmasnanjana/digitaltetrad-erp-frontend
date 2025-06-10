@@ -3,6 +3,13 @@
 import { generateAvatar } from '@/lib/utils';
 import type { AuthClient, SignInWithPasswordParams, SignUpParams } from './types';
 import type { User } from '@/types/user';
+import type { Role } from '@/types/permission';
+
+interface ApiResponse<T> {
+  data?: T;
+  error?: string;
+  info?: string;
+}
 
 class AuthClientImpl implements AuthClient {
   private readonly baseUrl: string;
@@ -14,7 +21,7 @@ class AuthClientImpl implements AuthClient {
   }
 
   private getToken(): string | null {
-    return this.storage.getItem('token');
+    return localStorage.getItem('token') || sessionStorage.getItem('token');
   }
 
   private setToken(token: string, rememberMe: boolean = false): void {
@@ -29,11 +36,13 @@ class AuthClientImpl implements AuthClient {
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const token = this.getToken();
-    const headers = new Headers(options.headers);
+    const headers = new Headers(options.headers || {});
 
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
     }
+
+    headers.set('Content-Type', 'application/json');
 
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
@@ -42,6 +51,10 @@ class AuthClientImpl implements AuthClient {
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        this.removeToken();
+        throw new Error('Authentication required');
+      }
       const error = await response.json();
       throw new Error(error.error || `HTTP error! status: ${response.status}`);
     }
@@ -51,58 +64,34 @@ class AuthClientImpl implements AuthClient {
 
   async signInWithPassword({ username, password, rememberMe }: SignInWithPasswordParams) {
     try {
-      console.log('Attempting login...');
-      const response = await fetch(`${this.baseUrl}/api/users/login`, {
+      const response = await this.request<{ token: string; user: User }>('/api/users/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
         body: JSON.stringify({ username, password, rememberMe }),
       });
 
-      console.log('Login response status:', response.status);
-      const responseData = await response.json();
-      console.log('Login response data:', responseData);
-
-      if (!response.ok) {
-        return { data: null, error: responseData.error || 'Failed to sign in' };
-      }
-
-      const { token, user } = responseData;
+      const { token, user } = response;
       
       if (!token) {
-        console.log('No token received');
         return { data: null, error: 'No token received from server' };
       }
 
-      console.log('Token received:', token);
-      console.log('User data received:', user);
-
-      // Store the token
       this.setToken(token, rememberMe);
 
-      // Generate avatar if not provided
       if (!user.avatar) {
         user.avatar = generateAvatar(user.username);
       }
 
       return { data: user, error: null };
     } catch (error) {
-      console.error('Login error:', error);
       this.removeToken();
       return { data: null, error: error instanceof Error ? error.message : 'Failed to sign in' };
     }
   }
 
-  async signUp({ username, password, firstName, lastName, email, role }: SignUpParams) {
+  async signUp({ username, password, firstName, lastName, email, roleId }: SignUpParams) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/users/register`, {
+      const response = await this.request<ApiResponse<null>>('/api/users/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
         body: JSON.stringify({ 
           username, 
           password, 
@@ -110,17 +99,11 @@ class AuthClientImpl implements AuthClient {
           firstName, 
           lastName, 
           email,
-          role 
+          roleId 
         }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        return { data: null, error: error.error || 'Failed to sign up' };
-      }
-
-      const { info } = await response.json();
-      return { data: null, error: null, info };
+      return { data: null, error: null, info: response.info };
     } catch (error) {
       return { data: null, error: error instanceof Error ? error.message : 'Failed to sign up' };
     }
@@ -137,25 +120,8 @@ class AuthClientImpl implements AuthClient {
         return { data: null, error: null };
       }
 
-      // Get user ID from token
-      const tokenPayload = JSON.parse(atob(token.split('.')[1]));
-      const userId = tokenPayload.id;
+      const user = await this.request<User>('/api/users/me');
 
-      const response = await fetch(`${this.baseUrl}/api/users/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        this.removeToken();
-        return { data: null, error: 'Session expired' };
-      }
-
-      const user = await response.json();
-
-      // Generate avatar if not provided
       if (!user.avatar) {
         user.avatar = generateAvatar(user.username);
       }
@@ -169,23 +135,12 @@ class AuthClientImpl implements AuthClient {
 
   async updateUser(id: string, data: Partial<User>) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/users/${id}`, {
+      const response = await this.request<ApiResponse<null>>(`/api/users/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.getToken()}`,
-        },
-        credentials: 'include',
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        return { data: null, error: error.error || 'Failed to update user' };
-      }
-
-      const { info } = await response.json();
-      return { data: null, error: null, info };
+      return { data: null, error: null, info: response.info };
     } catch (error) {
       return { data: null, error: error instanceof Error ? error.message : 'Failed to update user' };
     }
@@ -193,13 +148,8 @@ class AuthClientImpl implements AuthClient {
 
   async updatePassword(id: string, currentPassword: string, newPassword: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/users/${id}/password`, {
+      const response = await this.request<ApiResponse<null>>(`/api/users/${id}/password`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.getToken()}`,
-        },
-        credentials: 'include',
         body: JSON.stringify({ 
           currentPassword, 
           newPassword,
@@ -207,13 +157,7 @@ class AuthClientImpl implements AuthClient {
         }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        return { error: error.error || 'Failed to update password' };
-      }
-
-      const { info } = await response.json();
-      return { error: null, info };
+      return { error: null, info: response.info };
     } catch (error) {
       return { error: error instanceof Error ? error.message : 'Failed to update password' };
     }
@@ -221,23 +165,12 @@ class AuthClientImpl implements AuthClient {
 
   async updateActivity(id: string, isActive: boolean) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/users/${id}/activity`, {
+      const response = await this.request<ApiResponse<null>>(`/api/users/${id}/activity`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.getToken()}`,
-        },
-        credentials: 'include',
         body: JSON.stringify({ isActive }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        return { error: error.error || 'Failed to update activity' };
-      }
-
-      const { info } = await response.json();
-      return { error: null, info };
+      return { error: null, info: response.info };
     } catch (error) {
       return { error: error instanceof Error ? error.message : 'Failed to update activity' };
     }
@@ -245,19 +178,7 @@ class AuthClientImpl implements AuthClient {
 
   async getAllUsers() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/users/all`, {
-        headers: {
-          Authorization: `Bearer ${this.getToken()}`,
-        },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        return { data: null, error: error.error || 'Failed to get users' };
-      }
-
-      const users = await response.json();
+      const users = await this.request<User[]>('/api/users/all');
       return { data: users, error: null };
     } catch (error) {
       return { data: null, error: error instanceof Error ? error.message : 'Failed to get users' };
@@ -266,21 +187,11 @@ class AuthClientImpl implements AuthClient {
 
   async deleteUser(id: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/users/${id}`, {
+      const response = await this.request<ApiResponse<null>>(`/api/users/${id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${this.getToken()}`,
-        },
-        credentials: 'include',
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        return { error: error.error || 'Failed to delete user' };
-      }
-
-      const { info } = await response.json();
-      return { error: null, info };
+      return { error: null, info: response.info };
     } catch (error) {
       return { error: error instanceof Error ? error.message : 'Failed to delete user' };
     }
@@ -288,19 +199,7 @@ class AuthClientImpl implements AuthClient {
 
   async getAllRoles() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/roles`, {
-        headers: {
-          Authorization: `Bearer ${this.getToken()}`,
-        },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        return { data: null, error: error.error || 'Failed to get roles' };
-      }
-
-      const roles = await response.json();
+      const roles = await this.request<Role[]>('/api/roles');
       return { data: roles, error: null };
     } catch (error) {
       return { data: null, error: error instanceof Error ? error.message : 'Failed to get roles' };
@@ -309,23 +208,12 @@ class AuthClientImpl implements AuthClient {
 
   async createRole(data: { name: string; description?: string }) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/roles`, {
+      const response = await this.request<ApiResponse<Role>>('/api/roles', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.getToken()}`,
-        },
-        credentials: 'include',
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        return { data: null, error: error.error || 'Failed to create role' };
-      }
-
-      const { data: role, info } = await response.json();
-      return { data: role, error: null, info };
+      return { data: response.data || null, error: null, info: response.info };
     } catch (error) {
       return { data: null, error: error instanceof Error ? error.message : 'Failed to create role' };
     }
@@ -333,23 +221,12 @@ class AuthClientImpl implements AuthClient {
 
   async updateRole(id: string, data: { name: string; description?: string; isActive?: boolean }) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/roles/${id}`, {
+      const response = await this.request<ApiResponse<Role>>(`/api/roles/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.getToken()}`,
-        },
-        credentials: 'include',
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        return { data: null, error: error.error || 'Failed to update role' };
-      }
-
-      const { data: role, info } = await response.json();
-      return { data: role, error: null, info };
+      return { data: response.data || null, error: null, info: response.info };
     } catch (error) {
       return { data: null, error: error instanceof Error ? error.message : 'Failed to update role' };
     }
@@ -357,21 +234,11 @@ class AuthClientImpl implements AuthClient {
 
   async deleteRole(id: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/roles/${id}`, {
+      const response = await this.request<ApiResponse<null>>(`/api/roles/${id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${this.getToken()}`,
-        },
-        credentials: 'include',
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        return { error: error.error || 'Failed to delete role' };
-      }
-
-      const { info } = await response.json();
-      return { error: null, info };
+      return { error: null, info: response.info };
     } catch (error) {
       return { error: error instanceof Error ? error.message : 'Failed to delete role' };
     }
