@@ -1,8 +1,11 @@
+import type { Permission } from './permission';
+
 export interface Role {
   id: string;
   name: string;
   description?: string;
   isActive: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
+  permissions: Permission[];
+  createdAt: string;
+  updatedAt: string;
 } 
