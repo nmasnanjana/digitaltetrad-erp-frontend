@@ -12,31 +12,46 @@ export interface ExpenseType {
 }
 
 export interface Expense {
-    id: string;
+    id: number;
     expenses_type_id: number;
     operations: boolean;
-    job_id?: number;
+    operation_type_id?: number;
+    job_id?: string;
     description: string;
     amount: number;
-    status: 'pending' | 'approved' | 'rejected' | 'paid';
-    created_at: string;
-    updated_at: string;
-    created_by: string;
     edited_by?: string;
     reason_to_edit?: string;
-    approved_by?: string;
-    approved_at?: string;
-    rejected_by?: string;
-    rejected_at?: string;
-    rejected_reason?: string;
-    paid_by?: string;
-    paid_at?: string;
-    payment_method?: string;
-    payment_reference?: string;
+    reviewed_by?: string;
+    reviewer_comment?: string;
+    status?: 'on_progress' | 'approved' | 'denied';
+    reviewed_at?: Date;1
     paid: boolean;
-    job?: Job;
+    created_at?: string;
+    updated_at?: string;
     expenseType?: ExpenseType;
-    editor?: User;
-    reviewer?: User;
+    operationType?: OperationType;
+    job?: {
+        id: string;
+        name: string;
+    };
+    editor?: {
+        id: string;
+        firstName: string;
+        lastName?: string;
+    };
+    reviewer?: {
+        id: string;
+        firstName: string;
+        lastName?: string;
+    };
+}
+
+export interface OperationType {
+    id: number;
+    name: string;
+    description?: string;
+    isActive: boolean;
+    createdAt?: string;
+    updatedAt?: string;
 }
 

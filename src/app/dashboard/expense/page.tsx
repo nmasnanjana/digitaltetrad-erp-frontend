@@ -17,7 +17,7 @@ import {
   Chip,
   Grid,
 } from '@mui/material';
-import { Plus } from '@phosphor-icons/react/dist/ssr';
+import { Plus, List, Gear } from '@phosphor-icons/react/dist/ssr';
 import { getAllExpenses } from '@/api/expenseApi';
 import { Expense } from '@/types/expense';
 import Link from 'next/link';
@@ -93,14 +93,32 @@ export default function ExpenseOverviewPage() {
                 View and manage all expenses
               </Typography>
             </Stack>
-            <Button
-              component={Link}
-              href="/dashboard/expense/new"
-              variant="contained"
-              startIcon={<Plus />}
-            >
-              New Expense
-            </Button>
+            <Stack direction="row" spacing={2}>
+              <Button
+                component={Link}
+                href="/dashboard/expense/type"
+                variant="outlined"
+                startIcon={<List />}
+              >
+                Expense Types
+              </Button>
+              <Button
+                component={Link}
+                href="/dashboard/expense/operation-type"
+                variant="outlined"
+                startIcon={<Gear />}
+              >
+                Operation Types
+              </Button>
+              <Button
+                component={Link}
+                href="/dashboard/expense/new"
+                variant="contained"
+                startIcon={<Plus />}
+              >
+                New Expense
+              </Button>
+            </Stack>
           </Stack>
 
           {error && (
