@@ -40,6 +40,7 @@ interface HuaweiPoData {
   item_description: string;
   unit_price: number;
   requested_quantity: number;
+  invoiced_percentage: number;
 }
 
 interface JobViewProps {
@@ -229,6 +230,7 @@ export const JobView: React.FC<JobViewProps> = ({
             item_description: row[columnMap.item_description]?.toString() || '',
             unit_price: parseFloat(row[columnMap.unit_price]) || 0,
             requested_quantity: parseInt(row[columnMap.requested_quantity]) || 0,
+            invoiced_percentage: 0, // Default value for new PO data
           });
         }
       }
@@ -581,6 +583,7 @@ export const JobView: React.FC<JobViewProps> = ({
                       <TableCell sx={{ minWidth: 200 }}>Item Description</TableCell>
                       <TableCell sx={{ minWidth: 100 }}>Unit Price</TableCell>
                       <TableCell sx={{ minWidth: 120 }}>Requested Qty</TableCell>
+                      <TableCell sx={{ minWidth: 120 }}>Invoiced %</TableCell>
                       <TableCell sx={{ minWidth: 120 }}>Uploaded At</TableCell>
                     </TableRow>
                   </TableHead>
@@ -603,6 +606,9 @@ export const JobView: React.FC<JobViewProps> = ({
                             po.unit_price ? parseFloat(po.unit_price).toFixed(2) : '0.00'}
                         </TableCell>
                         <TableCell sx={{ minWidth: 120 }}>{po.requested_quantity}</TableCell>
+                        <TableCell sx={{ minWidth: 120 }}>
+                          {po.invoiced_percentage ? `${po.invoiced_percentage}%` : '-'}
+                        </TableCell>
                         <TableCell sx={{ minWidth: 120 }}>
                           {po.uploaded_at ? new Date(po.uploaded_at).toLocaleDateString() : '-'}
                         </TableCell>

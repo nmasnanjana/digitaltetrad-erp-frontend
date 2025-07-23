@@ -20,4 +20,5 @@ export const navItems = [
       {key: 'expensePayment', title: 'Payment Management', href: paths.dashboard.expensePayment, icon: 'CreditCard'},
     ]
   },
+  { key: 'invoiceGenerator', title: 'Invoice Generator', href: paths.dashboard.invoiceGenerator, icon: 'receipt' },
 ] satisfies NavItemConfig[];
