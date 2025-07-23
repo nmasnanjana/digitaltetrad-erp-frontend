@@ -1,21 +1,13 @@
 import { apiClient } from './apiClient';
 
 export interface InvoiceData {
-  po_no: string;
-  line_no: string;
-  percentage: number;
-}
-
-export interface AvailablePercentageResponse {
-  po_no: string;
-  line_no: string;
-  total_invoiced: number;
-  available_percentage: number;
-  can_invoice: boolean;
+  invoice_no: string;
+  huawei_po_id: number;
+  invoiced_percentage: number;
 }
 
 export interface CreateInvoiceRequest {
-  customer_id: number;
+  invoice_no: string;
   invoice_data: InvoiceData[];
 }
 
@@ -23,60 +15,78 @@ export interface CreateInvoiceResponse {
   info: string;
   data: {
     created_invoices: number;
-    warnings?: string[];
+    invoice_no: string;
   };
 }
 
 export interface InvoiceRecord {
   id: number;
-  customer_id: number;
-  po_no: string;
-  line_no: string;
-  percentage: number;
-  created_by: string;
+  invoice_no: string;
+  huawei_po_id: number;
+  invoiced_percentage: number;
   createdAt: string;
   updatedAt: string;
-  customer?: {
+  huaweiPo?: {
     id: number;
-    name: string;
-  };
-  creator?: {
-    firstName: string;
-    lastName: string;
-    username: string;
+    po_no: string;
+    line_no: string;
+    item_code: string;
+    item_description: string;
+    unit_price: number;
+    requested_quantity: number;
+    invoiced_percentage: number;
+    job?: {
+      id: string;
+      name: string;
+    };
   };
 }
 
-// Get available percentage for PO/Line combination for a customer
-export const getAvailablePercentage = async (
-  customer_id: number,
-  po_no: string,
-  line_no: string
-): Promise<AvailablePercentageResponse> => {
-  const response = await apiClient.get(`/huawei-invoices/available-percentage/${customer_id}/${po_no}/${line_no}`);
-  return response.data;
-};
+export interface InvoiceSummary {
+  invoice_no: string;
+  total_records: number;
+  total_amount: number;
+  created_at: string;
+}
 
-// Create invoice records for a customer
+// Create invoice records
 export const createInvoice = async (data: CreateInvoiceRequest): Promise<CreateInvoiceResponse> => {
-  const response = await apiClient.post('/huawei-invoices/create', data);
+  const response = await apiClient.post('/huawei-invoices', data);
   return response.data;
 };
 
-// Get all invoices for a customer
-export const getCustomerInvoices = async (customer_id: number): Promise<InvoiceRecord[]> => {
-  const response = await apiClient.get(`/huawei-invoices/customer/${customer_id}`);
+// Get all invoices
+export const getAllInvoices = async (): Promise<InvoiceRecord[]> => {
+  const response = await apiClient.get('/huawei-invoices');
   return response.data;
 };
 
-// Delete a specific invoice
+// Get invoice by ID
+export const getInvoiceById = async (id: number): Promise<InvoiceRecord> => {
+  const response = await apiClient.get(`/huawei-invoices/${id}`);
+  return response.data;
+};
+
+// Get invoices by invoice number
+export const getInvoicesByInvoiceNo = async (invoice_no: string): Promise<InvoiceRecord[]> => {
+  const response = await apiClient.get(`/huawei-invoices/invoice/${invoice_no}`);
+  return response.data;
+};
+
+// Get unique invoice numbers (summary)
+export const getInvoiceSummaries = async (): Promise<InvoiceSummary[]> => {
+  const response = await apiClient.get('/huawei-invoices/summaries');
+  return response.data;
+};
+
+// Delete invoice by ID
 export const deleteInvoice = async (id: number) => {
   const response = await apiClient.delete(`/huawei-invoices/${id}`);
   return response.data;
 };
 
-// Delete all invoices for a customer
-export const deleteAllCustomerInvoices = async (customer_id: number) => {
-  const response = await apiClient.delete(`/huawei-invoices/customer/${customer_id}`);
+// Delete all invoices by invoice number
+export const deleteInvoicesByInvoiceNo = async (invoice_no: string) => {
+  const response = await apiClient.delete(`/huawei-invoices/invoice/${invoice_no}`);
   return response.data;
 }; 

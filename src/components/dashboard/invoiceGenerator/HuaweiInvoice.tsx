@@ -20,10 +20,26 @@ import {
   LinearProgress,
   Alert,
   Chip,
+  IconButton,
+  Grid,
+  Divider,
 } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import DownloadIcon from '@mui/icons-material/Download';
 import * as XLSX from 'xlsx';
 import { getAllHuaweiPos } from '@/api/huaweiPoApi';
 import { getAllCustomers } from '@/api/customerApi';
+import { 
+  createInvoice, 
+  getInvoiceSummaries, 
+  getInvoicesByInvoiceNo,
+  deleteInvoicesByInvoiceNo,
+  InvoiceSummary,
+  InvoiceRecord 
+} from '@/api/huaweiInvoiceApi';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 interface ExtractedData {
   po_no: string;
@@ -39,6 +55,7 @@ interface CorrelatedData {
   invoiced_percentage: number;
   need_to_invoice_percentage: number;
   isCorrelated: boolean;
+  huawei_po_id?: number;
 }
 
 interface HuaweiPoData {
@@ -53,12 +70,17 @@ interface HuaweiPoData {
 
 export const HuaweiInvoice: React.FC = () => {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedData[]>([]);
   const [correlatedData, setCorrelatedData] = useState<CorrelatedData[]>([]);
   const [huaweiPoData, setHuaweiPoData] = useState<HuaweiPoData[]>([]);
   const [invoiceNumber, setInvoiceNumber] = useState<string>('');
+  const [invoiceSummaries, setInvoiceSummaries] = useState<InvoiceSummary[]>([]);
+  const [selectedInvoiceDetails, setSelectedInvoiceDetails] = useState<InvoiceRecord[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -66,6 +88,7 @@ export const HuaweiInvoice: React.FC = () => {
   // Load Huawei PO data for correlation
   useEffect(() => {
     loadHuaweiPoData();
+    loadInvoiceSummaries();
   }, []);
 
   const loadHuaweiPoData = async () => {
@@ -110,6 +133,192 @@ export const HuaweiInvoice: React.FC = () => {
       setError(err instanceof Error ? err.message : 'Failed to load Huawei PO data');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadInvoiceSummaries = async () => {
+    try {
+      const summaries = await getInvoiceSummaries();
+      setInvoiceSummaries(summaries);
+    } catch (err) {
+      console.error('Error loading invoice summaries:', err);
+    }
+  };
+
+  const handleViewInvoice = async (invoiceNo: string) => {
+    try {
+      const details = await getInvoicesByInvoiceNo(invoiceNo);
+      console.log('Invoice details received:', details);
+      console.log('Number of items in invoice:', details.length);
+      console.log('First item structure:', details[0]);
+      console.log('First item huaweiPo:', details[0]?.huaweiPo);
+      console.log('Unit price type:', typeof details[0]?.huaweiPo?.unit_price);
+      console.log('Unit price value:', details[0]?.huaweiPo?.unit_price);
+      console.log('Requested Qty type:', typeof details[0]?.huaweiPo?.requested_quantity);
+      console.log('Requested Qty value:', details[0]?.huaweiPo?.requested_quantity);
+      console.log('All huaweiPo fields:', Object.keys(details[0]?.huaweiPo || {}));
+      console.log('Full huaweiPo object:', JSON.stringify(details[0]?.huaweiPo, null, 2));
+      
+      // Check all items for consistency
+      details.forEach((item, index) => {
+        console.log(`Item ${index + 1}:`, {
+          po_no: item.huaweiPo?.po_no,
+          line_no: item.huaweiPo?.line_no,
+          unit_price: item.huaweiPo?.unit_price,
+          requested_quantity: item.huaweiPo?.requested_quantity,
+          invoiced_percentage: item.invoiced_percentage
+        });
+      });
+      
+      setSelectedInvoiceDetails(details);
+      setViewDialogOpen(true);
+    } catch (err) {
+      console.error('Error loading invoice details:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load invoice details');
+    }
+  };
+
+  const handleDeleteInvoice = async (invoiceNo: string) => {
+    if (!window.confirm(`Are you sure you want to delete invoice ${invoiceNo}? This will also reduce the invoiced percentages from the PO records.`)) {
+      return;
+    }
+
+    try {
+      await deleteInvoicesByInvoiceNo(invoiceNo);
+      setSuccess(`Invoice ${invoiceNo} deleted successfully`);
+      await loadInvoiceSummaries();
+      await loadHuaweiPoData(); // Reload PO data to get updated percentages
+    } catch (err) {
+      console.error('Error deleting invoice:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete invoice');
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    console.log('Download PDF button clicked');
+    console.log('Selected invoice details:', selectedInvoiceDetails);
+    
+    if (selectedInvoiceDetails.length === 0) {
+      console.log('No invoice details available');
+      return;
+    }
+
+    setIsDownloadingPDF(true);
+    setError(null);
+
+    try {
+      console.log('Creating PDF document...');
+      
+      // Create a simple PDF first to test
+      const doc = new jsPDF();
+      console.log('PDF document created successfully');
+      
+      const invoiceNo = selectedInvoiceDetails[0].invoice_no;
+      const createdDate = new Date(selectedInvoiceDetails[0].createdAt).toLocaleDateString();
+      
+      console.log('Invoice details:', { invoiceNo, createdDate });
+      
+      // Add simple text to test
+      doc.setFontSize(16);
+      doc.text('HUAWEI INVOICE', 20, 20);
+      doc.setFontSize(12);
+      doc.text(`Invoice Number: ${invoiceNo}`, 20, 40);
+      doc.text(`Date: ${createdDate}`, 20, 50);
+      doc.text(`Total Records: ${selectedInvoiceDetails.length}`, 20, 60);
+      
+      // Calculate and show total amount
+      const totalAmount = selectedInvoiceDetails.reduce((sum, item) => {
+        const unitPriceStr = item.huaweiPo?.unit_price;
+        const unitPrice = typeof unitPriceStr === 'string' ? parseFloat(unitPriceStr) : 
+                         typeof unitPriceStr === 'number' ? unitPriceStr : 0;
+        const percentage = item.invoiced_percentage;
+        const itemAmount = unitPrice * percentage / 100;
+        return sum + itemAmount;
+      }, 0);
+      
+      doc.text(`Total Amount: $${totalAmount.toFixed(2)}`, 20, 70);
+      
+      // Add some item details
+      let yPosition = 90;
+      doc.text('Invoice Items:', 20, yPosition);
+      yPosition += 10;
+      
+      selectedInvoiceDetails.forEach((item, index) => {
+        const unitPriceStr = item.huaweiPo?.unit_price;
+        const unitPrice = typeof unitPriceStr === 'string' ? parseFloat(unitPriceStr) : 
+                         typeof unitPriceStr === 'number' ? unitPriceStr : 0;
+        const amount = unitPrice * item.invoiced_percentage / 100;
+        
+        doc.text(`${index + 1}. ${item.huaweiPo?.po_no} - ${item.huaweiPo?.item_description}`, 20, yPosition);
+        yPosition += 5;
+        doc.text(`   Unit Price: $${unitPrice.toFixed(2)}, Invoiced: ${item.invoiced_percentage}%, Amount: $${amount.toFixed(2)}`, 20, yPosition);
+        yPosition += 10;
+      });
+      
+      console.log('PDF content added successfully');
+
+      // Download the PDF
+      const fileName = `Huawei_Invoice_${invoiceNo}_${new Date().toISOString().split('T')[0]}.pdf`;
+      console.log('Saving PDF with filename:', fileName);
+      doc.save(fileName);
+      
+      console.log('PDF saved successfully');
+      setSuccess('PDF downloaded successfully!');
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      setError(`Failed to generate PDF: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsDownloadingPDF(false);
+    }
+  };
+
+  const handleSaveInvoice = async () => {
+    if (!invoiceNumber.trim()) {
+      setError('Please enter an invoice number');
+      return;
+    }
+
+    const matchedRecords = correlatedData.filter(item => item.isCorrelated && item.need_to_invoice_percentage > 0);
+    
+    if (matchedRecords.length === 0) {
+      setError('No matched records with invoice percentages to save');
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const invoiceData = matchedRecords.map(item => ({
+        invoice_no: invoiceNumber,
+        huawei_po_id: item.huawei_po_id!,
+        invoiced_percentage: item.need_to_invoice_percentage
+      }));
+
+      const response = await createInvoice({
+        invoice_no: invoiceNumber,
+        invoice_data: invoiceData
+      });
+
+      setSuccess(`Successfully created invoice ${invoiceNumber} with ${response.data.created_invoices} records`);
+      
+      // Reload data
+      await loadInvoiceSummaries();
+      await loadHuaweiPoData();
+      
+      // Close dialog and reset
+      setTimeout(() => {
+        setUploadDialogOpen(false);
+        setCorrelatedData([]);
+        setInvoiceNumber('');
+      }, 3000);
+
+    } catch (err) {
+      console.error('Error saving invoice:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save invoice');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -254,7 +463,8 @@ export const HuaweiInvoice: React.FC = () => {
           unit_price: unitPrice,
           invoiced_percentage: existingPo.invoiced_percentage || 0,
           need_to_invoice_percentage: 0,
-          isCorrelated: true
+          isCorrelated: true,
+          huawei_po_id: existingPo.id
         };
       } else {
         console.log(`❌ No match found for PO=${item.po_no}, Line=${item.line_no}`);
@@ -267,7 +477,8 @@ export const HuaweiInvoice: React.FC = () => {
           unit_price: 0,
           invoiced_percentage: 0,
           need_to_invoice_percentage: 0,
-          isCorrelated: false
+          isCorrelated: false,
+          huawei_po_id: undefined
         };
       }
     });
@@ -310,20 +521,30 @@ export const HuaweiInvoice: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               Huawei Invoice Generation
             </Typography>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => document.getElementById('huawei-invoice-excel-input')?.click()}
-            >
-              Upload Invoice Excel
-            </Button>
-            <input
-              id="huawei-invoice-excel-input"
-              type="file"
-              accept=".xlsx,.xls,.xlsm"
-              style={{ display: 'none' }}
-              onChange={handleFileUpload}
-            />
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<VisibilityIcon />}
+                onClick={() => setViewDialogOpen(true)}
+              >
+                View Invoices
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => document.getElementById('huawei-invoice-excel-input')?.click()}
+              >
+                Upload Invoice Excel
+              </Button>
+              <input
+                id="huawei-invoice-excel-input"
+                type="file"
+                accept=".xlsx,.xls,.xlsm"
+                style={{ display: 'none' }}
+                onChange={handleFileUpload}
+              />
+            </Box>
           </Box>
 
           <Typography variant="body2" color="text.secondary">
@@ -333,6 +554,70 @@ export const HuaweiInvoice: React.FC = () => {
           </Typography>
         </CardContent>
       </Card>
+
+      {/* Invoice Summaries List */}
+      {invoiceSummaries.length > 0 && (
+        <Card sx={{ mt: 2 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Existing Invoices
+            </Typography>
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Invoice Number</TableCell>
+                    <TableCell>Total Records</TableCell>
+                    <TableCell>Total Amount</TableCell>
+                    <TableCell>Created Date</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {invoiceSummaries.map((summary) => (
+                    <TableRow key={summary.invoice_no}>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="bold">
+                          {summary.invoice_no}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={summary.total_records} color="primary" size="small" />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="bold" color="primary">
+                          ${summary.total_amount.toFixed(2)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(summary.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <IconButton
+                            color="primary"
+                            size="small"
+                            onClick={() => handleViewInvoice(summary.invoice_no)}
+                          >
+                            <VisibilityIcon />
+                          </IconButton>
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={() => handleDeleteInvoice(summary.invoice_no)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Upload and Process Dialog */}
       <Dialog 
@@ -501,7 +786,7 @@ export const HuaweiInvoice: React.FC = () => {
                             value={item.need_to_invoice_percentage}
                             onChange={(e) => handlePercentageChange(index, parseFloat(e.target.value) || 0)}
                             variant="standard"
-                            disabled={isProcessing}
+                            disabled={isProcessing || isSaving}
                             inputProps={{
                               min: 0,
                               max: 100,
@@ -538,9 +823,180 @@ export const HuaweiInvoice: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUploadDialogOpen(false)} disabled={isProcessing}>
+          <Button onClick={() => setUploadDialogOpen(false)} disabled={isProcessing || isSaving}>
+            Cancel
+          </Button>
+          {correlatedData.length > 0 && (
+            <Button 
+              onClick={handleSaveInvoice} 
+              color="primary" 
+              variant="contained"
+              disabled={isProcessing || isSaving || !validatePercentages() || !invoiceNumber.trim()}
+            >
+              {isSaving ? 'Saving Invoice...' : 'Save Invoice'}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* View Invoice Details Dialog */}
+      <Dialog 
+        open={viewDialogOpen} 
+        onClose={() => setViewDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h6">
+            Invoice Details
+            {selectedInvoiceDetails.length > 0 && (
+              <Typography variant="subtitle1" color="primary" sx={{ mt: 1 }}>
+                {selectedInvoiceDetails[0].invoice_no}
+              </Typography>
+            )}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {selectedInvoiceDetails.length > 0 ? (
+            <Box>
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Invoice Number
+                  </Typography>
+                  <Typography variant="body1" fontWeight="bold">
+                    {selectedInvoiceDetails[0].invoice_no}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Total Records
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedInvoiceDetails.length}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Total Amount
+                  </Typography>
+                  <Typography variant="body1" fontWeight="bold" color="primary">
+                    ${(() => {
+                      const total = selectedInvoiceDetails.reduce((sum, item, index) => {
+                        // Convert unit_price from decimal string to number
+                        const unitPriceStr = item.huaweiPo?.unit_price;
+                        const unitPrice = typeof unitPriceStr === 'string' ? parseFloat(unitPriceStr) : 
+                                         typeof unitPriceStr === 'number' ? unitPriceStr : 0;
+                        const percentage = item.invoiced_percentage;
+                        const itemAmount = unitPrice * percentage / 100;
+                        
+                        console.log(`Item ${index + 1} calculation:`, {
+                          po_no: item.huaweiPo?.po_no,
+                          line_no: item.huaweiPo?.line_no,
+                          unit_price: unitPrice,
+                          percentage: percentage,
+                          item_amount: itemAmount,
+                          running_total: sum + itemAmount
+                        });
+                        
+                        return sum + itemAmount;
+                      }, 0);
+                      
+                      console.log('Final total amount:', total);
+                      return total.toFixed(2);
+                    })()}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Created Date
+                  </Typography>
+                  <Typography variant="body1">
+                    {new Date(selectedInvoiceDetails[0].createdAt).toLocaleString()}
+                  </Typography>
+                </Grid>
+              </Grid>
+
+              <Divider sx={{ my: 2 }} />
+
+              <Typography variant="h6" gutterBottom>
+                Invoice Items
+              </Typography>
+              
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>PO NO.</TableCell>
+                      <TableCell>Line NO.</TableCell>
+                      <TableCell>Item Code</TableCell>
+                      <TableCell>Item Description</TableCell>
+                      <TableCell>Unit Price</TableCell>
+                      <TableCell>Requested Qty</TableCell>
+                      <TableCell>Invoiced %</TableCell>
+                      <TableCell>Amount</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {selectedInvoiceDetails.map((item) => {
+                      // Convert unit_price from decimal string to number
+                      const unitPriceStr = item.huaweiPo?.unit_price;
+                      const unitPrice = typeof unitPriceStr === 'string' ? parseFloat(unitPriceStr) : 
+                                       typeof unitPriceStr === 'number' ? unitPriceStr : 0;
+                      
+                      // Convert requested_quantity from decimal string to number
+                      const qtyStr = item.huaweiPo?.requested_quantity;
+                      const requestedQty = typeof qtyStr === 'string' ? parseFloat(qtyStr) : 
+                                         typeof qtyStr === 'number' ? qtyStr : 0;
+                      
+                      const amount = unitPrice * item.invoiced_percentage / 100;
+                      
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.huaweiPo?.po_no}</TableCell>
+                          <TableCell>{item.huaweiPo?.line_no}</TableCell>
+                          <TableCell>{item.huaweiPo?.item_code}</TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                              {item.huaweiPo?.item_description}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>${unitPrice.toFixed(2)}</TableCell>
+                          <TableCell>{requestedQty.toFixed(0)}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={`${item.invoiced_percentage}%`} 
+                              color="primary" 
+                              size="small" 
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="bold" color="primary">
+                              ${amount.toFixed(2)}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Loading invoice details...
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setViewDialogOpen(false)}>
             Close
           </Button>
+          {selectedInvoiceDetails.length > 0 && (
+            <Button onClick={handleDownloadPDF} startIcon={<DownloadIcon />} disabled={isDownloadingPDF}>
+              {isDownloadingPDF ? 'Downloading...' : 'Download PDF'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>
