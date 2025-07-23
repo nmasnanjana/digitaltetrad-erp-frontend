@@ -27,7 +27,7 @@ import {
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { getExpensesByJob } from '@/api/expenseApi';
-import { uploadHuaweiPoExcel, getHuaweiPosByJobId } from '@/api/huaweiPoApi';
+import { uploadHuaweiPoExcel, getHuaweiPosByJobId, deleteHuaweiPoByJobId } from '@/api/huaweiPoApi';
 import * as XLSX from 'xlsx';
 
 interface HuaweiPoData {
@@ -72,6 +72,10 @@ export const JobView: React.FC<JobViewProps> = ({
   const [huaweiPoData, setHuaweiPoData] = useState<any[]>([]);
   const [huaweiPoLoading, setHuaweiPoLoading] = useState(true);
   const [huaweiPoError, setHuaweiPoError] = useState<string | null>(null);
+
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const loadExpenses = async () => {
@@ -290,6 +294,38 @@ export const JobView: React.FC<JobViewProps> = ({
     }
   };
 
+  const handleDeleteHuaweiPo = async () => {
+    if (!isHuaweiJob()) {
+      console.error('Not a Huawei job');
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      
+      const response = await deleteHuaweiPoByJobId(job.id);
+      
+      console.log('Delete successful:', response);
+      
+      // Show success message
+      alert(`Successfully deleted ${response.data.records_deleted} Huawei PO records for job ${job.id}`);
+      
+      // Close dialog
+      setDeleteDialogOpen(false);
+      
+      // Refresh Huawei PO data (should be empty now)
+      setHuaweiPoData([]);
+      setHuaweiPoError(null);
+      
+    } catch (error) {
+      console.error('Error deleting Huawei PO data:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete Huawei PO data';
+      alert(`Delete failed: ${errorMessage}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Check if job is associated with Huawei customer
   const isHuaweiJob = () => {
     return job.customer?.name?.toLowerCase() === 'huawei';
@@ -451,9 +487,22 @@ export const JobView: React.FC<JobViewProps> = ({
         {/* Huawei PO Data Section - Only for Huawei jobs */}
         {isHuaweiJob() && (
           <Box sx={{ mt: 4 }}>
-            <Typography variant="h6" gutterBottom>
-              Huawei Purchase Orders
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Huawei Purchase Orders
+              </Typography>
+              {huaweiPoData.length > 0 && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete All PO Data'}
+                </Button>
+              )}
+            </Box>
             
             {huaweiPoLoading && (
               <Box sx={{ mt: 2 }}>
@@ -766,6 +815,37 @@ export const JobView: React.FC<JobViewProps> = ({
               {isProcessing ? 'Uploading...' : 'Submit Data'}
             </Button>
           )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Delete Huawei PO Data</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            Are you sure you want to delete all Huawei PO data for this job?
+          </Typography>
+          <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+            This action will:
+          </Typography>
+          <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+            <li>Delete all {huaweiPoData.length} PO records from the database</li>
+            <li>Remove the uploaded Excel file from the server</li>
+            <li>This action cannot be undone</li>
+          </ul>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteHuaweiPo} 
+            color="error" 
+            variant="contained"
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete All Data'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Card>

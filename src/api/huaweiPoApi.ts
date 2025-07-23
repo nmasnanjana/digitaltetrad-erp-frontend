@@ -89,4 +89,10 @@ export const getAllHuaweiPos = async (params?: {
 }) => {
   const response = await apiClient.get('/huawei-pos', { params });
   return response.data;
+};
+
+// Delete all Huawei PO data for a specific job
+export const deleteHuaweiPoByJobId = async (job_id: string) => {
+  const response = await apiClient.delete(`/huawei-pos/job/${job_id}`);
+  return response.data;
 }; 
