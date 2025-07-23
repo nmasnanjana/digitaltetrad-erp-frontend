@@ -27,7 +27,7 @@ import {
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { getExpensesByJob } from '@/api/expenseApi';
-import { uploadHuaweiPoExcel, getHuaweiPosByJobId, deleteHuaweiPoByJobId } from '@/api/huaweiPoApi';
+import { uploadHuaweiPoExcel, getHuaweiPosByJobId, deleteHuaweiPoByJobId, downloadHuaweiPoFile } from '@/api/huaweiPoApi';
 import * as XLSX from 'xlsx';
 
 interface HuaweiPoData {
@@ -76,6 +76,9 @@ export const JobView: React.FC<JobViewProps> = ({
   // Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Download state
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     const loadExpenses = async () => {
@@ -326,6 +329,38 @@ export const JobView: React.FC<JobViewProps> = ({
     }
   };
 
+  const handleDownloadHuaweiPo = async () => {
+    if (!isHuaweiJob()) {
+      console.error('Not a Huawei job');
+      return;
+    }
+
+    try {
+      setIsDownloading(true);
+      
+      const blob = await downloadHuaweiPoFile(job.id);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `huawei_po_${job.id}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log('Download successful');
+      
+    } catch (error) {
+      console.error('Error downloading Huawei PO file:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to download file';
+      alert(`Download failed: ${errorMessage}`);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   // Check if job is associated with Huawei customer
   const isHuaweiJob = () => {
     return job.customer?.name?.toLowerCase() === 'huawei';
@@ -492,15 +527,26 @@ export const JobView: React.FC<JobViewProps> = ({
                 Huawei Purchase Orders
               </Typography>
               {huaweiPoData.length > 0 && (
-                <Button
-                  variant="outlined"
-                  color="error"
-                  size="small"
-                  onClick={() => setDeleteDialogOpen(true)}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? 'Deleting...' : 'Delete All PO Data'}
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    size="small"
+                    onClick={handleDownloadHuaweiPo}
+                    disabled={isDownloading}
+                  >
+                    {isDownloading ? 'Downloading...' : 'Download PO File'}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    onClick={() => setDeleteDialogOpen(true)}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? 'Deleting...' : 'Delete All PO Data'}
+                  </Button>
+                </Box>
               )}
             </Box>
             
