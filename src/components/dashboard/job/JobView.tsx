@@ -21,9 +21,26 @@ import {
   TableHead,
   TableRow,
   Paper,
+  LinearProgress,
+  TextField,
+  IconButton,
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { getExpensesByJob } from '@/api/expenseApi';
+import { uploadHuaweiPoExcel, getHuaweiPosByJobId } from '@/api/huaweiPoApi';
+import * as XLSX from 'xlsx';
+
+interface HuaweiPoData {
+  site_code: string;
+  site_id: string;
+  site_name: string;
+  po_no: string;
+  line_no: string;
+  item_code: string;
+  item_description: string;
+  unit_price: number;
+  requested_quantity: number;
+}
 
 interface JobViewProps {
   job: Job;
@@ -43,6 +60,18 @@ export const JobView: React.FC<JobViewProps> = ({
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Upload dialog states
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [excelData, setExcelData] = useState<HuaweiPoData[]>([]);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Huawei PO data states
+  const [huaweiPoData, setHuaweiPoData] = useState<any[]>([]);
+  const [huaweiPoLoading, setHuaweiPoLoading] = useState(true);
+  const [huaweiPoError, setHuaweiPoError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadExpenses = async () => {
@@ -62,6 +91,32 @@ export const JobView: React.FC<JobViewProps> = ({
     };
 
     loadExpenses();
+  }, [job.id]);
+
+  // Load Huawei PO data for Huawei jobs
+  useEffect(() => {
+    const loadHuaweiPoData = async () => {
+      if (!isHuaweiJob()) {
+        setHuaweiPoLoading(false);
+        return;
+      }
+
+      try {
+        setHuaweiPoLoading(true);
+        console.log('Loading Huawei PO data for job:', job.id);
+        const response = await getHuaweiPosByJobId(job.id);
+        console.log('Huawei PO response:', response);
+        setHuaweiPoData(response);
+        setHuaweiPoError(null);
+      } catch (err) {
+        console.error('Error loading Huawei PO data:', err);
+        setHuaweiPoError(err instanceof Error ? err.message : 'Failed to load Huawei PO data');
+      } finally {
+        setHuaweiPoLoading(false);
+      }
+    };
+
+    loadHuaweiPoData();
   }, [job.id]);
 
   const getStatusColor = (status: Job['status']) => {
@@ -107,6 +162,137 @@ export const JobView: React.FC<JobViewProps> = ({
       onUpdateStatus(nextStatus);
       setStatusDialogOpen(false);
     }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      processExcelFile(file);
+    }
+  };
+
+  const processExcelFile = async (file: File) => {
+    setIsProcessing(true);
+    setProcessingProgress(0);
+    setUploadDialogOpen(true);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      setProcessingProgress(20);
+
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      setProcessingProgress(40);
+
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      setProcessingProgress(60);
+
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      setProcessingProgress(80);
+
+      // Extract headers from first row
+      const headers = jsonData[0] as string[];
+      
+      // Find column indices
+      const columnMap = {
+        site_code: headers.findIndex(h => h?.toLowerCase().includes('site code')),
+        site_id: headers.findIndex(h => h?.toLowerCase().includes('site id')),
+        site_name: headers.findIndex(h => h?.toLowerCase().includes('site name')),
+        po_no: headers.findIndex(h => h?.toLowerCase().includes('po no')),
+        line_no: headers.findIndex(h => h?.toLowerCase().includes('po line no')),
+        item_code: headers.findIndex(h => h?.toLowerCase().includes('item code')),
+        item_description: headers.findIndex(h => h?.toLowerCase().includes('item description')),
+        unit_price: headers.findIndex(h => h?.toLowerCase().includes('unit price')),
+        requested_quantity: headers.findIndex(h => h?.toLowerCase().includes('requested qty')),
+      };
+
+      // Process data rows (skip header row)
+      const processedData: HuaweiPoData[] = [];
+      for (let i = 1; i < jsonData.length; i++) {
+        const row = jsonData[i] as any[];
+        if (row && row.some(cell => cell !== undefined && cell !== null && cell !== '')) {
+          processedData.push({
+            site_code: row[columnMap.site_code]?.toString() || '',
+            site_id: row[columnMap.site_id]?.toString() || '',
+            site_name: row[columnMap.site_name]?.toString() || '',
+            po_no: row[columnMap.po_no]?.toString() || '',
+            line_no: row[columnMap.line_no]?.toString() || '',
+            item_code: row[columnMap.item_code]?.toString() || '',
+            item_description: row[columnMap.item_description]?.toString() || '',
+            unit_price: parseFloat(row[columnMap.unit_price]) || 0,
+            requested_quantity: parseInt(row[columnMap.requested_quantity]) || 0,
+          });
+        }
+      }
+
+      setExcelData(processedData);
+      setProcessingProgress(100);
+    } catch (error) {
+      console.error('Error processing Excel file:', error);
+      setError('Failed to process Excel file');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDataEdit = (index: number, field: keyof HuaweiPoData, value: string | number) => {
+    const updatedData = [...excelData];
+    updatedData[index] = { ...updatedData[index], [field]: value };
+    setExcelData(updatedData);
+  };
+
+  const handleSubmitData = async () => {
+    if (!selectedFile || !isHuaweiJob()) {
+      console.error('No file selected or not a Huawei job');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      setProcessingProgress(0);
+
+      // Upload file and data to backend
+      const response = await uploadHuaweiPoExcel(
+        job.id,
+        job.customer_id,
+        selectedFile
+      );
+
+      console.log('Upload successful:', response);
+      
+      // Show success message (you can add a toast notification here)
+      alert(`Successfully uploaded ${response.data.records_imported} records for job ${job.id}`);
+      
+      // Close dialog and reset state
+      setUploadDialogOpen(false);
+      setExcelData([]);
+      setSelectedFile(null);
+      setProcessingProgress(0);
+      
+      // Refresh Huawei PO data to show the newly uploaded data
+      if (isHuaweiJob()) {
+        try {
+          const huaweiPoResponse = await getHuaweiPosByJobId(job.id);
+          setHuaweiPoData(huaweiPoResponse);
+          setHuaweiPoError(null);
+        } catch (err) {
+          console.error('Error refreshing Huawei PO data:', err);
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error uploading data:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload data';
+      alert(`Upload failed: ${errorMessage}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Check if job is associated with Huawei customer
+  const isHuaweiJob = () => {
+    return job.customer?.name?.toLowerCase() === 'huawei';
   };
 
   return (
@@ -244,7 +430,7 @@ export const JobView: React.FC<JobViewProps> = ({
                       <TableCell>{expense.description}</TableCell>
                       <TableCell>${expense.amount.toFixed(2)}</TableCell>
                       <TableCell>
-                        {new Date(expense.createdAt).toLocaleDateString()}
+                        {expense.created_at ? new Date(expense.created_at).toLocaleDateString() : '-'}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -262,6 +448,86 @@ export const JobView: React.FC<JobViewProps> = ({
           </Box>
         )}
 
+        {/* Huawei PO Data Section - Only for Huawei jobs */}
+        {isHuaweiJob() && (
+          <Box sx={{ mt: 4 }}>
+            <Typography variant="h6" gutterBottom>
+              Huawei Purchase Orders
+            </Typography>
+            
+            {huaweiPoLoading && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" gutterBottom>
+                  Loading Huawei PO data...
+                </Typography>
+                <LinearProgress />
+              </Box>
+            )}
+
+            {huaweiPoError && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" color="error" gutterBottom>
+                  Error loading Huawei PO data: {huaweiPoError}
+                </Typography>
+              </Box>
+            )}
+
+            {!huaweiPoLoading && !huaweiPoError && huaweiPoData.length > 0 && (
+              <TableContainer component={Paper} sx={{ maxHeight: 400, overflowX: 'auto' }}>
+                <Table stickyHeader size="small" sx={{ minWidth: 1200 }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ minWidth: 100 }}>Site Code</TableCell>
+                      <TableCell sx={{ minWidth: 100 }}>Site ID</TableCell>
+                      <TableCell sx={{ minWidth: 150 }}>Site Name</TableCell>
+                      <TableCell sx={{ minWidth: 120 }}>PO NO.</TableCell>
+                      <TableCell sx={{ minWidth: 120 }}>PO Line NO.</TableCell>
+                      <TableCell sx={{ minWidth: 120 }}>Item Code</TableCell>
+                      <TableCell sx={{ minWidth: 200 }}>Item Description</TableCell>
+                      <TableCell sx={{ minWidth: 100 }}>Unit Price</TableCell>
+                      <TableCell sx={{ minWidth: 120 }}>Requested Qty</TableCell>
+                      <TableCell sx={{ minWidth: 120 }}>Uploaded At</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {huaweiPoData.map((po, index) => (
+                      <TableRow key={po.id || index}>
+                        <TableCell sx={{ minWidth: 100 }}>{po.site_code}</TableCell>
+                        <TableCell sx={{ minWidth: 100 }}>{po.site_id}</TableCell>
+                        <TableCell sx={{ minWidth: 150 }}>{po.site_name}</TableCell>
+                        <TableCell sx={{ minWidth: 120 }}>{po.po_no}</TableCell>
+                        <TableCell sx={{ minWidth: 120 }}>{po.line_no}</TableCell>
+                        <TableCell sx={{ minWidth: 120 }}>{po.item_code}</TableCell>
+                        <TableCell sx={{ minWidth: 200 }}>
+                          <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                            {po.item_description}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ minWidth: 100 }}>
+                          ${typeof po.unit_price === 'number' ? po.unit_price.toFixed(2) : 
+                            po.unit_price ? parseFloat(po.unit_price).toFixed(2) : '0.00'}
+                        </TableCell>
+                        <TableCell sx={{ minWidth: 120 }}>{po.requested_quantity}</TableCell>
+                        <TableCell sx={{ minWidth: 120 }}>
+                          {po.uploaded_at ? new Date(po.uploaded_at).toLocaleDateString() : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+
+            {!huaweiPoLoading && !huaweiPoError && huaweiPoData.length === 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  No Huawei PO data found for this job. Upload an Excel file to get started.
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        )}
+
         <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
           {getNextStatus(job.status) && (
             <Button
@@ -275,6 +541,25 @@ export const JobView: React.FC<JobViewProps> = ({
               Next Phase
             </Button>
           )}
+          {isHuaweiJob() && (
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={() => {
+                // Trigger file input
+                document.getElementById('excel-file-input')?.click();
+              }}
+            >
+              Upload Po
+            </Button>
+          )}
+          <input
+            id="excel-file-input"
+            type="file"
+            accept=".xlsx,.xls"
+            style={{ display: 'none' }}
+            onChange={handleFileUpload}
+          />
           <Button
             variant="contained"
             color="primary"
@@ -302,6 +587,185 @@ export const JobView: React.FC<JobViewProps> = ({
           <Button onClick={handleStatusUpdate} color="primary">
             Update
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Upload Dialog */}
+      <Dialog 
+        open={uploadDialogOpen} 
+        onClose={() => setUploadDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>Upload PO Excel File</DialogTitle>
+        <DialogContent>
+          {isProcessing && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" gutterBottom>
+                Processing Excel file...
+              </Typography>
+              <LinearProgress variant="determinate" value={processingProgress} />
+              <Typography variant="caption" color="text.secondary">
+                {processingProgress}% Complete
+              </Typography>
+            </Box>
+          )}
+
+          {!isProcessing && excelData.length > 0 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Extracted Data ({excelData.length} rows)
+              </Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Review and edit the data before submitting
+              </Typography>
+              
+              <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+                <Table stickyHeader size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Site Code</TableCell>
+                      <TableCell>Site ID</TableCell>
+                      <TableCell>Site Name</TableCell>
+                      <TableCell>PO NO.</TableCell>
+                      <TableCell>PO Line NO.</TableCell>
+                      <TableCell>Item Code</TableCell>
+                      <TableCell>Item Description</TableCell>
+                      <TableCell>Unit Price</TableCell>
+                      <TableCell>Requested Qty</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {excelData.map((row, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            value={row.site_code}
+                            onChange={(e) => handleDataEdit(index, 'site_code', e.target.value)}
+                            variant="standard"
+                            disabled={isProcessing}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            value={row.site_id}
+                            onChange={(e) => handleDataEdit(index, 'site_id', e.target.value)}
+                            variant="standard"
+                            disabled={isProcessing}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            value={row.site_name}
+                            onChange={(e) => handleDataEdit(index, 'site_name', e.target.value)}
+                            variant="standard"
+                            disabled={isProcessing}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            value={row.po_no}
+                            onChange={(e) => handleDataEdit(index, 'po_no', e.target.value)}
+                            variant="standard"
+                            disabled={isProcessing}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            value={row.line_no}
+                            onChange={(e) => handleDataEdit(index, 'line_no', e.target.value)}
+                            variant="standard"
+                            disabled={isProcessing}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            value={row.item_code}
+                            onChange={(e) => handleDataEdit(index, 'item_code', e.target.value)}
+                            variant="standard"
+                            disabled={isProcessing}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            value={row.item_description}
+                            onChange={(e) => handleDataEdit(index, 'item_description', e.target.value)}
+                            variant="standard"
+                            multiline
+                            maxRows={2}
+                            disabled={isProcessing}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            type="number"
+                            value={row.unit_price}
+                            onChange={(e) => handleDataEdit(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                            variant="standard"
+                            disabled={isProcessing}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            type="number"
+                            value={row.requested_quantity}
+                            onChange={(e) => handleDataEdit(index, 'requested_quantity', parseInt(e.target.value) || 0)}
+                            variant="standard"
+                            disabled={isProcessing}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+
+          {isProcessing && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" gutterBottom>
+                Uploading data to server...
+              </Typography>
+              <LinearProgress />
+            </Box>
+          )}
+
+          {!isProcessing && excelData.length === 0 && !error && (
+            <Typography variant="body2" color="text.secondary">
+              No data found in the Excel file or file format is not supported.
+            </Typography>
+          )}
+
+          {error && (
+            <Typography variant="body2" color="error">
+              {error}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUploadDialogOpen(false)} disabled={isProcessing}>
+            Cancel
+          </Button>
+          {excelData.length > 0 && (
+            <Button 
+              onClick={handleSubmitData} 
+              color="primary" 
+              variant="contained"
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Uploading...' : 'Submit Data'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Card>
