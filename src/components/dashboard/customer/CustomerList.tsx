@@ -101,6 +101,7 @@ export const ListCustomer: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell>Name</TableCell>
+              <TableCell>Address</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -108,6 +109,17 @@ export const ListCustomer: React.FC = () => {
             {customers.map((customer) => (
               <TableRow key={customer.id}>
                 <TableCell>{customer.name}</TableCell>
+                <TableCell>
+                  {customer.address ? (
+                    <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                      {customer.address}
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No address
+                    </Typography>
+                  )}
+                </TableCell>
                 <TableCell align="right">
                   <IconButton
                     color="primary"

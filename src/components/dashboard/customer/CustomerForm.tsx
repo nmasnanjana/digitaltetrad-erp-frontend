@@ -29,6 +29,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
   mode,
 }) => {
   const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -37,8 +38,10 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
     if (open) {
       if (customer) {
         setName(customer.name);
+        setAddress(customer.address || '');
       } else {
         setName('');
+        setAddress('');
       }
       setError(null);
     }
@@ -46,6 +49,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
 
   const handleClose = () => {
     setName('');
+    setAddress('');
     setError(null);
     onClose();
   };
@@ -57,9 +61,9 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
 
     try {
       if (mode === 'create') {
-        await createCustomer({ name });
+        await createCustomer({ name, address });
       } else if (customer) {
-        await updateCustomer(customer.id.toString(), { name });
+        await updateCustomer(customer.id.toString(), { name, address });
       }
       onSuccess();
       handleClose();
@@ -91,6 +95,18 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Address"
+            type="text"
+            fullWidth
+            multiline
+            rows={4}
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Enter complete address including street, city, state, postal code, country"
           />
         </DialogContent>
         <DialogActions>
