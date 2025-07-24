@@ -22,14 +22,29 @@ import {
   Divider,
   TextField,
   InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Stack,
+  OutlinedInput,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DownloadIcon from '@mui/icons-material/Download';
 import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import { getAllInvoices, deleteInvoice, InvoiceRecord } from '@/api/huaweiInvoiceApi';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+
+interface FilterState {
+  customer: string;
+  minAmount: string;
+  maxAmount: string;
+  fromDate: string;
+  toDate: string;
+}
 
 export const ViewInvoices: React.FC = () => {
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
@@ -41,25 +56,97 @@ export const ViewInvoices: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [filters, setFilters] = useState<FilterState>({
+    customer: '',
+    minAmount: '',
+    maxAmount: '',
+    fromDate: '',
+    toDate: ''
+  });
 
   useEffect(() => {
     loadAllInvoices();
   }, []);
 
   useEffect(() => {
-    // Filter invoices based on search term
-    const filtered = invoices.filter(invoice => {
-      const searchLower = searchTerm.toLowerCase();
-      return (
-        invoice.invoice_no.toLowerCase().includes(searchLower) ||
-        invoice.huaweiPo?.po_no?.toLowerCase().includes(searchLower) ||
-        invoice.huaweiPo?.item_code?.toLowerCase().includes(searchLower) ||
-        invoice.huaweiPo?.item_description?.toLowerCase().includes(searchLower) ||
-        invoice.huaweiPo?.job?.name?.toLowerCase().includes(searchLower)
+    // Apply both search and filters
+    let filtered = invoices;
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(invoice => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          invoice.invoice_no.toLowerCase().includes(searchLower) ||
+          invoice.huaweiPo?.po_no?.toLowerCase().includes(searchLower) ||
+          invoice.huaweiPo?.item_code?.toLowerCase().includes(searchLower) ||
+          invoice.huaweiPo?.item_description?.toLowerCase().includes(searchLower) ||
+          invoice.huaweiPo?.job?.name?.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+    
+    // Apply customer filter
+    if (filters.customer) {
+      filtered = filtered.filter(invoice => 
+        invoice.huaweiPo?.job?.customer?.name === filters.customer
       );
-    });
+    }
+    
+    // Apply amount filters
+    if (filters.minAmount || filters.maxAmount) {
+      filtered = filtered.filter(invoice => {
+        const unitPriceStr = invoice.huaweiPo?.unit_price;
+        const unitPrice = typeof unitPriceStr === 'string' ? parseFloat(unitPriceStr) : 
+                         typeof unitPriceStr === 'number' ? unitPriceStr : 0;
+        const amount = unitPrice * invoice.invoiced_percentage / 100;
+        
+        const minAmount = filters.minAmount ? parseFloat(filters.minAmount) : 0;
+        const maxAmount = filters.maxAmount ? parseFloat(filters.maxAmount) : Infinity;
+        
+        return amount >= minAmount && amount <= maxAmount;
+      });
+    }
+    
+    // Apply date filters
+    if (filters.fromDate || filters.toDate) {
+      filtered = filtered.filter(invoice => {
+        const invoiceDate = new Date(invoice.createdAt);
+        const fromDate = filters.fromDate ? new Date(filters.fromDate) : new Date(0);
+        const toDate = filters.toDate ? new Date(filters.toDate) : new Date();
+        
+        return invoiceDate >= fromDate && invoiceDate <= toDate;
+      });
+    }
+    
     setFilteredInvoices(filtered);
-  }, [invoices, searchTerm]);
+  }, [invoices, searchTerm, filters]);
+
+  // Get unique customers for filter dropdown
+  const uniqueCustomers = Array.from(new Set(
+    invoices
+      .map(invoice => invoice.huaweiPo?.job?.customer?.name)
+      .filter(Boolean)
+  )).sort();
+
+  const clearSearch = () => {
+    setSearchTerm('');
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      customer: '',
+      minAmount: '',
+      maxAmount: '',
+      fromDate: '',
+      toDate: ''
+    });
+  };
+
+  const clearAll = () => {
+    clearSearch();
+    clearFilters();
+  };
 
   const loadAllInvoices = async () => {
     try {
@@ -243,11 +330,11 @@ export const ViewInvoices: React.FC = () => {
   return (
     <Box>
       <Card>
-        <CardContent>
+        <CardContent sx={{ p: 2 }}>
           <Typography variant="h6" gutterBottom>
             All Invoices
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             View and manage all invoices across all customers
           </Typography>
           
@@ -264,32 +351,169 @@ export const ViewInvoices: React.FC = () => {
                   <SearchIcon />
                 </InputAdornment>
               ),
+              endAdornment: searchTerm && (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={clearSearch}
+                    edge="end"
+                  >
+                    <ClearIcon />
+                  </IconButton>
+                </InputAdornment>
+              ),
             }}
-            sx={{ mb: 2 }}
+            sx={{ mb: 1.5 }}
           />
+
+          {/* Filter Section */}
+          <Box sx={{ mb: 2 }}>
+            <Card variant="outlined" sx={{ p: 1.5 }}>
+              <Typography variant="subtitle2" gutterBottom sx={{ mb: 1.5 }}>
+                Filters
+              </Typography>
+              <Grid container spacing={1.5}>
+                {/* Customer Filter */}
+                <Grid item xs={12} md={3}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Customer</InputLabel>
+                    <Select
+                      value={filters.customer}
+                      onChange={(e) => setFilters({ ...filters, customer: e.target.value })}
+                      label="Customer"
+                    >
+                      <MenuItem value="">All Customers</MenuItem>
+                      {uniqueCustomers.map((customer) => (
+                        <MenuItem key={customer} value={customer}>
+                          {customer}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {/* Amount Range */}
+                <Grid item xs={12} md={4}>
+                  <Stack direction="row" spacing={1}>
+                    <TextField
+                      label="Min Amount"
+                      type="number"
+                      size="small"
+                      value={filters.minAmount}
+                      onChange={(e) => setFilters({ ...filters, minAmount: e.target.value })}
+                      placeholder="0.00"
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                      }}
+                      sx={{ flex: 1 }}
+                    />
+                    <TextField
+                      label="Max Amount"
+                      type="number"
+                      size="small"
+                      value={filters.maxAmount}
+                      onChange={(e) => setFilters({ ...filters, maxAmount: e.target.value })}
+                      placeholder="∞"
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                      }}
+                      sx={{ flex: 1 }}
+                    />
+                  </Stack>
+                </Grid>
+
+                {/* Date Range */}
+                <Grid item xs={12} md={4}>
+                  <Stack direction="row" spacing={1}>
+                    <TextField
+                      label="From Date"
+                      type="date"
+                      size="small"
+                      value={filters.fromDate}
+                      onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })}
+                      InputLabelProps={{ shrink: true }}
+                      sx={{ flex: 1 }}
+                    />
+                    <TextField
+                      label="To Date"
+                      type="date"
+                      size="small"
+                      value={filters.toDate}
+                      onChange={(e) => setFilters({ ...filters, toDate: e.target.value })}
+                      InputLabelProps={{ shrink: true }}
+                      sx={{ flex: 1 }}
+                    />
+                  </Stack>
+                </Grid>
+
+                {/* Clear Filters Button */}
+                <Grid item xs={12} md={1}>
+                  <Button
+                    variant="outlined"
+                    onClick={clearFilters}
+                    size="small"
+                    fullWidth
+                    disabled={!Object.values(filters).some(v => v)}
+                  >
+                    Clear
+                  </Button>
+                </Grid>
+              </Grid>
+
+              {/* Active Filters Display */}
+              {(filters.customer || filters.minAmount || filters.maxAmount || filters.fromDate || filters.toDate) && (
+                <Box sx={{ mt: 1.5, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  <Typography variant="caption" sx={{ alignSelf: 'center', mr: 1 }}>
+                    Active Filters:
+                  </Typography>
+                  {filters.customer && (
+                    <Chip
+                      label={`Customer: ${filters.customer}`}
+                      size="small"
+                      onDelete={() => setFilters({ ...filters, customer: '' })}
+                    />
+                  )}
+                  {(filters.minAmount || filters.maxAmount) && (
+                    <Chip
+                      label={`Amount: $${filters.minAmount || '0'} - $${filters.maxAmount || '∞'}`}
+                      size="small"
+                      onDelete={() => setFilters({ ...filters, minAmount: '', maxAmount: '' })}
+                    />
+                  )}
+                  {(filters.fromDate || filters.toDate) && (
+                    <Chip
+                      label={`Date: ${filters.fromDate || 'Any'} to ${filters.toDate || 'Any'}`}
+                      size="small"
+                      onDelete={() => setFilters({ ...filters, fromDate: '', toDate: '' })}
+                    />
+                  )}
+                </Box>
+              )}
+            </Card>
+          </Box>
         </CardContent>
       </Card>
 
       {/* Error/Success Messages */}
       {error && (
-        <Card sx={{ mt: 2, bgcolor: 'error.light' }}>
-          <CardContent>
+        <Card sx={{ mt: 1.5, bgcolor: 'error.light' }}>
+          <CardContent sx={{ p: 1.5 }}>
             <Typography color="error">{error}</Typography>
           </CardContent>
         </Card>
       )}
 
       {success && (
-        <Card sx={{ mt: 2, bgcolor: 'success.light' }}>
-          <CardContent>
+        <Card sx={{ mt: 1.5, bgcolor: 'success.light' }}>
+          <CardContent sx={{ p: 1.5 }}>
             <Typography color="success.main">{success}</Typography>
           </CardContent>
         </Card>
       )}
 
       {/* Invoices List */}
-      <Card sx={{ mt: 2 }}>
-        <CardContent>
+      <Card sx={{ mt: 1.5 }}>
+        <CardContent sx={{ p: 2 }}>
           <Typography variant="h6" gutterBottom>
             Invoice Summary ({invoiceSummaries.length} invoices)
           </Typography>
