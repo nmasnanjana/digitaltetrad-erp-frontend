@@ -29,6 +29,7 @@ import { useRouter } from 'next/navigation';
 import { getExpensesByJob } from '@/api/expenseApi';
 import { uploadHuaweiPoExcel, getHuaweiPosByJobId, deleteHuaweiPoByJobId, downloadHuaweiPoFile } from '@/api/huaweiPoApi';
 import * as XLSX from 'xlsx';
+import LockIcon from '@mui/icons-material/Lock';
 
 interface HuaweiPoData {
   site_code: string;
@@ -368,6 +369,26 @@ export const JobView: React.FC<JobViewProps> = ({
     return job.customer?.name?.toLowerCase() === 'huawei';
   };
 
+  // Helper function to check if any PO has been invoiced
+  const hasInvoicedPos = () => {
+    return huaweiPoData.some(po => {
+      const invoicedPercentage = typeof po.invoiced_percentage === 'string' ? 
+        parseFloat(po.invoiced_percentage) : 
+        typeof po.invoiced_percentage === 'number' ? po.invoiced_percentage : 0;
+      return invoicedPercentage > 0;
+    });
+  };
+
+  // Helper function to count frozen POs
+  const getFrozenPoCount = () => {
+    return huaweiPoData.filter(po => {
+      const invoicedPercentage = typeof po.invoiced_percentage === 'string' ? 
+        parseFloat(po.invoiced_percentage) : 
+        typeof po.invoiced_percentage === 'number' ? po.invoiced_percentage : 0;
+      return invoicedPercentage > 0;
+    }).length;
+  };
+
   return (
     <Card>
       <CardContent>
@@ -544,7 +565,8 @@ export const JobView: React.FC<JobViewProps> = ({
                     color="error"
                     size="small"
                     onClick={() => setDeleteDialogOpen(true)}
-                    disabled={isDeleting}
+                    disabled={isDeleting || hasInvoicedPos()}
+                    title={hasInvoicedPos() ? "Cannot delete - some PO records have been invoiced" : ""}
                   >
                     {isDeleting ? 'Deleting...' : 'Delete All PO Data'}
                   </Button>
@@ -584,39 +606,89 @@ export const JobView: React.FC<JobViewProps> = ({
                       <TableCell sx={{ minWidth: 100 }}>Unit Price</TableCell>
                       <TableCell sx={{ minWidth: 120 }}>Requested Qty</TableCell>
                       <TableCell sx={{ minWidth: 120 }}>Invoiced %</TableCell>
+                      <TableCell sx={{ minWidth: 120 }}>Status</TableCell>
                       <TableCell sx={{ minWidth: 120 }}>Uploaded At</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {huaweiPoData.map((po, index) => (
-                      <TableRow key={po.id || index}>
-                        <TableCell sx={{ minWidth: 100 }}>{po.site_code}</TableCell>
-                        <TableCell sx={{ minWidth: 100 }}>{po.site_id}</TableCell>
-                        <TableCell sx={{ minWidth: 150 }}>{po.site_name}</TableCell>
-                        <TableCell sx={{ minWidth: 120 }}>{po.po_no}</TableCell>
-                        <TableCell sx={{ minWidth: 120 }}>{po.line_no}</TableCell>
-                        <TableCell sx={{ minWidth: 120 }}>{po.item_code}</TableCell>
-                        <TableCell sx={{ minWidth: 200 }}>
-                          <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
-                            {po.item_description}
-                          </Typography>
-                        </TableCell>
-                        <TableCell sx={{ minWidth: 100 }}>
-                          ${typeof po.unit_price === 'number' ? po.unit_price.toFixed(2) : 
-                            po.unit_price ? parseFloat(po.unit_price).toFixed(2) : '0.00'}
-                        </TableCell>
-                        <TableCell sx={{ minWidth: 120 }}>{po.requested_quantity}</TableCell>
-                        <TableCell sx={{ minWidth: 120 }}>
-                          {po.invoiced_percentage ? `${po.invoiced_percentage}%` : '-'}
-                        </TableCell>
-                        <TableCell sx={{ minWidth: 120 }}>
-                          {po.uploaded_at ? new Date(po.uploaded_at).toLocaleDateString() : '-'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {huaweiPoData.map((po, index) => {
+                      const invoicedPercentage = typeof po.invoiced_percentage === 'string' ? 
+                        parseFloat(po.invoiced_percentage) : 
+                        typeof po.invoiced_percentage === 'number' ? po.invoiced_percentage : 0;
+                      const isFrozen = invoicedPercentage > 0;
+                      
+                      return (
+                        <TableRow 
+                          key={po.id || index}
+                          sx={{
+                            backgroundColor: isFrozen ? 'grey.50' : 'inherit',
+                            '&:hover': {
+                              backgroundColor: isFrozen ? 'grey.100' : 'action.hover'
+                            }
+                          }}
+                        >
+                          <TableCell sx={{ minWidth: 100 }}>{po.site_code}</TableCell>
+                          <TableCell sx={{ minWidth: 100 }}>{po.site_id}</TableCell>
+                          <TableCell sx={{ minWidth: 150 }}>{po.site_name}</TableCell>
+                          <TableCell sx={{ minWidth: 120 }}>{po.po_no}</TableCell>
+                          <TableCell sx={{ minWidth: 120 }}>{po.line_no}</TableCell>
+                          <TableCell sx={{ minWidth: 120 }}>{po.item_code}</TableCell>
+                          <TableCell sx={{ minWidth: 200 }}>
+                            <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                              {po.item_description}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ minWidth: 100 }}>
+                            ${typeof po.unit_price === 'number' ? po.unit_price.toFixed(2) : 
+                              po.unit_price ? parseFloat(po.unit_price).toFixed(2) : '0.00'}
+                          </TableCell>
+                          <TableCell sx={{ minWidth: 120 }}>{po.requested_quantity}</TableCell>
+                          <TableCell sx={{ minWidth: 120 }}>
+                            {invoicedPercentage > 0 ? `${invoicedPercentage}%` : '-'}
+                          </TableCell>
+                          <TableCell sx={{ minWidth: 120 }}>
+                            {isFrozen ? (
+                              <Chip 
+                                label="Frozen" 
+                                color="default" 
+                                size="small"
+                                icon={<LockIcon />}
+                                title="This PO has been invoiced and cannot be modified"
+                                sx={{ 
+                                  backgroundColor: 'grey.200',
+                                  color: 'grey.700',
+                                  '& .MuiChip-icon': {
+                                    color: 'grey.600'
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <Chip 
+                                label="Editable" 
+                                color="success" 
+                                size="small"
+                                title="This PO can be modified"
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell sx={{ minWidth: 120 }}>
+                            {po.uploaded_at ? new Date(po.uploaded_at).toLocaleDateString() : '-'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>
+            )}
+
+            {/* Warning message for invoiced POs */}
+            {hasInvoicedPos() && (
+              <Box sx={{ mt: 1, p: 1.5, bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200', borderRadius: 1 }}>
+                <Typography variant="body2" color="info.dark" sx={{ fontSize: '0.875rem' }}>
+                  <strong>Note:</strong> {getFrozenPoCount()} PO record(s) are frozen due to invoicing. These cannot be modified or deleted.
+                </Typography>
+              </Box>
             )}
 
             {!huaweiPoLoading && !huaweiPoError && huaweiPoData.length === 0 && (
@@ -874,30 +946,63 @@ export const JobView: React.FC<JobViewProps> = ({
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Delete Huawei PO Data</DialogTitle>
         <DialogContent>
-          <Typography variant="body1" gutterBottom>
-            Are you sure you want to delete all Huawei PO data for this job?
-          </Typography>
-          <Typography variant="body2" color="error" sx={{ mt: 2 }}>
-            This action will:
-          </Typography>
-          <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
-            <li>Delete all {huaweiPoData.length} PO records from the database</li>
-            <li>Remove the uploaded Excel file from the server</li>
-            <li>This action cannot be undone</li>
-          </ul>
+          {hasInvoicedPos() ? (
+            <Box>
+              <Typography variant="body1" color="error" gutterBottom>
+                Cannot delete Huawei PO data for this job.
+              </Typography>
+              <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+                The following PO records have been invoiced and cannot be deleted:
+              </Typography>
+              <Box sx={{ mt: 1, p: 2, bgcolor: 'error.light', borderRadius: 1 }}>
+                {huaweiPoData
+                  .filter(po => {
+                    const invoicedPercentage = typeof po.invoiced_percentage === 'string' ? 
+                      parseFloat(po.invoiced_percentage) : 
+                      typeof po.invoiced_percentage === 'number' ? po.invoiced_percentage : 0;
+                    return invoicedPercentage > 0;
+                  })
+                  .map((po, index) => (
+                    <Typography key={po.id || index} variant="body2" color="error.dark">
+                      • PO {po.po_no} (Line {po.line_no}) - {po.invoiced_percentage}% invoiced
+                    </Typography>
+                  ))}
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                PO records with invoices cannot be deleted to maintain data integrity. 
+                You can only delete PO records that have 0% invoiced.
+              </Typography>
+            </Box>
+          ) : (
+            <Box>
+              <Typography variant="body1" gutterBottom>
+                Are you sure you want to delete all Huawei PO data for this job?
+              </Typography>
+              <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+                This action will:
+              </Typography>
+              <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                <li>Delete all {huaweiPoData.length} PO records from the database</li>
+                <li>Remove the uploaded Excel file from the server</li>
+                <li>This action cannot be undone</li>
+              </ul>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
-            Cancel
+            {hasInvoicedPos() ? 'Close' : 'Cancel'}
           </Button>
-          <Button 
-            onClick={handleDeleteHuaweiPo} 
-            color="error" 
-            variant="contained"
-            disabled={isDeleting}
-          >
-            {isDeleting ? 'Deleting...' : 'Delete All Data'}
-          </Button>
+          {!hasInvoicedPos() && (
+            <Button 
+              onClick={handleDeleteHuaweiPo} 
+              color="error" 
+              variant="contained"
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete All Data'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Card>
