@@ -31,4 +31,5 @@ export const navIcons = {
   'fingerprint': Fingerprint,
   'invoice': Invoice,
   'receipt': Receipt,
+  'settings': GearSixIcon,
 } as Record<string, Icon>;
