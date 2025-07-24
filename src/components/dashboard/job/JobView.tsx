@@ -27,9 +27,11 @@ import {
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { getExpensesByJob } from '@/api/expenseApi';
-import { uploadHuaweiPoExcel, getHuaweiPosByJobId, deleteHuaweiPoByJobId, downloadHuaweiPoFile } from '@/api/huaweiPoApi';
+import { uploadHuaweiPoExcel, getHuaweiPosByJobId, deleteHuaweiPoByJobId, downloadHuaweiPoFile, createHuaweiPo, updateHuaweiPo, deleteHuaweiPo } from '@/api/huaweiPoApi';
 import * as XLSX from 'xlsx';
 import LockIcon from '@mui/icons-material/Lock';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 interface HuaweiPoData {
   site_code: string;
@@ -43,6 +45,179 @@ interface HuaweiPoData {
   requested_quantity: number;
   invoiced_percentage: number;
 }
+
+interface AddPoFormProps {
+  onSubmit: (data: any) => void;
+  onCancel: () => void;
+  isSubmitting: boolean;
+  jobId: string;
+  customerId: number;
+  initialData?: any;
+  isEdit?: boolean;
+}
+
+const AddPoForm: React.FC<AddPoFormProps> = ({
+  onSubmit,
+  onCancel,
+  isSubmitting,
+  jobId,
+  customerId,
+  initialData,
+  isEdit = false
+}) => {
+  const [formData, setFormData] = useState({
+    site_code: initialData?.site_code || '',
+    site_id: initialData?.site_id || '',
+    site_name: initialData?.site_name || '',
+    po_no: initialData?.po_no || '',
+    line_no: initialData?.line_no || '',
+    item_code: initialData?.item_code || '',
+    item_description: initialData?.item_description || '',
+    unit_price: initialData?.unit_price || 0,
+    requested_quantity: initialData?.requested_quantity || 0
+  });
+
+  const handleInputChange = (field: string, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      ...formData,
+      job_id: jobId,
+      customer_id: customerId
+    });
+  };
+
+  return (
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Site Code"
+            value={formData.site_code}
+            onChange={(e) => handleInputChange('site_code', e.target.value)}
+            required
+            disabled={isSubmitting}
+            size="small"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Site ID"
+            value={formData.site_id}
+            onChange={(e) => handleInputChange('site_id', e.target.value)}
+            required
+            disabled={isSubmitting}
+            size="small"
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Site Name"
+            value={formData.site_name}
+            onChange={(e) => handleInputChange('site_name', e.target.value)}
+            required
+            disabled={isSubmitting}
+            size="small"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="PO Number"
+            value={formData.po_no}
+            onChange={(e) => handleInputChange('po_no', e.target.value)}
+            required
+            disabled={isSubmitting}
+            size="small"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="PO Line Number"
+            value={formData.line_no}
+            onChange={(e) => handleInputChange('line_no', e.target.value)}
+            required
+            disabled={isSubmitting}
+            size="small"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Item Code"
+            value={formData.item_code}
+            onChange={(e) => handleInputChange('item_code', e.target.value)}
+            required
+            disabled={isSubmitting}
+            size="small"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Unit Price"
+            type="number"
+            value={formData.unit_price}
+            onChange={(e) => handleInputChange('unit_price', parseFloat(e.target.value) || 0)}
+            required
+            disabled={isSubmitting}
+            size="small"
+            inputProps={{ min: 0, step: 0.01 }}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Requested Quantity"
+            type="number"
+            value={formData.requested_quantity}
+            onChange={(e) => handleInputChange('requested_quantity', parseInt(e.target.value) || 0)}
+            required
+            disabled={isSubmitting}
+            size="small"
+            inputProps={{ min: 1 }}
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Item Description"
+            value={formData.item_description}
+            onChange={(e) => handleInputChange('item_description', e.target.value)}
+            required
+            disabled={isSubmitting}
+            size="small"
+            multiline
+            rows={3}
+          />
+        </Grid>
+      </Grid>
+      
+      <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+        <Button onClick={onCancel} disabled={isSubmitting}>
+          Cancel
+        </Button>
+        <Button 
+          type="submit" 
+          variant="contained" 
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (isEdit ? 'Updating...' : 'Adding...') : (isEdit ? 'Update PO' : 'Add PO')}
+        </Button>
+      </Box>
+    </Box>
+  );
+};
 
 interface JobViewProps {
   job: Job;
@@ -81,6 +256,15 @@ export const JobView: React.FC<JobViewProps> = ({
 
   // Download state
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // Add PO dialog state
+  const [addPoDialogOpen, setAddPoDialogOpen] = useState(false);
+
+  // Individual PO management states
+  const [editPoDialogOpen, setEditPoDialogOpen] = useState(false);
+  const [selectedPoForEdit, setSelectedPoForEdit] = useState<any>(null);
+  const [isEditingPo, setIsEditingPo] = useState(false);
+  const [isDeletingIndividualPo, setIsDeletingIndividualPo] = useState(false);
 
   useEffect(() => {
     const loadExpenses = async () => {
@@ -272,7 +456,8 @@ export const JobView: React.FC<JobViewProps> = ({
       console.log('Upload successful:', response);
       
       // Show success message (you can add a toast notification here)
-      alert(`Successfully uploaded ${response.data.records_imported} records for job ${job.id}`);
+      const actionText = huaweiPoData.length === 0 ? 'uploaded' : 'updated';
+      alert(`Successfully ${actionText} ${response.data.records_imported} records for job ${job.id}`);
       
       // Close dialog and reset state
       setUploadDialogOpen(false);
@@ -294,7 +479,8 @@ export const JobView: React.FC<JobViewProps> = ({
     } catch (error) {
       console.error('Error uploading data:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to upload data';
-      alert(`Upload failed: ${errorMessage}`);
+      const actionText = huaweiPoData.length === 0 ? 'Upload' : 'Update';
+      alert(`${actionText} failed: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
     }
@@ -387,6 +573,81 @@ export const JobView: React.FC<JobViewProps> = ({
         typeof po.invoiced_percentage === 'number' ? po.invoiced_percentage : 0;
       return invoicedPercentage > 0;
     }).length;
+  };
+
+  // Helper function to check if all POs are frozen
+  const areAllPosFrozen = () => {
+    return huaweiPoData.length > 0 && getFrozenPoCount() === huaweiPoData.length;
+  };
+
+  // Individual PO management functions
+  const handleAddPo = async (poData: any) => {
+    try {
+      setIsEditingPo(true);
+      await createHuaweiPo(poData);
+      
+      // Refresh PO data
+      const response = await getHuaweiPosByJobId(job.id);
+      setHuaweiPoData(response);
+      setAddPoDialogOpen(false);
+      
+      alert('PO added successfully!');
+    } catch (error) {
+      console.error('Error adding PO:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add PO';
+      alert(`Add PO failed: ${errorMessage}`);
+    } finally {
+      setIsEditingPo(false);
+    }
+  };
+
+  const handleEditPo = async (poData: any) => {
+    try {
+      setIsEditingPo(true);
+      await updateHuaweiPo(selectedPoForEdit.id, poData);
+      
+      // Refresh PO data
+      const response = await getHuaweiPosByJobId(job.id);
+      setHuaweiPoData(response);
+      setEditPoDialogOpen(false);
+      setSelectedPoForEdit(null);
+      
+      alert('PO updated successfully!');
+    } catch (error) {
+      console.error('Error updating PO:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update PO';
+      alert(`Update PO failed: ${errorMessage}`);
+    } finally {
+      setIsEditingPo(false);
+    }
+  };
+
+  const handleDeleteIndividualPo = async (poId: number) => {
+    if (!window.confirm('Are you sure you want to delete this PO record?')) {
+      return;
+    }
+
+    try {
+      setIsDeletingIndividualPo(true);
+      await deleteHuaweiPo(poId);
+      
+      // Refresh PO data
+      const response = await getHuaweiPosByJobId(job.id);
+      setHuaweiPoData(response);
+      
+      alert('PO deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting PO:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete PO';
+      alert(`Delete PO failed: ${errorMessage}`);
+    } finally {
+      setIsDeletingIndividualPo(false);
+    }
+  };
+
+  const openEditPoDialog = (po: any) => {
+    setSelectedPoForEdit(po);
+    setEditPoDialogOpen(true);
   };
 
   return (
@@ -553,12 +814,35 @@ export const JobView: React.FC<JobViewProps> = ({
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button
                     variant="outlined"
+                    color="secondary"
+                    size="small"
+                    onClick={() => {
+                      // Trigger file input for PO variations
+                      document.getElementById('excel-file-input')?.click();
+                    }}
+                    disabled={areAllPosFrozen()}
+                    title={areAllPosFrozen() ? "Cannot update - all PO records have been invoiced and are frozen" : ""}
+                  >
+                    PO Variations
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    size="small"
+                    onClick={() => setAddPoDialogOpen(true)}
+                    disabled={areAllPosFrozen()}
+                    title={areAllPosFrozen() ? "Cannot add - all PO records have been invoiced and are frozen" : ""}
+                  >
+                    Add PO
+                  </Button>
+                  <Button
+                    variant="outlined"
                     color="primary"
                     size="small"
                     onClick={handleDownloadHuaweiPo}
                     disabled={isDownloading}
                   >
-                    {isDownloading ? 'Downloading...' : 'Download PO File'}
+                    {isDownloading ? 'Downloading...' : 'Download PO'}
                   </Button>
                   <Button
                     variant="outlined"
@@ -608,6 +892,7 @@ export const JobView: React.FC<JobViewProps> = ({
                       <TableCell sx={{ minWidth: 120 }}>Invoiced %</TableCell>
                       <TableCell sx={{ minWidth: 120 }}>Status</TableCell>
                       <TableCell sx={{ minWidth: 120 }}>Uploaded At</TableCell>
+                      <TableCell sx={{ minWidth: 100 }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -674,6 +959,24 @@ export const JobView: React.FC<JobViewProps> = ({
                           <TableCell sx={{ minWidth: 120 }}>
                             {po.uploaded_at ? new Date(po.uploaded_at).toLocaleDateString() : '-'}
                           </TableCell>
+                          <TableCell sx={{ minWidth: 100 }}>
+                            <IconButton
+                              size="small"
+                              onClick={() => openEditPoDialog(po)}
+                              disabled={isFrozen}
+                              title="Edit PO"
+                            >
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDeleteIndividualPo(po.id)}
+                              disabled={isFrozen}
+                              title="Delete PO"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -686,7 +989,10 @@ export const JobView: React.FC<JobViewProps> = ({
             {hasInvoicedPos() && (
               <Box sx={{ mt: 1, p: 1.5, bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200', borderRadius: 1 }}>
                 <Typography variant="body2" color="info.dark" sx={{ fontSize: '0.875rem' }}>
-                  <strong>Note:</strong> {getFrozenPoCount()} PO record(s) are frozen due to invoicing. These cannot be modified or deleted.
+                  <strong>Note:</strong> {areAllPosFrozen() 
+                    ? `All ${getFrozenPoCount()} PO record(s) are frozen due to invoicing. No modifications are allowed.`
+                    : `${getFrozenPoCount()} PO record(s) are frozen due to invoicing. These cannot be modified or deleted.`
+                  }
                 </Typography>
               </Box>
             )}
@@ -714,7 +1020,7 @@ export const JobView: React.FC<JobViewProps> = ({
               Next Phase
             </Button>
           )}
-          {isHuaweiJob() && (
+          {isHuaweiJob() && huaweiPoData.length === 0 && (
             <Button
               variant="contained"
               color="secondary"
@@ -723,7 +1029,7 @@ export const JobView: React.FC<JobViewProps> = ({
                 document.getElementById('excel-file-input')?.click();
               }}
             >
-              Upload Po
+              Upload PO
             </Button>
           )}
           <input
@@ -770,7 +1076,9 @@ export const JobView: React.FC<JobViewProps> = ({
         maxWidth="lg"
         fullWidth
       >
-        <DialogTitle>Upload PO Excel File</DialogTitle>
+        <DialogTitle>
+          {huaweiPoData.length === 0 ? 'Upload PO Excel File' : 'PO Variations - Update Existing PO Data'}
+        </DialogTitle>
         <DialogContent>
           {isProcessing && (
             <Box sx={{ mb: 2 }}>
@@ -787,10 +1095,13 @@ export const JobView: React.FC<JobViewProps> = ({
           {!isProcessing && excelData.length > 0 && (
             <Box>
               <Typography variant="h6" gutterBottom>
-                Extracted Data ({excelData.length} rows)
+                {huaweiPoData.length === 0 ? 'Extracted Data' : 'PO Variations Data'} ({excelData.length} rows)
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                Review and edit the data before submitting
+                {huaweiPoData.length === 0 
+                  ? 'Review and edit the data before submitting' 
+                  : 'Review and edit the PO variations before updating existing data'
+                }
               </Typography>
               
               <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
@@ -936,7 +1247,10 @@ export const JobView: React.FC<JobViewProps> = ({
               variant="contained"
               disabled={isProcessing}
             >
-              {isProcessing ? 'Uploading...' : 'Submit Data'}
+              {isProcessing 
+                ? (huaweiPoData.length === 0 ? 'Uploading...' : 'Updating...') 
+                : (huaweiPoData.length === 0 ? 'Submit Data' : 'Update PO Data')
+              }
             </Button>
           )}
         </DialogActions>
@@ -949,10 +1263,16 @@ export const JobView: React.FC<JobViewProps> = ({
           {hasInvoicedPos() ? (
             <Box>
               <Typography variant="body1" color="error" gutterBottom>
-                Cannot delete Huawei PO data for this job.
+                {areAllPosFrozen() 
+                  ? 'Cannot delete Huawei PO data for this job - all PO records are frozen.'
+                  : 'Cannot delete Huawei PO data for this job.'
+                }
               </Typography>
               <Typography variant="body2" color="error" sx={{ mt: 2 }}>
-                The following PO records have been invoiced and cannot be deleted:
+                {areAllPosFrozen() 
+                  ? 'All PO records have been invoiced and cannot be deleted:'
+                  : 'The following PO records have been invoiced and cannot be deleted:'
+                }
               </Typography>
               <Box sx={{ mt: 1, p: 2, bgcolor: 'error.light', borderRadius: 1 }}>
                 {huaweiPoData
@@ -969,8 +1289,10 @@ export const JobView: React.FC<JobViewProps> = ({
                   ))}
               </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                PO records with invoices cannot be deleted to maintain data integrity. 
-                You can only delete PO records that have 0% invoiced.
+                {areAllPosFrozen() 
+                  ? 'All PO records with invoices cannot be deleted to maintain data integrity. This job is completely frozen.'
+                  : 'PO records with invoices cannot be deleted to maintain data integrity. You can only delete PO records that have 0% invoiced.'
+                }
               </Typography>
             </Box>
           ) : (
@@ -1004,6 +1326,54 @@ export const JobView: React.FC<JobViewProps> = ({
             </Button>
           )}
         </DialogActions>
+      </Dialog>
+
+      {/* Add PO Dialog */}
+      <Dialog 
+        open={addPoDialogOpen} 
+        onClose={() => setAddPoDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Add New PO</DialogTitle>
+        <DialogContent>
+          <AddPoForm 
+            onSubmit={handleAddPo}
+            onCancel={() => setAddPoDialogOpen(false)}
+            isSubmitting={isEditingPo}
+            jobId={job.id}
+            customerId={job.customer_id}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit PO Dialog */}
+      <Dialog 
+        open={editPoDialogOpen} 
+        onClose={() => {
+          setEditPoDialogOpen(false);
+          setSelectedPoForEdit(null);
+        }}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Edit PO</DialogTitle>
+        <DialogContent>
+          {selectedPoForEdit && (
+            <AddPoForm 
+              onSubmit={handleEditPo}
+              onCancel={() => {
+                setEditPoDialogOpen(false);
+                setSelectedPoForEdit(null);
+              }}
+              isSubmitting={isEditingPo}
+              jobId={job.id}
+              customerId={job.customer_id}
+              initialData={selectedPoForEdit}
+              isEdit={true}
+            />
+          )}
+        </DialogContent>
       </Dialog>
     </Card>
   );
