@@ -296,10 +296,16 @@ export const HuaweiInvoice: React.FC = () => {
         invoiced_percentage: item.need_to_invoice_percentage
       }));
 
+      console.log('Sending invoice data to backend:', invoiceData);
+      console.log('Matched records:', matchedRecords);
+      console.log('Correlated data:', correlatedData);
+
       const response = await createInvoice({
         invoice_no: invoiceNumber,
         invoice_data: invoiceData
       });
+
+      console.log('Backend response:', response);
 
       setSuccess(`Successfully created invoice ${invoiceNumber} with ${response.data.created_invoices} records`);
       
@@ -314,9 +320,35 @@ export const HuaweiInvoice: React.FC = () => {
         setInvoiceNumber('');
       }, 3000);
 
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving invoice:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save invoice');
+      
+      // Handle different types of errors
+      if (err.response) {
+        // Backend returned an error response
+        const errorData = err.response.data;
+        console.log('Backend error response:', errorData);
+        console.log('Error details array:', errorData.details);
+        
+        if (errorData.error) {
+          // Single error message
+          setError(`Invoice creation failed: ${errorData.error}`);
+        } else if (errorData.details && Array.isArray(errorData.details)) {
+          // Multiple validation errors
+          console.log('Validation errors found:', errorData.details);
+          const errorMessages = errorData.details.join('\n');
+          setError(`Invoice creation failed:\n${errorMessages}`);
+        } else {
+          // Generic error
+          setError(`Invoice creation failed: ${errorData.message || 'Unknown error'}`);
+        }
+      } else if (err.request) {
+        // Network error
+        setError('Network error: Unable to connect to the server. Please check your connection and try again.');
+      } else {
+        // Other error
+        setError(err.message || 'Failed to save invoice');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -503,14 +535,45 @@ export const HuaweiInvoice: React.FC = () => {
   };
 
   const validatePercentages = () => {
-    return correlatedData.every(item => 
-      item.need_to_invoice_percentage >= 0 && 
-      item.need_to_invoice_percentage <= 100
-    );
+    return correlatedData.every(item => {
+      const currentInvoiced = typeof item.invoiced_percentage === 'string' ? parseFloat(item.invoiced_percentage) : 
+                             typeof item.invoiced_percentage === 'number' ? item.invoiced_percentage : 0;
+      const newInvoice = typeof item.need_to_invoice_percentage === 'string' ? parseFloat(item.need_to_invoice_percentage) : 
+                        typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
+      const total = currentInvoiced + newInvoice;
+      
+      return newInvoice >= 0 && newInvoice <= 100 && total <= 100;
+    });
   };
 
   const getTotalPercentage = () => {
-    return correlatedData.reduce((sum, item) => sum + item.need_to_invoice_percentage, 0);
+    return correlatedData.reduce((sum, item) => {
+      const newInvoice = typeof item.need_to_invoice_percentage === 'string' ? parseFloat(item.need_to_invoice_percentage) : 
+                        typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
+      return sum + newInvoice;
+    }, 0);
+  };
+
+  const getValidationErrors = () => {
+    const errors: string[] = [];
+    
+    correlatedData.forEach((item, index) => {
+      const currentInvoiced = typeof item.invoiced_percentage === 'string' ? parseFloat(item.invoiced_percentage) : 
+                             typeof item.invoiced_percentage === 'number' ? item.invoiced_percentage : 0;
+      const newInvoice = typeof item.need_to_invoice_percentage === 'string' ? parseFloat(item.need_to_invoice_percentage) : 
+                        typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
+      const total = currentInvoiced + newInvoice;
+      
+      if (newInvoice < 0) {
+        errors.push(`Row ${index + 1}: Percentage cannot be negative`);
+      } else if (newInvoice > 100) {
+        errors.push(`Row ${index + 1}: Percentage cannot exceed 100%`);
+      } else if (total > 100) {
+        errors.push(`Row ${index + 1}: Total invoiced percentage would exceed 100% (${currentInvoiced}% + ${newInvoice}% = ${total}%)`);
+      }
+    });
+    
+    return errors;
   };
 
   return (
@@ -792,8 +855,49 @@ export const HuaweiInvoice: React.FC = () => {
                               max: 100,
                               step: 0.01
                             }}
-                            sx={{ width: 100 }}
+                            sx={{ 
+                              width: 100,
+                              '& .MuiInput-root': {
+                                color: (() => {
+                                  const currentInvoiced = typeof item.invoiced_percentage === 'string' ? parseFloat(item.invoiced_percentage) : 
+                                                   typeof item.invoiced_percentage === 'number' ? item.invoiced_percentage : 0;
+                                  const newInvoice = typeof item.need_to_invoice_percentage === 'string' ? parseFloat(item.need_to_invoice_percentage) : 
+                                              typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
+                                  const total = currentInvoiced + newInvoice;
+                                  return total > 100 ? 'error.main' : 'inherit';
+                                })()
+                              }
+                            }}
                           />
+                          {(() => {
+                            const currentInvoiced = typeof item.invoiced_percentage === 'string' ? parseFloat(item.invoiced_percentage) : 
+                                                   typeof item.invoiced_percentage === 'number' ? item.invoiced_percentage : 0;
+                            const newInvoice = typeof item.need_to_invoice_percentage === 'string' ? parseFloat(item.need_to_invoice_percentage) : 
+                                              typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
+                            const total = currentInvoiced + newInvoice;
+                            const remaining = 100 - currentInvoiced;
+                            
+                            if (total > 100) {
+                              return (
+                                <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
+                                  Total: {total.toFixed(2)}% (exceeds 100%)
+                                </Typography>
+                              );
+                            } else if (newInvoice > remaining) {
+                              return (
+                                <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
+                                  Only {remaining.toFixed(2)}% remaining
+                                </Typography>
+                              );
+                            } else if (newInvoice > 0) {
+                              return (
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                  Total: {total.toFixed(2)}%
+                                </Typography>
+                              );
+                            }
+                            return null;
+                          })()}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -803,7 +907,16 @@ export const HuaweiInvoice: React.FC = () => {
 
               {!validatePercentages() && (
                 <Alert severity="warning" sx={{ mt: 2 }}>
-                  Please ensure all percentages are between 0 and 100.
+                  <Typography variant="body2" component="div">
+                    Please fix the following validation errors:
+                  </Typography>
+                  <Box component="ul" sx={{ mt: 1, mb: 0, pl: 2 }}>
+                    {getValidationErrors().map((error, index) => (
+                      <li key={index}>
+                        <Typography variant="body2">{error}</Typography>
+                      </li>
+                    ))}
+                  </Box>
                 </Alert>
               )}
 
