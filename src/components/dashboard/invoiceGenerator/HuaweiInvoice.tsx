@@ -584,30 +584,20 @@ export const HuaweiInvoice: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               Huawei Invoice Generation
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<VisibilityIcon />}
-                onClick={() => setViewDialogOpen(true)}
-              >
-                View Invoices
-              </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => document.getElementById('huawei-invoice-excel-input')?.click()}
-              >
-                Upload Invoice Excel
-              </Button>
-              <input
-                id="huawei-invoice-excel-input"
-                type="file"
-                accept=".xlsx,.xls,.xlsm"
-                style={{ display: 'none' }}
-                onChange={handleFileUpload}
-              />
-            </Box>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => document.getElementById('huawei-invoice-excel-input')?.click()}
+            >
+              Upload Invoice Excel
+            </Button>
+            <input
+              id="huawei-invoice-excel-input"
+              type="file"
+              accept=".xlsx,.xls,.xlsm"
+              style={{ display: 'none' }}
+              onChange={handleFileUpload}
+            />
           </Box>
 
           <Typography variant="body2" color="text.secondary">
@@ -623,7 +613,7 @@ export const HuaweiInvoice: React.FC = () => {
         <Card sx={{ mt: 2 }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              Existing Invoices
+              Latest Invoices
             </Typography>
             <TableContainer component={Paper}>
               <Table>
@@ -637,7 +627,7 @@ export const HuaweiInvoice: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {invoiceSummaries.map((summary) => (
+                  {invoiceSummaries.slice(0, 5).map((summary) => (
                     <TableRow key={summary.invoice_no}>
                       <TableCell>
                         <Typography variant="body2" fontWeight="bold">

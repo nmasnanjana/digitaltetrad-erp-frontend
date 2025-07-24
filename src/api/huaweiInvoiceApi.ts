@@ -38,6 +38,10 @@ export interface InvoiceRecord {
     job?: {
       id: string;
       name: string;
+      customer?: {
+        id: string;
+        name: string;
+      };
     };
   };
 }

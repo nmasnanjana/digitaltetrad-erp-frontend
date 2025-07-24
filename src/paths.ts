@@ -22,6 +22,7 @@ export const paths = {
     expenseApproval: '/dashboard/expense/approval',
     expensePayment: '/dashboard/expense/payment',
     invoiceGenerator: '/dashboard/invoice-generator',
+    viewInvoices: '/dashboard/view-invoices',
   },
   errors: { notFound: '/errors/404' },
 } as const;
