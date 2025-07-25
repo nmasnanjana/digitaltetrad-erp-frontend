@@ -6,9 +6,9 @@ export interface ExpenseType {
     id: number;
     name: string;
     description?: string;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface Expense {
@@ -21,39 +21,37 @@ export interface Expense {
     amount: number;
     edited_by?: string;
     reason_to_edit?: string;
-    status: 'on_progress' | 'approved' | 'rejected';
     reviewed_by?: string;
     reviewer_comment?: string;
-    reviewed_at?: string;
+    status?: 'on_progress' | 'approved' | 'denied';
+    reviewed_at?: Date;1
     paid: boolean;
-    createdAt: string;
-    updatedAt: string;
+    created_at?: string;
+    updated_at?: string;
     expenseType?: ExpenseType;
     operationType?: OperationType;
-    job?: Job;
-    editor?: User;
-    reviewer?: User;
+    job?: {
+        id: string;
+        name: string;
+    };
+    editor?: {
+        id: string;
+        firstName: string;
+        lastName?: string;
+    };
+    reviewer?: {
+        id: string;
+        firstName: string;
+        lastName?: string;
+    };
 }
 
-export interface Job {
-    id: string;
+export interface OperationType {
+    id: number;
     name: string;
     description?: string;
     isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
-}
-
-export interface User {
-    id: string;
-    firstName: string;
-    lastName?: string;
-    username: string;
-    email?: string;
-    role: 'admin' | 'user' | 'viewer' | 'developer';
-    isActive: boolean;
-    lastLogin?: string;
-    createdAt: string;
-    updatedAt: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 

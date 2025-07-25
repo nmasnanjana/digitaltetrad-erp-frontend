@@ -1,38 +1,22 @@
-import axios from 'axios';
-import { OperationType } from '@/types/operationType';
+import { apiClient } from './apiClient';
+import { OperationType } from '@/types/expense';
 
-const API_URL = 'http://localhost:4575/api';
-
-// Operation Type API
-export const getAllOperationTypes = async () => {
-    const response = await axios.get(`${API_URL}/operation-types`);
-    return response;
+export const getAllOperationTypes = () => {
+  return apiClient.get<OperationType[]>('/operation-types');
 };
 
-export const getOperationTypeById = async (id: string) => {
-    const response = await axios.get(`${API_URL}/operation-types/${id}`);
-    return response;
+export const getOperationType = (id: number) => {
+  return apiClient.get<OperationType>(`/operation-types/${id}`);
 };
 
-export const createOperationType = async (data: {
-    name: string;
-    description?: string;
-    isActive: boolean;
-}) => {
-    const response = await axios.post(`${API_URL}/operation-types`, data);
-    return response;
+export const createOperationType = (data: { name: string; description?: string }) => {
+  return apiClient.post<OperationType>('/operation-types', data);
 };
 
-export const updateOperationType = async (id: string, data: {
-    name: string;
-    description?: string;
-    isActive: boolean;
-}) => {
-    const response = await axios.put(`${API_URL}/operation-types/${id}`, data);
-    return response;
+export const updateOperationType = (id: number, data: { name: string; description?: string }) => {
+  return apiClient.put<OperationType>(`/operation-types/${id}`, data);
 };
 
-export const deleteOperationType = async (id: string) => {
-    const response = await axios.delete(`${API_URL}/operation-types/${id}`);
-    return response;
+export const deleteOperationType = (id: number) => {
+  return apiClient.delete(`/operation-types/${id}`);
 }; 

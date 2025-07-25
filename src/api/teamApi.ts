@@ -6,6 +6,15 @@ const API = axios.create({
     withCredentials: true,
 });
 
+// Add request interceptor to include token
+API.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
 export const getAllTeams = () =>
     API.get<Team[]>('/teams');
 

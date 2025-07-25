@@ -1,70 +1,110 @@
 import axios from 'axios';
-import { Expense, ExpenseType } from '@/types/expense';
+import { Expense, ExpenseType, OperationType } from '@/types/expense';
 
-const API_URL = 'http://localhost:4575/api';
+const API = axios.create({
+    baseURL: 'http://localhost:4575/api',
+    withCredentials: true,
+});
 
-// Expense Type API
-export const getAllExpenseTypes = async () => {
-    const response = await axios.get(`${API_URL}/expense-types`);
-    return response;
-};
+// Add request interceptor to include token
+API.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
 
-export const createExpenseType = async (data: Partial<ExpenseType>) => {
-    const response = await axios.post(`${API_URL}/expense-types`, data);
-    return response;
-};
+// Add error handling
+API.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response) {
+            console.error('Error response:', error.response.data);
+            return Promise.reject(error.response.data);
+        } else if (error.request) {
+            console.error('Error request:', error.request);
+            return Promise.reject(new Error('No response received from server'));
+        } else {
+            console.error('Error message:', error.message);
+            return Promise.reject(error);
+        }
+    }
+);
 
-export const updateExpenseType = async (id: string, data: Partial<ExpenseType>) => {
-    const response = await axios.put(`${API_URL}/expense-types/${id}`, data);
-    return response;
-};
+export interface ExpenseFilters {
+    createdStartDate?: string;
+    createdEndDate?: string;
+    expenseTypeId?: number;
+    category?: 'job' | 'operation';
+    jobId?: string;
+    operationTypeId?: number;
+    status?: string;
+}
 
-export const deleteExpenseType = async (id: string) => {
-    const response = await axios.delete(`${API_URL}/expense-types/${id}`);
-    return response;
-};
+// Expense Types
+export const getAllExpenseTypes = () =>
+    API.get<ExpenseType[]>('/expense-types');
 
-// Expense API
-export const getAllExpenses = async () => {
-    const response = await axios.get(`${API_URL}/expenses`);
-    return response;
-};
+export const getExpenseTypeById = (id: string) =>
+    API.get<ExpenseType>(`/expense-types/${id}`);
 
-export const getExpenseById = async (id: string) => {
-    const response = await axios.get(`${API_URL}/expenses/${id}`);
-    return response;
-};
+export const createExpenseType = (data: Partial<ExpenseType>) =>
+    API.post('/expense-types', data);
 
-export const createExpense = async (data: {
-    expenses_type_id: number;
-    operations: boolean;
-    job_id?: number;
-    description: string;
-    amount: number;
-}) => {
-    const response = await axios.post(`${API_URL}/expenses`, data);
-    return response;
-};
+export const updateExpenseType = (id: string, data: Partial<ExpenseType>) =>
+    API.put(`/expense-types/${id}`, data);
 
-export const updateExpense = async (id: string, data: {
-    expenses_type_id: number;
-    operations: boolean;
-    job_id?: number;
-    description: string;
-    amount: number;
-    edited_by: string;
-    reason_to_edit: string;
-}) => {
-    const response = await axios.put(`${API_URL}/expenses/${id}`, data);
-    return response;
-};
+export const deleteExpenseType = (id: string) =>
+    API.delete(`/expense-types/${id}`);
 
-export const deleteExpense = async (id: string) => {
-    const response = await axios.delete(`${API_URL}/expenses/${id}`);
-    return response;
-};
+// Operation Types
+export const getAllOperationTypes = () =>
+    API.get<OperationType[]>('/operation-types');
+
+export const getOperationTypeById = (id: string) =>
+    API.get<OperationType>(`/operation-types/${id}`);
+
+export const createOperationType = (data: Partial<OperationType>) =>
+    API.post('/operation-types', data);
+
+export const updateOperationType = (id: string, data: Partial<OperationType>) =>
+    API.put(`/operation-types/${id}`, data);
+
+export const deleteOperationType = (id: string) =>
+    API.delete(`/operation-types/${id}`);
+
+// Expenses
+export const getAllExpenses = () =>
+    API.get<Expense[]>('/expenses');
+
+export const getExpenseById = (id: string) =>
+    API.get<Expense>(`/expenses/${id}`);
+
+export const createExpense = (data: Partial<Expense>) =>
+    API.post('/expenses', data);
+
+export const updateExpense = (id: string, data: Partial<Expense>) =>
+    API.put(`/expenses/${id}`, data);
+
+export const deleteExpense = (id: string) =>
+    API.delete(`/expenses/${id}`);
+
+// Expense Approvals
+export const approveExpense = (id: string, data: { approved: boolean; comment?: string }) =>
+    API.post(`/expenses/${id}/approve`, data);
+
+export const rejectExpense = (id: string, data: { comment: string }) =>
+    API.post(`/expenses/${id}/reject`, data);
+
+// Expense Payments
+export const markAsPaid = (id: string, data: { paymentDate: string; paymentMethod: string; reference?: string }) =>
+    API.post(`/expenses/${id}/pay`, data);
+
+export const getExpensePayments = (id: string) =>
+    API.get(`/expenses/${id}/payments`);
 
 export const getExpensesByJob = async (jobId: string) => {
-    const response = await axios.get(`${API_URL}/expenses/job/${jobId}`);
+    const response = await API.get(`/expenses/job/${jobId}`);
     return response;
 };

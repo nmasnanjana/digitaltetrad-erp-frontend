@@ -1,11 +1,16 @@
+import type { Role } from './role';
+
 export interface User {
   id: string;
-  username: string;
   firstName: string;
-  lastName: string;
-  email: string;
+  lastName?: string;
+  username: string;
+  email?: string;
+  roleId: string;
+  isActive: boolean;
+  lastLogin?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+  role?: Role;
   avatar?: string;
-  role: 'admin' | 'user';
-  createdAt: string;
-  updatedAt: string;
 }

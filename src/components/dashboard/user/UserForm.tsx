@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Role, User } from '@/types/user';
-import { Box, Button, Grid, TextField, MenuItem, Alert, Typography, Paper } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { User } from '@/types/user';
+import { Role } from '@/types/role';
+import { Box, Button, Grid, TextField, MenuItem, Alert, Typography, Paper, FormControl, InputLabel, Select, SelectChangeEvent } from '@mui/material';
 import { useRouter } from 'next/navigation';
+import { authClient } from '@/lib/auth/client';
 
 interface Props {
   onSubmit: (data: any) => void;
@@ -13,19 +15,45 @@ interface Props {
 
 const UserForm: React.FC<Props> = ({ onSubmit, initialData = {}, mode = 'create' }) => {
   const router = useRouter();
+  const [roles, setRoles] = useState<Role[]>([]);
   const [formData, setFormData] = useState({
     firstName: initialData.firstName || '',
     lastName: initialData.lastName || '',
     username: initialData.username || '',
     email: initialData.email || '',
-    role: initialData.role || 'user',
+    roleId: initialData.roleId || '',
     password: '',
     password_confirmation: '',
   });
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    fetchRoles();
+  }, []);
+
+  const fetchRoles = async () => {
+    try {
+      const response = await authClient.getAllRoles();
+      if (response.data) {
+        setRoles(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+      setError('Failed to load roles. Please try again later.');
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError(null);
+  };
+
+  const handleSelectChange = (e: SelectChangeEvent) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
     setError(null);
   };
 
@@ -104,22 +132,21 @@ const UserForm: React.FC<Props> = ({ onSubmit, initialData = {}, mode = 'create'
             />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField
-              required
-              fullWidth
-              select
+            <FormControl fullWidth required>
+              <InputLabel>Role</InputLabel>
+              <Select
+                name="roleId"
+                value={formData.roleId}
+                onChange={handleSelectChange}
               label="Role"
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              variant="outlined"
-            >
-              {['admin', 'user', 'viewer', 'developer'].map((role) => (
-                <MenuItem key={role} value={role}>
-                  {role.charAt(0).toUpperCase() + role.slice(1)}
+              >
+                {roles.map((role) => (
+                  <MenuItem key={role.id} value={role.id}>
+                    {role.name}
                 </MenuItem>
               ))}
-            </TextField>
+              </Select>
+            </FormControl>
           </Grid>
           {mode === 'create' && (
             <>

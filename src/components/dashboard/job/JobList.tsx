@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getAllJobs, deleteJob } from '@/api/jobApi';
+import { getAllJobs, deleteJob, JobFilters as JobFiltersType } from '@/api/jobApi';
+import { getAllCustomers } from '@/api/customerApi';
 import { Job } from '@/types/job';
+import { Customer } from '@/types/customer';
 import {
   Box,
   Button,
@@ -24,22 +26,34 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
 import JobForm from './JobForm';
+import { JobFilters } from './JobFilters';
 import { useRouter } from 'next/navigation';
 
 export const ListJob: React.FC = () => {
   const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+  const [filters, setFilters] = useState<JobFiltersType>({});
+
+  const loadCustomers = async () => {
+    try {
+      const response = await getAllCustomers();
+      setCustomers(response.data);
+    } catch (err) {
+      console.error('Failed to load customers:', err);
+    }
+  };
 
   const loadJobs = async () => {
     try {
       setLoading(true);
-      const response = await getAllJobs();
+      const response = await getAllJobs(filters);
       setJobs(response.data);
       setError(null);
     } catch (err) {
@@ -73,8 +87,16 @@ export const ListJob: React.FC = () => {
     setFormOpen(true);
   };
 
+  const handleFilterChange = (newFilters: JobFiltersType) => {
+    setFilters(newFilters);
+  };
+
   useEffect(() => {
     loadJobs();
+  }, [filters]);
+
+  useEffect(() => {
+    loadCustomers();
   }, []);
 
   const getStatusColor = (status: Job['status']) => {
@@ -129,6 +151,12 @@ export const ListJob: React.FC = () => {
         </Alert>
       )}
 
+      <JobFilters
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        customers={customers}
+      />
+
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -138,6 +166,8 @@ export const ListJob: React.FC = () => {
               <TableCell>Type</TableCell>
               <TableCell>Team</TableCell>
               <TableCell>Customer</TableCell>
+              <TableCell>Created At</TableCell>
+              <TableCell>Completed At</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -161,6 +191,8 @@ export const ListJob: React.FC = () => {
                 </TableCell>
                 <TableCell>{job.team?.name || '-'}</TableCell>
                 <TableCell>{job.customer?.name || '-'}</TableCell>
+                <TableCell>{job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '-'}</TableCell>
+                <TableCell>{job.completed_at ? new Date(job.completed_at).toLocaleDateString() : '-'}</TableCell>
                 <TableCell align="right">
                   <IconButton
                     color="primary"

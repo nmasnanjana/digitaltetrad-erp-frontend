@@ -50,21 +50,41 @@ export function SignInForm(): React.JSX.Element {
 
   const onSubmit = React.useCallback(
     async (values: Values): Promise<void> => {
+      console.log('Form submitted with values:', values);
       setIsPending(true);
 
-      const { error } = await authClient.signInWithPassword(values);
+      try {
+        console.log('Calling signInWithPassword...');
+        const { data, error } = await authClient.signInWithPassword(values);
+        console.log('Sign in response:', { data, error });
 
       if (error) {
+          console.log('Sign in error:', error);
         setError('root', { type: 'server', message: error });
         setIsPending(false);
         return;
       }
 
+        if (!data) {
+          console.log('No user data received');
+          setError('root', { type: 'server', message: 'Failed to get user data' });
+          setIsPending(false);
+          return;
+        }
+
+        console.log('Sign in successful, refreshing session...');
       // Refresh the auth state
       await checkSession?.();
 
+        console.log('Redirecting to dashboard...');
       // Redirect to dashboard
       router.push(paths.dashboard.overview);
+      } catch (error) {
+        console.error('Unexpected error:', error);
+        setError('root', { type: 'server', message: 'An unexpected error occurred' });
+      } finally {
+        setIsPending(false);
+      }
     },
     [checkSession, router, setError]
   );
