@@ -30,6 +30,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import * as XLSX from 'xlsx';
 import { getAllHuaweiPos } from '@/api/huaweiPoApi';
 import { getAllCustomers } from '@/api/customerApi';
+import { getSettings } from '@/api/settingsApi';
 import { 
   createInvoice, 
   getInvoiceSummaries, 
@@ -84,11 +85,14 @@ export const HuaweiInvoice: React.FC = () => {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [vatPercentage, setVatPercentage] = useState<number>(0);
+  const [customerAddress, setCustomerAddress] = useState<string>('');
 
   // Load Huawei PO data for correlation
   useEffect(() => {
     loadHuaweiPoData();
     loadInvoiceSummaries();
+    loadSettings();
   }, []);
 
   const loadHuaweiPoData = async () => {
@@ -112,6 +116,10 @@ export const HuaweiInvoice: React.FC = () => {
       const huaweiCustomerId = huaweiCustomer.id;
       console.log('Found Huawei customer:', huaweiCustomer);
       console.log('Found Huawei customer ID:', huaweiCustomerId);
+      
+      // Set the customer address from the found Huawei customer
+      setCustomerAddress(huaweiCustomer.address || '');
+      console.log('Set customer address:', huaweiCustomer.address);
       
       // Now load Huawei PO data for this customer
       console.log('Loading Huawei PO data for customer ID:', huaweiCustomerId);
@@ -142,6 +150,17 @@ export const HuaweiInvoice: React.FC = () => {
       setInvoiceSummaries(summaries);
     } catch (err) {
       console.error('Error loading invoice summaries:', err);
+    }
+  };
+
+  const loadSettings = async () => {
+    try {
+      const settings = await getSettings();
+      setVatPercentage(settings.data.vat_percentage);
+      console.log('Settings loaded:', settings.data);
+    } catch (err) {
+      console.error('Error loading settings:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load settings');
     }
   };
 
@@ -678,8 +697,24 @@ export const HuaweiInvoice: React.FC = () => {
         onClose={() => setUploadDialogOpen(false)}
         maxWidth="xl"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+            background: '#ffffff'
+          }
+        }}
       >
-        <DialogTitle>Process Huawei Invoice Excel File</DialogTitle>
+        <DialogTitle sx={{ 
+          background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+          color: 'white',
+          borderRadius: '8px 8px 0 0',
+          mb: 0
+        }}>
+          <Typography variant="h6" fontWeight="500">
+            Process Huawei Invoice Excel File
+          </Typography>
+        </DialogTitle>
         <DialogContent>
           {isProcessing && (
             <Box sx={{ mb: 2 }}>
@@ -758,32 +793,108 @@ export const HuaweiInvoice: React.FC = () => {
               </Typography>
               
               {/* Invoice Number Input */}
-              <Box sx={{ mb: 3, p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
-                <Typography variant="subtitle2" gutterBottom>
+              <Box sx={{ 
+                mb: 3, 
+                p: 3, 
+                backgroundColor: '#f8fafc',
+                borderRadius: 2, 
+                border: '1px solid', 
+                borderColor: '#e2e8f0'
+              }}>
+                <Typography variant="subtitle1" gutterBottom color="text.primary" fontWeight="500" sx={{ mb: 2 }}>
                   Invoice Number
                 </Typography>
                 <TextField
                   fullWidth
-                  size="small"
+                  size="medium"
                   placeholder="Enter invoice number (e.g., INV-2024-001)"
                   variant="outlined"
                   value={invoiceNumber}
                   onChange={(e) => setInvoiceNumber(e.target.value)}
-                  sx={{ maxWidth: 400 }}
+                  sx={{ 
+                    maxWidth: 400,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1,
+                      backgroundColor: 'white'
+                    }
+                  }}
                 />
                 <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                   This invoice number will be applied to all selected records
                 </Typography>
+              </Box>
+
+              {/* VAT and Customer Information */}
+              <Box sx={{ 
+                mb: 3, 
+                p: 3, 
+                backgroundColor: '#f1f5f9',
+                borderRadius: 2, 
+                border: '1px solid', 
+                borderColor: '#cbd5e1'
+              }}>
+                <Typography variant="subtitle1" gutterBottom color="text.primary" fontWeight="500" sx={{ mb: 2 }}>
+                  Invoice Information
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      <Typography variant="subtitle2" color="text.primary" gutterBottom fontWeight="500">
+                        VAT Percentage
+                      </Typography>
+                      <Typography variant="h5" fontWeight="600" color="#1e40af">
+                        {vatPercentage}%
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Applied to all invoice amounts
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      <Typography variant="subtitle2" color="text.primary" gutterBottom fontWeight="500">
+                        Customer Address
+                      </Typography>
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }} color="text.primary">
+                        {customerAddress || 'No address available'}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
               </Box>
               
               <Typography variant="body2" color="text.secondary" gutterBottom>
                 Set the percentage to invoice for each PO. Total percentage: {getTotalPercentage().toFixed(2)}%
               </Typography>
               
-              <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+              <TableContainer component={Paper} sx={{ 
+                maxHeight: 400, 
+                borderRadius: 2, 
+                border: '1px solid', 
+                borderColor: '#e2e8f0',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+              }}>
                 <Table stickyHeader size="small">
                   <TableHead>
-                    <TableRow>
+                    <TableRow sx={{ 
+                      backgroundColor: '#f8fafc',
+                      '& th': {
+                        fontWeight: 600,
+                        color: '#374151',
+                        borderBottom: '2px solid #e5e7eb',
+                        fontSize: '0.875rem'
+                      }
+                    }}>
                       <TableCell>PO NO.</TableCell>
                       <TableCell>Item Code</TableCell>
                       <TableCell>Item Description</TableCell>
@@ -797,39 +908,78 @@ export const HuaweiInvoice: React.FC = () => {
                       <TableRow 
                         key={index}
                         sx={{ 
-                          backgroundColor: item.isCorrelated ? 'inherit' : '#ffebee',
+                          backgroundColor: item.isCorrelated ? 'inherit' : '#fef2f2',
+                          opacity: item.isCorrelated ? 1 : 0.7,
                           '&:hover': {
-                            backgroundColor: item.isCorrelated ? 'rgba(0, 0, 0, 0.04)' : '#ffcdd2'
+                            backgroundColor: item.isCorrelated ? '#f9fafb' : '#fee2e2'
+                          },
+                          '& td': {
+                            borderBottom: item.isCorrelated ? '1px solid #f3f4f6' : '1px solid #fecaca',
+                            fontSize: '0.875rem'
                           }
                         }}
                       >
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {item.po_no}
+                            <Typography variant="body2" fontWeight="500" color={item.isCorrelated ? 'text.primary' : 'text.disabled'}>
+                              {item.po_no}
+                            </Typography>
                             {!item.isCorrelated && (
                               <Chip 
                                 label="No Match" 
                                 color="error" 
                                 size="small" 
                                 variant="outlined"
+                                sx={{ 
+                                  fontSize: '0.7rem',
+                                  borderColor: '#ef4444',
+                                  color: '#ef4444',
+                                  fontWeight: 500
+                                }}
+                              />
+                            )}
+                            {item.isCorrelated && (
+                              <Chip 
+                                label="Matched" 
+                                color="success" 
+                                size="small" 
+                                variant="outlined"
+                                sx={{ 
+                                  fontSize: '0.7rem',
+                                  borderColor: '#10b981',
+                                  color: '#10b981',
+                                  fontWeight: 500
+                                }}
                               />
                             )}
                           </Box>
                         </TableCell>
-                        <TableCell>{item.item_code}</TableCell>
                         <TableCell>
-                          <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                          <Typography variant="body2" color={item.isCorrelated ? 'text.secondary' : 'text.disabled'}>
+                            {item.item_code}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ wordBreak: 'break-word' }} color={item.isCorrelated ? 'text.primary' : 'text.disabled'}>
                             {item.item_description}
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          ${typeof item.unit_price === 'number' ? item.unit_price.toFixed(2) : '0.00'}
+                          <Typography variant="body2" fontWeight="500" color={item.isCorrelated ? 'text.primary' : 'text.disabled'}>
+                            ${typeof item.unit_price === 'number' ? item.unit_price.toFixed(2) : '0.00'}
+                          </Typography>
                         </TableCell>
                         <TableCell>
                           <Chip 
                             label={`${item.invoiced_percentage}%`} 
                             color="primary" 
-                            size="small" 
+                            size="small"
+                            sx={{ 
+                              backgroundColor: item.isCorrelated ? '#dbeafe' : '#f3f4f6',
+                              color: item.isCorrelated ? '#1e40af' : '#6b7280',
+                              fontWeight: 500,
+                              fontSize: '0.75rem'
+                            }}
                           />
                         </TableCell>
                         <TableCell>
@@ -839,7 +989,7 @@ export const HuaweiInvoice: React.FC = () => {
                             value={item.need_to_invoice_percentage}
                             onChange={(e) => handlePercentageChange(index, parseFloat(e.target.value) || 0)}
                             variant="standard"
-                            disabled={isProcessing || isSaving}
+                            disabled={isProcessing || isSaving || !item.isCorrelated}
                             inputProps={{
                               min: 0,
                               max: 100,
@@ -847,8 +997,10 @@ export const HuaweiInvoice: React.FC = () => {
                             }}
                             sx={{ 
                               width: 100,
+                              opacity: item.isCorrelated ? 1 : 0.5,
                               '& .MuiInput-root': {
                                 color: (() => {
+                                  if (!item.isCorrelated) return 'text.disabled';
                                   const currentInvoiced = typeof item.invoiced_percentage === 'string' ? parseFloat(item.invoiced_percentage) : 
                                                    typeof item.invoiced_percentage === 'number' ? item.invoiced_percentage : 0;
                                   const newInvoice = typeof item.need_to_invoice_percentage === 'string' ? parseFloat(item.need_to_invoice_percentage) : 
@@ -859,11 +1011,11 @@ export const HuaweiInvoice: React.FC = () => {
                               }
                             }}
                           />
-                          {(() => {
+                          {item.isCorrelated && (() => {
                             const currentInvoiced = typeof item.invoiced_percentage === 'string' ? parseFloat(item.invoiced_percentage) : 
-                                                   typeof item.invoiced_percentage === 'number' ? item.invoiced_percentage : 0;
+                                                 typeof item.invoiced_percentage === 'number' ? item.invoiced_percentage : 0;
                             const newInvoice = typeof item.need_to_invoice_percentage === 'string' ? parseFloat(item.need_to_invoice_percentage) : 
-                                              typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
+                                            typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
                             const total = currentInvoiced + newInvoice;
                             const remaining = 100 - currentInvoiced;
                             
@@ -896,25 +1048,123 @@ export const HuaweiInvoice: React.FC = () => {
               </TableContainer>
 
               {!validatePercentages() && (
-                <Alert severity="warning" sx={{ mt: 2 }}>
-                  <Typography variant="body2" component="div">
+                <Alert severity="warning" sx={{ mt: 2, borderRadius: 2, border: '1px solid', borderColor: 'orange.200' }}>
+                  <Typography variant="body2" component="div" color="text.primary">
                     Please fix the following validation errors:
                   </Typography>
                   <Box component="ul" sx={{ mt: 1, mb: 0, pl: 2 }}>
                     {getValidationErrors().map((error, index) => (
                       <li key={index}>
-                        <Typography variant="body2">{error}</Typography>
+                        <Typography variant="body2" color="text.primary">{error}</Typography>
                       </li>
                     ))}
                   </Box>
                 </Alert>
               )}
 
-              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Summary:</strong> {correlatedData.filter(item => item.isCorrelated).length} matched records, 
-                  {correlatedData.filter(item => !item.isCorrelated).length} unmatched records (highlighted in red)
+              <Box sx={{ 
+                mt: 2, 
+                p: 3, 
+                backgroundColor: '#f9fafb',
+                borderRadius: 2, 
+                border: '1px solid', 
+                borderColor: '#e5e7eb'
+              }}>
+                <Typography variant="subtitle1" color="text.primary" fontWeight="500" sx={{ mb: 1 }}>
+                  Summary
                 </Typography>
+                <Typography variant="body2" color="text.primary">
+                  <strong>Matched:</strong> {correlatedData.filter(item => item.isCorrelated).length} records | 
+                  <strong>Unmatched:</strong> {correlatedData.filter(item => !item.isCorrelated).length} records
+                </Typography>
+              </Box>
+
+              {/* Financial Summary */}
+              <Box sx={{ 
+                mt: 2, 
+                p: 3, 
+                backgroundColor: '#f0fdf4',
+                borderRadius: 2, 
+                border: '1px solid', 
+                borderColor: '#bbf7d0'
+              }}>
+                <Typography variant="subtitle1" gutterBottom color="text.primary" fontWeight="500" sx={{ mb: 2 }}>
+                  Financial Summary
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Subtotal
+                      </Typography>
+                      <Typography variant="h5" fontWeight="600" color="text.primary">
+                        ${(() => {
+                          const subtotal = correlatedData.reduce((sum, item) => {
+                            const unitPrice = typeof item.unit_price === 'number' ? item.unit_price : 0;
+                            const percentage = typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
+                            return sum + (unitPrice * percentage / 100);
+                          }, 0);
+                          return subtotal.toFixed(2);
+                        })()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        VAT ({vatPercentage}%)
+                      </Typography>
+                      <Typography variant="h5" fontWeight="600" color="#1e40af">
+                        ${(() => {
+                          const subtotal = correlatedData.reduce((sum, item) => {
+                            const unitPrice = typeof item.unit_price === 'number' ? item.unit_price : 0;
+                            const percentage = typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
+                            return sum + (unitPrice * percentage / 100);
+                          }, 0);
+                          const vatTotal = subtotal * vatPercentage / 100;
+                          return vatTotal.toFixed(2);
+                        })()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Total Amount
+                      </Typography>
+                      <Typography variant="h5" fontWeight="600" color="#059669">
+                        ${(() => {
+                          const subtotal = correlatedData.reduce((sum, item) => {
+                            const unitPrice = typeof item.unit_price === 'number' ? item.unit_price : 0;
+                            const percentage = typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
+                            return sum + (unitPrice * percentage / 100);
+                          }, 0);
+                          const vatTotal = subtotal * vatPercentage / 100;
+                          const total = subtotal + vatTotal;
+                          return total.toFixed(2);
+                        })()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
               </Box>
             </Box>
           )}
