@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -35,6 +37,8 @@ import DownloadIcon from '@mui/icons-material/Download';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import { getAllInvoices, deleteInvoice, InvoiceRecord } from '@/api/huaweiInvoiceApi';
+import { getSettings } from '@/api/settingsApi';
+import { useSettings } from '@/contexts/SettingsContext';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
@@ -47,6 +51,7 @@ interface FilterState {
 }
 
 export const ViewInvoices: React.FC = () => {
+  const { formatCurrency, currencySymbol } = useSettings();
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [filteredInvoices, setFilteredInvoices] = useState<InvoiceRecord[]>([]);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -56,6 +61,7 @@ export const ViewInvoices: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [settings, setSettings] = useState<any>(null);
   const [filters, setFilters] = useState<FilterState>({
     customer: '',
     minAmount: '',
@@ -66,6 +72,7 @@ export const ViewInvoices: React.FC = () => {
 
   useEffect(() => {
     loadAllInvoices();
+    loadSettings();
   }, []);
 
   useEffect(() => {
@@ -96,15 +103,13 @@ export const ViewInvoices: React.FC = () => {
     // Apply amount filters
     if (filters.minAmount || filters.maxAmount) {
       filtered = filtered.filter(invoice => {
-        const unitPriceStr = invoice.huaweiPo?.unit_price;
-        const unitPrice = typeof unitPriceStr === 'string' ? parseFloat(unitPriceStr) : 
-                         typeof unitPriceStr === 'number' ? unitPriceStr : 0;
-        const amount = unitPrice * invoice.invoiced_percentage / 100;
+        const totalAmount = typeof invoice.total_amount === 'string' ? parseFloat(invoice.total_amount) : 
+                           typeof invoice.total_amount === 'number' ? invoice.total_amount : 0;
         
         const minAmount = filters.minAmount ? parseFloat(filters.minAmount) : 0;
         const maxAmount = filters.maxAmount ? parseFloat(filters.maxAmount) : Infinity;
         
-        return amount >= minAmount && amount <= maxAmount;
+        return totalAmount >= minAmount && totalAmount <= maxAmount;
       });
     }
     
@@ -166,6 +171,16 @@ export const ViewInvoices: React.FC = () => {
     }
   };
 
+  const loadSettings = async () => {
+    try {
+      const response = await getSettings();
+      setSettings(response);
+    } catch (err) {
+      console.error('Error loading settings:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load settings');
+    }
+  };
+
   const handleViewInvoice = async (invoiceNo: string) => {
     try {
       const details = invoices.filter(invoice => invoice.invoice_no === invoiceNo);
@@ -199,102 +214,311 @@ export const ViewInvoices: React.FC = () => {
     setError(null);
 
     try {
+      console.log('Starting PDF generation...');
       const doc = new jsPDF();
+      
       const invoiceNo = selectedInvoiceDetails[0].invoice_no;
       const createdDate = new Date(selectedInvoiceDetails[0].createdAt).toLocaleDateString();
+      const vatPercentage = selectedInvoiceDetails[0].vat_percentage;
+      const customerName = selectedInvoiceDetails[0].huaweiPo?.job?.customer?.name || 'Customer';
+      const customerAddress = (selectedInvoiceDetails[0].huaweiPo?.job?.customer as any)?.address || 'Address not available';
+      const jobName = selectedInvoiceDetails[0].huaweiPo?.job?.name || 'Job';
+      const jobType = (selectedInvoiceDetails[0].huaweiPo?.job as any)?.type || 'Service';
       
-      // Calculate total amount
+      // Calculate totals
+      const subtotal = selectedInvoiceDetails.reduce((sum, item) => {
+        const subtotalAmount = typeof item.subtotal_amount === 'string' ? parseFloat(item.subtotal_amount) : 
+                             typeof item.subtotal_amount === 'number' ? item.subtotal_amount : 0;
+        return sum + subtotalAmount;
+      }, 0);
+      
+      const vatTotal = selectedInvoiceDetails.reduce((sum, item) => {
+        const vatAmount = typeof item.vat_amount === 'string' ? parseFloat(item.vat_amount) : 
+                         typeof item.vat_amount === 'number' ? item.vat_amount : 0;
+        return sum + vatAmount;
+      }, 0);
+      
       const totalAmount = selectedInvoiceDetails.reduce((sum, item) => {
-        const unitPriceStr = item.huaweiPo?.unit_price;
-        const unitPrice = typeof unitPriceStr === 'string' ? parseFloat(unitPriceStr) : 
-                         typeof unitPriceStr === 'number' ? unitPriceStr : 0;
-        const percentage = item.invoiced_percentage;
-        const itemAmount = unitPrice * percentage / 100;
-        return sum + itemAmount;
+        const totalAmount = typeof item.total_amount === 'string' ? parseFloat(item.total_amount) : 
+                           typeof item.total_amount === 'number' ? item.total_amount : 0;
+        return sum + totalAmount;
       }, 0);
 
-      // Header
-      doc.setFontSize(20);
-      doc.setTextColor(33, 150, 243);
-      doc.text('INVOICE DETAILS', 105, 20, { align: 'center' });
+      // Get unique PO numbers and subcontract numbers
+      const uniquePOs = Array.from(new Set(selectedInvoiceDetails.map(item => item.huaweiPo?.po_no).filter(Boolean)));
+      const uniqueSubcontracts = Array.from(new Set(selectedInvoiceDetails.map(item => (item.huaweiPo?.job as any)?.subcontract_no).filter(Boolean)));
+
+      // Set up page
+      const pageWidth = doc.internal.pageSize.width;
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
       
+      let currentY = 30;
+
+      // Header - Company Logo and Name
+      doc.setFontSize(28);
+      doc.setTextColor(33, 33, 33);
+      doc.text(`${settings?.data?.company_name || 'Company Name'}`, pageWidth / 2, currentY, { align: 'center' });
+      currentY += 20;
+
+      // Tax Invoice Title
+      doc.setFontSize(28);
+      doc.text('Tax Invoice', pageWidth / 2, currentY, { align: 'center' });
+      currentY += 30;
+
+      // First table - Customer and Invoice Details
+      const table1Y = currentY;
+      const col1Width = contentWidth * 0.333;
+      const col2Width = contentWidth * 0.333;
+      const col3Width = contentWidth * 0.334;
+
+      // Draw table borders
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+
+      // Table 1 - Header row
+      doc.line(margin, table1Y, pageWidth - margin, table1Y);
+      doc.line(margin, table1Y + 15, pageWidth - margin, table1Y + 15);
+      doc.line(margin, table1Y + 30, pageWidth - margin, table1Y + 30);
+      doc.line(margin, table1Y + 45, pageWidth - margin, table1Y + 45);
+      doc.line(margin, table1Y + 60, pageWidth - margin, table1Y + 60);
+      
+      // Vertical lines
+      doc.line(margin + col1Width, table1Y, margin + col1Width, table1Y + 60);
+      doc.line(margin + col1Width + col2Width, table1Y, margin + col1Width + col2Width, table1Y + 60);
+
+      // Column 1 - Customer Address
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
-      doc.text(`Invoice Number: ${invoiceNo}`, 20, 40);
-      doc.text(`Date: ${createdDate}`, 20, 50);
-      doc.text(`Total Records: ${selectedInvoiceDetails.length}`, 20, 60);
-      doc.text(`Total Amount: $${totalAmount.toFixed(2)}`, 20, 70);
+      doc.text('To:', margin + 5, table1Y + 10);
+      
+      // Split customer address into lines
+      const addressLines = customerAddress.split('\n').slice(0, 8); // Max 8 lines
+      addressLines.forEach((line: string, index: number) => {
+        doc.setFontSize(10);
+        doc.text(line, margin + 15, table1Y + 20 + (index * 5));
+      });
+      
+      doc.setFontSize(10);
+      doc.text(`YOUR VAT NO.: ${settings?.data?.vat_number || 'N/A'}`, margin + 5, table1Y + 55);
 
-      // Table data
-      const tableData = selectedInvoiceDetails.map((item) => {
-        const unitPriceStr = item.huaweiPo?.unit_price;
-        const unitPrice = typeof unitPriceStr === 'string' ? parseFloat(unitPriceStr) : 
-                         typeof unitPriceStr === 'number' ? unitPriceStr : 0;
-        const qtyStr = item.huaweiPo?.requested_quantity;
-        const requestedQty = typeof qtyStr === 'string' ? parseFloat(qtyStr) : 
-                            typeof qtyStr === 'number' ? qtyStr : 0;
-        const amount = unitPrice * item.invoiced_percentage / 100;
-        
-        return [
-          item.huaweiPo?.po_no || '',
-          item.huaweiPo?.line_no || '',
-          item.huaweiPo?.item_code || '',
-          item.huaweiPo?.item_description || '',
-          `$${unitPrice.toFixed(2)}`,
-          requestedQty.toFixed(0),
-          `${item.invoiced_percentage}%`,
-          `$${amount.toFixed(2)}`
-        ];
+      // Column 2 - Invoice Number
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Invoice No. :', margin + col1Width + 5, table1Y + 10);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(invoiceNo, margin + col1Width + 5, table1Y + 20);
+
+      // Column 3 - Date
+      doc.setFontSize(12);
+      doc.text('Date:', margin + col1Width + col2Width + 5, table1Y + 10);
+      doc.setFontSize(10);
+      doc.text(createdDate, margin + col1Width + col2Width + 5, table1Y + 20);
+
+      // Row 2 - Subcontract Numbers
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Subcontract No.:', margin + col1Width + 5, table1Y + 35);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const subcontractText = uniqueSubcontracts.length > 0 ? uniqueSubcontracts.join(', ') : 'N/A';
+      doc.text(subcontractText, margin + col1Width + 5, table1Y + 45);
+
+      // Row 3 - PO Numbers
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('P.O No.', margin + col1Width + 5, table1Y + 50);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const poText = uniquePOs.length > 0 ? uniquePOs.join(', ') : 'N/A';
+      doc.text(poText, margin + col1Width + 5, table1Y + 60);
+
+      // Row 4 - Payment Instructions
+      doc.setFontSize(10);
+      doc.text('By Cheques or TT.', margin + col1Width + 5, table1Y + 65);
+      doc.text('All the Cheques to be drawn in favour of', margin + col1Width + 5, table1Y + 70);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`"${settings?.data?.company_name || 'Company Name'}"`, margin + col1Width + 5, table1Y + 75);
+
+      currentY = table1Y + 85;
+
+      // Main Items Table
+      const table2Y = currentY;
+      const itemColWidth = contentWidth * 0.05;
+      const descColWidth = contentWidth * 0.80;
+      const amountColWidth = contentWidth * 0.15;
+
+      // Table 2 - Header
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(1);
+      doc.rect(margin, table2Y, contentWidth, 15);
+      doc.line(margin + itemColWidth, table2Y, margin + itemColWidth, table2Y + 15);
+      doc.line(margin + itemColWidth + descColWidth, table2Y, margin + itemColWidth + descColWidth, table2Y + 15);
+
+      // Table 2 - Header text
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('#', margin + itemColWidth/2, table2Y + 10, { align: 'center' });
+      doc.text('Description of Work', margin + itemColWidth + descColWidth/2, table2Y + 10, { align: 'center' });
+      doc.text(`Total Amount\n${currencySymbol}`, margin + itemColWidth + descColWidth + amountColWidth/2, table2Y + 10, { align: 'center' });
+
+      currentY = table2Y + 15;
+
+      // Row 1 - Main item
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.rect(margin, currentY, contentWidth, 15);
+      doc.line(margin + itemColWidth, currentY, margin + itemColWidth, currentY + 15);
+      doc.line(margin + itemColWidth + descColWidth, currentY, margin + itemColWidth + descColWidth, currentY + 15);
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text('1', margin + itemColWidth/2, currentY + 10, { align: 'center' });
+      doc.text(`${jobType}\nPROJECT: ${jobName}`, margin + itemColWidth + 5, currentY + 5);
+      doc.text(formatCurrency(subtotal), margin + itemColWidth + descColWidth + amountColWidth/2, currentY + 10, { align: 'right' });
+
+      currentY += 15;
+
+      // Empty rows (2 and 3)
+      for (let i = 0; i < 2; i++) {
+        doc.rect(margin, currentY, contentWidth, 15);
+        doc.line(margin + itemColWidth, currentY, margin + itemColWidth, currentY + 15);
+        doc.line(margin + itemColWidth + descColWidth, currentY, margin + itemColWidth + descColWidth, currentY + 15);
+        currentY += 15;
+      }
+
+      // Row 4 - Refer annexure
+      doc.rect(margin, currentY, contentWidth, 15);
+      doc.line(margin + itemColWidth, currentY, margin + itemColWidth, currentY + 15);
+      doc.line(margin + itemColWidth + descColWidth, currentY, margin + itemColWidth + descColWidth, currentY + 15);
+      doc.text('***REFER ANNEXURE FOR MORE DETAILS', margin + itemColWidth + 5, currentY + 5);
+      doc.text('Value Excluding VAT', margin + itemColWidth + 5, currentY + 12);
+      doc.text(formatCurrency(subtotal), margin + itemColWidth + descColWidth + amountColWidth/2, currentY + 10, { align: 'right' });
+
+      currentY += 15;
+
+      // Payment Terms row
+      doc.rect(margin, currentY, contentWidth, 15);
+      doc.line(margin + itemColWidth, currentY, margin + itemColWidth, currentY + 15);
+      doc.line(margin + itemColWidth + descColWidth, currentY, margin + itemColWidth + descColWidth, currentY + 15);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Payment Terms :', margin + itemColWidth + 5, currentY + 5);
+      doc.setFont('helvetica', 'normal');
+
+      currentY += 15;
+
+      // Full Payment row
+      doc.rect(margin, currentY, contentWidth, 15);
+      doc.line(margin + itemColWidth, currentY, margin + itemColWidth, currentY + 15);
+      doc.line(margin + itemColWidth + descColWidth, currentY, margin + itemColWidth + descColWidth, currentY + 15);
+      doc.text('Full Payment 100% on AC1-ESAR - Value Including VAT', margin + itemColWidth + 5, currentY + 10);
+      doc.text(formatCurrency(totalAmount), margin + itemColWidth + descColWidth + amountColWidth/2, currentY + 10, { align: 'right' });
+
+      currentY += 15;
+
+      // VAT row
+      doc.rect(margin, currentY, contentWidth, 15);
+      doc.line(margin + itemColWidth, currentY, margin + itemColWidth, currentY + 15);
+      doc.line(margin + itemColWidth + descColWidth, currentY, margin + itemColWidth + descColWidth, currentY + 15);
+      doc.text(`OUR VAT NO.: ${settings?.data?.vat_number || 'N/A'}`, margin + itemColWidth + 5, currentY + 5);
+      doc.text(`Add : VAT ${vatPercentage}%`, margin + itemColWidth + 5, currentY + 12);
+      doc.text(formatCurrency(vatTotal), margin + itemColWidth + descColWidth + amountColWidth/2, currentY + 10, { align: 'right' });
+
+      currentY += 25;
+
+      // Amount Chargeable
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Amount Chargeable', margin, currentY);
+      doc.text(formatCurrency(totalAmount), pageWidth - margin - 5, currentY, { align: 'right' });
+
+      currentY += 15;
+
+      // Amount in Words
+      const amountInWords = numberToWords(totalAmount);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('(In Words)', margin, currentY);
+      doc.text(`(${amountInWords})`, margin, currentY + 8);
+
+      currentY += 20;
+
+      // Contact Information
+      doc.setFontSize(10);
+      doc.text(`Note: Any question concern please contact ${settings?.data?.contact_number || 'N/A'} or e-mail : ${settings?.data?.email || 'N/A'} / ${settings?.data?.finance_email || 'N/A'}`, margin, currentY, { align: 'center' });
+
+      currentY += 20;
+
+      // Signature and Bank Details
+      const signatureY = currentY;
+      doc.text(`For ${settings?.data?.company_name || 'Company Name'}`, margin + 10, signatureY);
+      doc.text('Authorized Signatory', margin + 10, signatureY + 20);
+
+      // Bank details (right side)
+      const bankDetails = settings?.data?.bank_account || 'Bank details not available';
+      const bankLines = bankDetails.split('\n');
+      bankLines.forEach((line: string, index: number) => {
+        doc.text(line, margin + contentWidth/2 + 10, signatureY + (index * 5));
       });
 
-      // Create table
-      (doc as any).autoTable({
-        startY: 85,
-        head: [['PO NO.', 'Line NO.', 'Item Code', 'Item Description', 'Unit Price', 'Requested Qty', 'Invoiced %', 'Amount']],
-        body: tableData,
-        theme: 'grid',
-        headStyles: {
-          fillColor: [33, 150, 243],
-          textColor: 255,
-          fontSize: 10,
-          fontStyle: 'bold'
-        },
-        bodyStyles: {
-          fontSize: 9
-        },
-        columnStyles: {
-          0: { cellWidth: 25 },
-          1: { cellWidth: 15 },
-          2: { cellWidth: 20 },
-          3: { cellWidth: 40 },
-          4: { cellWidth: 20 },
-          5: { cellWidth: 20 },
-          6: { cellWidth: 20 },
-          7: { cellWidth: 20 }
-        },
-        styles: {
-          overflow: 'linebreak',
-          cellPadding: 3
-        }
-      });
+      currentY = signatureY + 40;
 
       // Footer
-      const finalY = (doc as any).lastAutoTable.finalY + 10;
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text('Generated by ERP System', 105, finalY, { align: 'center' });
-      doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, finalY + 10, { align: 'center' });
-
+      doc.setFontSize(8);
+      doc.text(`Office : ${settings?.data?.contact_number || 'N/A'}`, margin, currentY);
+      doc.text(`Tel: ${settings?.data?.contact_number || 'N/A'} Fax: N/A Email: ${settings?.data?.email || 'N/A'} Web: N/A`, margin, currentY + 5);
+      doc.text(`Reg. Office No: ${settings?.data?.business_registration_number || 'N/A'} Tel: ${settings?.data?.contact_number || 'N/A'}`, margin, currentY + 10);
+      
+      console.log('PDF generation completed successfully');
+      
       // Download the PDF
-      doc.save(`Invoice_${invoiceNo}_${new Date().toISOString().split('T')[0]}.pdf`);
+      const fileName = `Invoice_${invoiceNo}_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
       
       setSuccess('PDF downloaded successfully!');
     } catch (err) {
       console.error('Error generating PDF:', err);
-      setError('Failed to generate PDF. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setError(`Failed to generate PDF: ${errorMessage}`);
     } finally {
       setIsDownloadingPDF(false);
     }
+  };
+
+  // Helper function to convert number to words
+  const numberToWords = (num: number): string => {
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+
+    const convertLessThanOneThousand = (n: number): string => {
+      if (n === 0) return '';
+
+      if (n < 10) return ones[n];
+      if (n < 20) return teens[n - 10];
+      if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
+      if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' and ' + convertLessThanOneThousand(n % 100) : '');
+      return '';
+    };
+
+    const convert = (n: number): string => {
+      if (n === 0) return 'Zero';
+      if (n < 1000) return convertLessThanOneThousand(n);
+      if (n < 1000000) return convertLessThanOneThousand(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 !== 0 ? ' ' + convertLessThanOneThousand(n % 1000) : '');
+      if (n < 1000000000) return convertLessThanOneThousand(Math.floor(n / 1000000)) + ' Million' + (n % 1000000 !== 0 ? ' ' + convert(n % 1000000) : '');
+      return convertLessThanOneThousand(Math.floor(n / 1000000000)) + ' Billion' + (n % 1000000000 !== 0 ? ' ' + convert(n % 1000000000) : '');
+    };
+
+    const dollars = Math.floor(num);
+    const cents = Math.round((num - dollars) * 100);
+    
+    let result = convert(dollars) + ' Dollars';
+    if (cents > 0) {
+      result += ' and ' + convert(cents) + ' Cents';
+    }
+    
+    return result;
   };
 
   // Group invoices by invoice number
@@ -310,11 +534,9 @@ export const ViewInvoices: React.FC = () => {
   // Calculate summaries for each invoice group
   const invoiceSummaries = Object.entries(groupedInvoices).map(([invoiceNo, invoices]) => {
     const totalAmount = invoices.reduce((sum, invoice) => {
-      const unitPriceStr = invoice.huaweiPo?.unit_price;
-      const unitPrice = typeof unitPriceStr === 'string' ? parseFloat(unitPriceStr) : 
-                       typeof unitPriceStr === 'number' ? unitPriceStr : 0;
-      const amount = unitPrice * invoice.invoiced_percentage / 100;
-      return sum + amount;
+      const totalAmount = typeof invoice.total_amount === 'string' ? parseFloat(invoice.total_amount) : 
+                         typeof invoice.total_amount === 'number' ? invoice.total_amount : 0;
+      return sum + totalAmount;
     }, 0);
 
     return {
@@ -553,7 +775,7 @@ export const ViewInvoices: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight="bold" color="primary">
-                        ${summary.total_amount.toFixed(2)}
+                        {formatCurrency(summary.total_amount)}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -627,20 +849,10 @@ export const ViewInvoices: React.FC = () => {
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    Total Amount
+                    VAT Percentage
                   </Typography>
-                  <Typography variant="body1" fontWeight="bold" color="primary">
-                    ${(() => {
-                      const total = selectedInvoiceDetails.reduce((sum, item) => {
-                        const unitPriceStr = item.huaweiPo?.unit_price;
-                        const unitPrice = typeof unitPriceStr === 'string' ? parseFloat(unitPriceStr) : 
-                                         typeof unitPriceStr === 'number' ? unitPriceStr : 0;
-                        const percentage = item.invoiced_percentage;
-                        const itemAmount = unitPrice * percentage / 100;
-                        return sum + itemAmount;
-                      }, 0);
-                      return total.toFixed(2);
-                    })()}
+                  <Typography variant="body1" fontWeight="bold" color="#1e40af">
+                    {selectedInvoiceDetails[0].vat_percentage}%
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
@@ -652,6 +864,107 @@ export const ViewInvoices: React.FC = () => {
                   </Typography>
                 </Grid>
               </Grid>
+
+              {/* Financial Summary for Saved Invoice */}
+              <Box sx={{ 
+                mb: 3, 
+                p: 3, 
+                backgroundColor: '#f0fdf4',
+                borderRadius: 2, 
+                border: '1px solid', 
+                borderColor: '#bbf7d0'
+              }}>
+                <Typography variant="subtitle1" gutterBottom color="text.primary" fontWeight="500" sx={{ mb: 2 }}>
+                  Financial Summary
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Subtotal
+                      </Typography>
+                      <Typography variant="h6" fontWeight="600" color="text.primary">
+                        ${(() => {
+                          const subtotal = selectedInvoiceDetails.reduce((sum, item) => {
+                            const subtotalAmount = typeof item.subtotal_amount === 'string' ? parseFloat(item.subtotal_amount) : 
+                                                 typeof item.subtotal_amount === 'number' ? item.subtotal_amount : 0;
+                            return sum + subtotalAmount;
+                          }, 0);
+                          return subtotal.toFixed(2);
+                        })()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        VAT ({selectedInvoiceDetails[0].vat_percentage}%)
+                      </Typography>
+                      <Typography variant="h6" fontWeight="600" color="#1e40af">
+                        ${(() => {
+                          const vatTotal = selectedInvoiceDetails.reduce((sum, item) => {
+                            const vatAmount = typeof item.vat_amount === 'string' ? parseFloat(item.vat_amount) : 
+                                            typeof item.vat_amount === 'number' ? item.vat_amount : 0;
+                            return sum + vatAmount;
+                          }, 0);
+                          return vatTotal.toFixed(2);
+                        })()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Total Amount
+                      </Typography>
+                      <Typography variant="h6" fontWeight="600" color="#059669">
+                        ${(() => {
+                          const total = selectedInvoiceDetails.reduce((sum, item) => {
+                            const totalAmount = typeof item.total_amount === 'string' ? parseFloat(item.total_amount) : 
+                                              typeof item.total_amount === 'number' ? item.total_amount : 0;
+                            return sum + totalAmount;
+                          }, 0);
+                          return total.toFixed(2);
+                        })()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Invoice Date
+                      </Typography>
+                      <Typography variant="h6" fontWeight="600" color="text.primary">
+                        {new Date(selectedInvoiceDetails[0].createdAt).toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
 
               <Divider sx={{ my: 2 }} />
 
@@ -670,7 +983,9 @@ export const ViewInvoices: React.FC = () => {
                       <TableCell>Unit Price</TableCell>
                       <TableCell>Requested Qty</TableCell>
                       <TableCell>Invoiced %</TableCell>
-                      <TableCell>Amount</TableCell>
+                      <TableCell>Subtotal</TableCell>
+                      <TableCell>VAT Amount</TableCell>
+                      <TableCell>Total Amount</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -682,8 +997,6 @@ export const ViewInvoices: React.FC = () => {
                       const qtyStr = item.huaweiPo?.requested_quantity;
                       const requestedQty = typeof qtyStr === 'string' ? parseFloat(qtyStr) : 
                                          typeof qtyStr === 'number' ? qtyStr : 0;
-                      
-                      const amount = unitPrice * item.invoiced_percentage / 100;
                       
                       return (
                         <TableRow key={item.id}>
@@ -705,8 +1018,30 @@ export const ViewInvoices: React.FC = () => {
                             />
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2" fontWeight="bold" color="primary">
-                              ${amount.toFixed(2)}
+                            <Typography variant="body2" fontWeight="500" color="text.primary">
+                              ${(() => {
+                                const subtotalAmount = typeof item.subtotal_amount === 'string' ? parseFloat(item.subtotal_amount) : 
+                                                     typeof item.subtotal_amount === 'number' ? item.subtotal_amount : 0;
+                                return subtotalAmount.toFixed(2);
+                              })()}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="500" color="#1e40af">
+                              ${(() => {
+                                const vatAmount = typeof item.vat_amount === 'string' ? parseFloat(item.vat_amount) : 
+                                                typeof item.vat_amount === 'number' ? item.vat_amount : 0;
+                                return vatAmount.toFixed(2);
+                              })()}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="600" color="#059669">
+                              ${(() => {
+                                const totalAmount = typeof item.total_amount === 'string' ? parseFloat(item.total_amount) : 
+                                                  typeof item.total_amount === 'number' ? item.total_amount : 0;
+                                return totalAmount.toFixed(2);
+                              })()}
                             </Typography>
                           </TableCell>
                         </TableRow>

@@ -9,6 +9,7 @@ export interface InvoiceData {
 export interface CreateInvoiceRequest {
   invoice_no: string;
   invoice_data: InvoiceData[];
+  vat_percentage: number;
 }
 
 export interface CreateInvoiceResponse {
@@ -16,6 +17,7 @@ export interface CreateInvoiceResponse {
   data: {
     created_invoices: number;
     invoice_no: string;
+    vat_percentage: number;
   };
 }
 
@@ -24,6 +26,10 @@ export interface InvoiceRecord {
   invoice_no: string;
   huawei_po_id: number;
   invoiced_percentage: number;
+  vat_percentage: number;
+  vat_amount: number;
+  subtotal_amount: number;
+  total_amount: number;
   createdAt: string;
   updatedAt: string;
   huaweiPo?: {

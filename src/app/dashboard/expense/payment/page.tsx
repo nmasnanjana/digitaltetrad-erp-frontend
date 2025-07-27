@@ -24,8 +24,10 @@ import {
 import { CheckCircle, XCircle } from '@phosphor-icons/react/dist/ssr';
 import { getAllExpenses, markAsPaid } from '@/api/expenseApi';
 import { Expense } from '@/types/expense';
+import { useSettings } from '@/contexts/SettingsContext';
 
 export default function ExpensePaymentPage() {
+  const { formatCurrency } = useSettings();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -55,23 +57,16 @@ export default function ExpensePaymentPage() {
     setPaymentDialogOpen(true);
   };
 
-  const handlePaymentSubmit = async () => {
+  const handlePaymentConfirm = async () => {
     if (!selectedExpense) return;
-
+    
     try {
-      setError(null);
-      await markAsPaid(selectedExpense.id, {
-        paymentDate: new Date().toISOString(),
-        paymentMethod: 'Bank Transfer',
-        reference: `PAY-${selectedExpense.id}`
-      });
-
-      await fetchExpenses();
+      await markAsPaid(selectedExpense.id.toString());
       setPaymentDialogOpen(false);
-      setSelectedExpense(null);
+      fetchExpenses();
     } catch (error) {
-      console.error('Error updating payment status:', error);
-      setError(error instanceof Error ? error.message : 'Failed to update payment status. Please try again.');
+      console.error('Error marking expense as paid:', error);
+      setError(error instanceof Error ? error.message : 'Failed to mark expense as paid. Please try again later.');
     }
   };
 
@@ -153,7 +148,7 @@ export default function ExpensePaymentPage() {
                       <TableCell>{expense.job?.name || 'N/A'}</TableCell>
                       <TableCell>{expense.expenseType?.name}</TableCell>
                       <TableCell>{expense.description}</TableCell>
-                      <TableCell>${expense.amount.toFixed(2)}</TableCell>
+                      <TableCell>{formatCurrency(expense.amount)}</TableCell>
                       <TableCell>
                         {expense.approved_by 
                           ? `${expense.approved_by}`
@@ -201,7 +196,7 @@ export default function ExpensePaymentPage() {
               <Stack spacing={1}>
                 <Typography variant="subtitle2">Expense Details:</Typography>
                 <Typography>Job: {selectedExpense.job?.name || 'N/A'}</Typography>
-                <Typography>Amount: ${selectedExpense.amount.toFixed(2)}</Typography>
+                <Typography>Amount: {formatCurrency(selectedExpense.amount)}</Typography>
                 <Typography>Description: {selectedExpense.description}</Typography>
               </Stack>
             )}
@@ -209,7 +204,7 @@ export default function ExpensePaymentPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPaymentDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handlePaymentSubmit} variant="contained" color="success">
+          <Button onClick={handlePaymentConfirm} variant="contained" color="success">
             Confirm Payment
           </Button>
         </DialogActions>

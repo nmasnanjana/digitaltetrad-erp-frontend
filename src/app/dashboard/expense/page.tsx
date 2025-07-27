@@ -20,9 +20,11 @@ import {
 import { Plus, List, Gear } from '@phosphor-icons/react/dist/ssr';
 import { getAllExpenses } from '@/api/expenseApi';
 import { Expense } from '@/types/expense';
+import { useSettings } from '@/contexts/SettingsContext';
 import Link from 'next/link';
 
 export default function ExpenseOverviewPage() {
+  const { formatCurrency } = useSettings();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -144,7 +146,7 @@ export default function ExpenseOverviewPage() {
                   Total Amount
                 </Typography>
                 <Typography variant="h4">
-                  ${totalAmount.toFixed(2)}
+                  {formatCurrency(totalAmount)}
                 </Typography>
               </Card>
             </Grid>
@@ -206,7 +208,7 @@ export default function ExpenseOverviewPage() {
                       <TableCell>{expense.job?.name || 'N/A'}</TableCell>
                       <TableCell>{expense.expenseType?.name}</TableCell>
                       <TableCell>{expense.description}</TableCell>
-                      <TableCell>${expense.amount.toFixed(2)}</TableCell>
+                      <TableCell>{formatCurrency(expense.amount)}</TableCell>
                       <TableCell>
                         <Chip
                           label={expense.status}

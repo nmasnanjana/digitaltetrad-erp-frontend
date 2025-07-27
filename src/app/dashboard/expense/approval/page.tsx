@@ -27,8 +27,10 @@ import {
 import { CheckCircle } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { getAllExpenses, approveExpense, rejectExpense } from '@/api/expenseApi';
 import { Expense } from '@/types/expense';
+import { useSettings } from '@/contexts/SettingsContext';
 
 export default function ExpenseApprovalPage() {
+  const { formatCurrency } = useSettings();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
@@ -169,7 +171,7 @@ export default function ExpenseApprovalPage() {
                       <TableCell>{expense.job?.name || 'N/A'}</TableCell>
                       <TableCell>{expense.expenseType?.name}</TableCell>
                       <TableCell>{expense.description}</TableCell>
-                      <TableCell>${expense.amount.toFixed(2)}</TableCell>
+                      <TableCell>{formatCurrency(expense.amount)}</TableCell>
                       <TableCell>
                         <Typography
                           sx={{

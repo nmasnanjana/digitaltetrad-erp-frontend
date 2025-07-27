@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getExpenseById, deleteExpense } from '@/api/expenseApi';
 import { Expense } from '@/types/expense';
+import { useSettings } from '@/contexts/SettingsContext';
 import {
   Box,
   Button,
@@ -33,6 +34,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const { formatCurrency } = useSettings();
 
   const loadExpense = async () => {
     try {
@@ -149,7 +151,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
             <Typography variant="subtitle2" color="text.secondary">
               Amount
             </Typography>
-            <Typography variant="body1">LKR {expense.amount.toFixed(2)}</Typography>
+            <Typography variant="body1">{formatCurrency(expense.amount)}</Typography>
           </Grid>
           <Grid item xs={12}>
             <Typography variant="subtitle2" color="text.secondary">
@@ -157,26 +159,24 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
             </Typography>
             <Typography variant="body1">{expense.description}</Typography>
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12}>
             <Typography variant="subtitle2" color="text.secondary">
               Status
             </Typography>
             <Chip
-              label={expense.status.charAt(0).toUpperCase() + expense.status.slice(1).replace('_', ' ')}
-              color={
-                expense.status === 'approved' ? 'success' :
-                expense.status === 'rejected' ? 'error' :
-                'warning'
-              }
+              label={expense.status || 'Unknown'}
+              color={expense.status === 'approved' ? 'success' : expense.status === 'denied' ? 'error' : 'warning'}
+              size="small"
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12}>
             <Typography variant="subtitle2" color="text.secondary">
               Payment Status
             </Typography>
             <Chip
               label={expense.paid ? 'Paid' : 'Unpaid'}
-              color={expense.paid ? 'success' : 'warning'}
+              color={expense.paid ? 'success' : 'default'}
+              size="small"
             />
           </Grid>
           {expense.editor && (
@@ -189,21 +189,21 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
               </Typography>
             </Grid>
           )}
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12}>
             <Typography variant="subtitle2" color="text.secondary">
               Created At
             </Typography>
             <Typography variant="body1">
-              {expense.createdAt ? new Date(expense.createdAt).toLocaleString() : '-'}
+              {expense.created_at ? new Date(expense.created_at).toLocaleString() : 'N/A'}
             </Typography>
           </Grid>
-          {expense.updatedAt && expense.updatedAt !== expense.createdAt && (
-            <Grid item xs={12} sm={6}>
+          {expense.updated_at && expense.updated_at !== expense.created_at && (
+            <Grid item xs={12}>
               <Typography variant="subtitle2" color="text.secondary">
                 Updated At
               </Typography>
               <Typography variant="body1">
-                {new Date(expense.updatedAt).toLocaleString()}
+                {expense.updated_at ? new Date(expense.updated_at).toLocaleString() : 'N/A'}
               </Typography>
             </Grid>
           )}

@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState } from 'react';
 import { Job } from '@/types/job';
 import { Expense } from '@/types/expense';
@@ -28,6 +30,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { getExpensesByJob } from '@/api/expenseApi';
 import { uploadHuaweiPoExcel, getHuaweiPosByJobId, deleteHuaweiPoByJobId, downloadHuaweiPoFile, createHuaweiPo, updateHuaweiPo, deleteHuaweiPo } from '@/api/huaweiPoApi';
+import { useSettings } from '@/contexts/SettingsContext';
 import * as XLSX from 'xlsx';
 import LockIcon from '@mui/icons-material/Lock';
 import EditIcon from '@mui/icons-material/Edit';
@@ -232,6 +235,8 @@ export const JobView: React.FC<JobViewProps> = ({
   onDelete,
   onUpdateStatus,
 }) => {
+  const { formatCurrency } = useSettings();
+  const router = useRouter();
   const [statusDialogOpen, setStatusDialogOpen] = React.useState(false);
   const [nextStatus, setNextStatus] = React.useState<Job['status'] | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -783,7 +788,7 @@ export const JobView: React.FC<JobViewProps> = ({
                     <TableRow key={expense.id}>
                       <TableCell>{expense.expenseType?.name || '-'}</TableCell>
                       <TableCell>{expense.description}</TableCell>
-                      <TableCell>${expense.amount.toFixed(2)}</TableCell>
+                      <TableCell>{formatCurrency(expense.amount)}</TableCell>
                       <TableCell>
                         {expense.created_at ? new Date(expense.created_at).toLocaleDateString() : '-'}
                       </TableCell>
@@ -924,8 +929,7 @@ export const JobView: React.FC<JobViewProps> = ({
                             </Typography>
                           </TableCell>
                           <TableCell sx={{ minWidth: 100 }}>
-                            ${typeof po.unit_price === 'number' ? po.unit_price.toFixed(2) : 
-                              po.unit_price ? parseFloat(po.unit_price).toFixed(2) : '0.00'}
+                            {formatCurrency(po.unit_price)}
                           </TableCell>
                           <TableCell sx={{ minWidth: 120 }}>{po.requested_quantity}</TableCell>
                           <TableCell sx={{ minWidth: 120 }}>

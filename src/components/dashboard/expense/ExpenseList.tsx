@@ -9,6 +9,7 @@ import { Expense } from '@/types/expense';
 import { ExpenseType } from '@/types/expense';
 import { Job } from '@/types/job';
 import { OperationType } from '@/types/operationType';
+import { useSettings } from '@/contexts/SettingsContext';
 import {
   Box,
   Button,
@@ -34,6 +35,7 @@ import { ExpenseFilters, ExpenseFilters as ExpenseFiltersType } from './ExpenseF
 import { useRouter } from 'next/navigation';
 
 export const ExpenseList: React.FC = () => {
+  const { formatCurrency } = useSettings();
   const router = useRouter();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +53,7 @@ export const ExpenseList: React.FC = () => {
     try {
       setLoading(true);
       const [expensesResponse, expenseTypesResponse, jobsResponse, operationTypesResponse] = await Promise.all([
-        getAllExpenses(filters),
+        getAllExpenses(),
         getAllExpenseTypes(),
         getAllJobs(),
         getAllOperationTypes()
@@ -182,7 +184,7 @@ export const ExpenseList: React.FC = () => {
                     size="small"
                   />
                 </TableCell>
-                <TableCell>LKR {expense.amount.toFixed(2)}</TableCell>
+                <TableCell>{formatCurrency(expense.amount)}</TableCell>
                 <TableCell>
                   <Chip
                     label={expense.status}
@@ -198,7 +200,7 @@ export const ExpenseList: React.FC = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  {new Date(expense.createdAt).toLocaleDateString()}
+                  {expense.created_at ? new Date(expense.created_at).toLocaleDateString() : '-'}
                 </TableCell>
                 <TableCell align="right">
                   <IconButton
