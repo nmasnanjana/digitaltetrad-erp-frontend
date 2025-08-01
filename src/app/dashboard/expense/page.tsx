@@ -59,7 +59,12 @@ export default function ExpensePage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string, paid: boolean) => {
+    // If expense is paid, show success color
+    if (paid) {
+      return 'success';
+    }
+    
     switch (status) {
       case 'approved':
         return 'success';
@@ -72,7 +77,12 @@ export default function ExpensePage() {
     }
   };
 
-  const formatStatus = (status: string) => {
+  const formatStatus = (status: string, paid: boolean) => {
+    // If expense is paid, show "Paid" regardless of status
+    if (paid) {
+      return 'Paid';
+    }
+    
     switch (status) {
       case 'approved':
         return 'Approved';
@@ -290,8 +300,8 @@ export default function ExpensePage() {
                       <TableCell>{formatCurrency(expense.amount)}</TableCell>
                       <TableCell>
                         <Chip
-                          label={expense.status ? formatStatus(expense.status) : 'N/A'}
-                          color={expense.status ? getStatusColor(expense.status) : 'default'}
+                          label={expense.status ? formatStatus(expense.status, expense.paid) : 'N/A'}
+                          color={expense.status ? getStatusColor(expense.status, expense.paid) : 'default'}
                           size="small"
                         />
                       </TableCell>
