@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getExpenseById, deleteExpense } from '@/api/expenseApi';
 import { Expense } from '@/types/expense';
-import { useSettings } from '@/contexts/SettingsContext';
 import {
   Box,
   Button,
@@ -28,13 +27,19 @@ interface ExpenseViewPageProps {
 }
 
 const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
+  // Temporarily use a simple currency formatter without settings
+  const formatCurrency = (amount: number | string | undefined) => {
+    if (amount === undefined || amount === null) return '$0.00';
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return `$${num.toFixed(2)}`;
+  };
+
   const router = useRouter();
   const [expense, setExpense] = useState<Expense | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
-  const { formatCurrency } = useSettings();
 
   const loadExpense = async () => {
     try {

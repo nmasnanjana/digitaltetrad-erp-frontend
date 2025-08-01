@@ -6,9 +6,9 @@ export interface ExpenseType {
     id: number;
     name: string;
     description?: string;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface Expense {
@@ -24,10 +24,12 @@ export interface Expense {
     reviewed_by?: string;
     reviewer_comment?: string;
     status?: 'on_progress' | 'approved' | 'denied';
-    reviewed_at?: Date;1
+    reviewed_at?: Date;
     paid: boolean;
     created_at?: string;
     updated_at?: string;
+    createdAt?: string;
+    updatedAt?: string;
     expenseType?: ExpenseType;
     operationType?: OperationType;
     job?: {
@@ -46,12 +48,5 @@ export interface Expense {
     };
 }
 
-export interface OperationType {
-    id: number;
-    name: string;
-    description?: string;
-    isActive: boolean;
-    createdAt?: string;
-    updatedAt?: string;
-}
+
 

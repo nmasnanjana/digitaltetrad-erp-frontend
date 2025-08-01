@@ -29,16 +29,20 @@ interface SettingsProviderProps {
 }
 
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) => {
+  console.log('SettingsProvider rendering');
+  
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadSettings = async () => {
     try {
+      console.log('SettingsProvider: Loading settings...');
       setLoading(true);
       const response = await getSettings();
+      console.log('SettingsProvider: Settings loaded:', response);
       setSettings(response.data);
     } catch (error) {
-      console.error('Error loading settings:', error);
+      console.error('SettingsProvider: Error loading settings:', error);
       // Use default settings if loading fails
       setSettings({
         id: 1,
@@ -62,6 +66,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
   };
 
   useEffect(() => {
+    console.log('SettingsProvider: useEffect triggered');
     loadSettings();
   }, []);
 
@@ -77,6 +82,8 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
     formatCurrencyWithSpace: (amount: number | string | undefined) => formatCurrencyWithSpace(amount, currency),
     refreshSettings: loadSettings,
   };
+
+  console.log('SettingsProvider: Rendering with settings:', settings);
 
   return (
     <SettingsContext.Provider value={contextValue}>

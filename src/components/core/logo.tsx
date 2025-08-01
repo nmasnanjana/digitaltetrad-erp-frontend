@@ -4,7 +4,6 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { useColorScheme } from '@mui/material/styles';
-import { useSettings } from '@/contexts/SettingsContext';
 
 import { NoSsr } from '@/components/core/no-ssr';
 
@@ -68,31 +67,7 @@ function PlaceholderLogo({ height, width, companyName }: { height: number; width
 }
 
 export function Logo({ color = 'dark', emblem, height = HEIGHT, width = WIDTH }: LogoProps): React.JSX.Element {
-  const { settings } = useSettings();
-  
-  // Use company logo from settings if available
-  if (settings?.company_logo) {
-    return (
-      <Box 
-        alt="Company Logo" 
-        component="img" 
-        height={height} 
-        src={settings.company_logo} 
-        width={width}
-        sx={{
-          objectFit: 'contain',
-          borderRadius: 1,
-        }}
-      />
-    );
-  }
-
-  // Show placeholder logo if no company logo but company name exists
-  if (settings?.company_name && settings.company_name !== 'Company Name') {
-    return <PlaceholderLogo height={height} width={width} companyName={settings.company_name} />;
-  }
-
-  // Fallback to default logo
+  // Temporarily use default logo without settings
   let url: string;
 
   if (emblem) {

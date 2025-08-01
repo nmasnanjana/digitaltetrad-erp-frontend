@@ -20,6 +20,8 @@ import {
   TextField,
   Alert,
   IconButton,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import { Plus, PencilSimple, Trash } from '@phosphor-icons/react/dist/ssr';
 import { getAllExpenseTypes, createExpenseType, updateExpenseType, deleteExpenseType } from '@/api/expenseTypeApi';
@@ -40,6 +42,7 @@ export default function ExpenseTypePage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    isActive: true,
   });
 
   useEffect(() => {
@@ -50,7 +53,7 @@ export default function ExpenseTypePage() {
       }
 
       const hasPermission = user.role?.name === 'Developer' || user.role?.permissions?.some(
-        p => p.module === 'expense' && (p.action === 'read' || p.action === 'write') && p.isActive
+        p => p.module === 'expensetype' && (p.action === 'read' || p.action === 'create' || p.action === 'update' || p.action === 'delete') && p.isActive
       );
 
       if (!hasPermission) {
@@ -77,7 +80,7 @@ export default function ExpenseTypePage() {
   };
 
   const handleOpenDialog = (type?: ExpenseType) => {
-    if (!user?.role?.permissions?.some(p => p.module === 'expense' && p.action === 'write' && p.isActive)) {
+    if (!user?.role?.permissions?.some(p => p.module === 'expensetype' && (p.action === 'create' || p.action === 'update') && p.isActive)) {
       setError('You do not have permission to modify expense types');
       return;
     }
@@ -87,6 +90,7 @@ export default function ExpenseTypePage() {
       setFormData({
         name: type.name,
         description: type.description || '',
+        isActive: type.isActive,
       });
       setIsEdit(true);
     } else {
@@ -94,6 +98,7 @@ export default function ExpenseTypePage() {
       setFormData({
         name: '',
         description: '',
+        isActive: true,
       });
       setIsEdit(false);
     }
@@ -106,11 +111,12 @@ export default function ExpenseTypePage() {
     setFormData({
       name: '',
       description: '',
+      isActive: true,
     });
   };
 
   const handleSubmit = async () => {
-    if (!user?.role?.permissions?.some(p => p.module === 'expense' && p.action === 'write' && p.isActive)) {
+    if (!user?.role?.permissions?.some(p => p.module === 'expensetype' && (p.action === 'create' || p.action === 'update') && p.isActive)) {
       setError('You do not have permission to modify expense types');
       return;
     }
@@ -131,7 +137,7 @@ export default function ExpenseTypePage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!user?.role?.permissions?.some(p => p.module === 'expense' && p.action === 'write' && p.isActive)) {
+    if (!user?.role?.permissions?.some(p => p.module === 'expensetype' && p.action === 'delete' && p.isActive)) {
       setError('You do not have permission to delete expense types');
       return;
     }
@@ -189,15 +195,20 @@ export default function ExpenseTypePage() {
                 Manage expense categories and types
               </Typography>
             </Stack>
-            {user?.role?.permissions?.some(p => p.module === 'expense' && p.action === 'write' && p.isActive) && (
-              <Button
-                variant="contained"
-                startIcon={<Plus />}
-                onClick={() => handleOpenDialog()}
-              >
-                New Type
-              </Button>
-            )}
+            <Button
+              variant="contained"
+              startIcon={<Plus />}
+              onClick={() => handleOpenDialog()}
+              sx={{
+                backgroundColor: 'primary.main',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'primary.dark',
+                },
+              }}
+            >
+              New Expense Type
+            </Button>
           </Stack>
 
           {error && (
@@ -242,18 +253,18 @@ export default function ExpenseTypePage() {
                       <TableCell>
                         <Typography
                           sx={{
-                            color: type.is_active ? 'success.main' : 'error.main',
+                            color: type.isActive ? 'success.main' : 'error.main',
                             fontWeight: 'bold',
                           }}
                         >
-                          {type.is_active ? 'Active' : 'Inactive'}
+                          {type.isActive ? 'Active' : 'Inactive'}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        {new Date(type.created_at).toLocaleDateString()}
+                        {type.createdAt ? new Date(type.createdAt).toLocaleDateString() : 'N/A'}
                       </TableCell>
                       <TableCell>
-                        {user?.role?.permissions?.some(p => p.module === 'expense' && p.action === 'write' && p.isActive) && (
+                        {user?.role?.permissions?.some(p => p.module === 'expensetype' && (p.action === 'update' || p.action === 'delete') && p.isActive) && (
                           <Stack direction="row" spacing={1}>
                             <IconButton
                               size="small"
@@ -300,6 +311,16 @@ export default function ExpenseTypePage() {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               multiline
               rows={3}
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  color="primary"
+                />
+              }
+              label="Active Status"
             />
           </Stack>
         </DialogContent>

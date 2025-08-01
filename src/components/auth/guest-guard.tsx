@@ -17,33 +17,44 @@ export function GuestGuard({ children }: GuestGuardProps): React.JSX.Element | n
   const { user, error, isLoading } = useUser();
   const [isChecking, setIsChecking] = React.useState<boolean>(true);
 
+  console.log('[GuestGuard] State:', { user: !!user, error, isLoading, isChecking });
+
   const checkPermissions = async (): Promise<void> => {
+    console.log('[GuestGuard] checkPermissions called');
     if (isLoading) {
+      console.log('[GuestGuard] Still loading, returning');
       return;
     }
 
     if (error) {
+      console.log('[GuestGuard] Error detected:', error);
       setIsChecking(false);
       return;
     }
 
     if (user) {
+      console.log('[GuestGuard] User is logged in, redirecting to dashboard');
       logger.debug('[GuestGuard]: User is logged in, redirecting to dashboard');
       router.replace(paths.dashboard.overview);
       return;
     }
 
+    console.log('[GuestGuard] No user, showing sign-in form');
     setIsChecking(false);
   };
 
   React.useEffect(() => {
-    checkPermissions().catch(() => {
-      // noop
-    });
+    // Only run checkPermissions when loading is complete
+    if (!isLoading) {
+      checkPermissions().catch(() => {
+        // noop
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Expected
   }, [user, error, isLoading]);
 
-  if (isChecking) {
+  // Show loading state while checking
+  if (isLoading || isChecking) {
     return null;
   }
 

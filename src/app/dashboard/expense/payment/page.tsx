@@ -27,7 +27,12 @@ import { Expense } from '@/types/expense';
 import { useSettings } from '@/contexts/SettingsContext';
 
 export default function ExpensePaymentPage() {
-  const { formatCurrency } = useSettings();
+  // Temporarily use a simple currency formatter without settings
+  const formatCurrency = (amount: number | string | undefined) => {
+    if (amount === undefined || amount === null) return '$0.00';
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return `$${num.toFixed(2)}`;
+  };
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -61,7 +66,7 @@ export default function ExpensePaymentPage() {
     if (!selectedExpense) return;
     
     try {
-      await markAsPaid(selectedExpense.id.toString());
+      await markAsPaid(selectedExpense.id.toString(), { paid: true });
       setPaymentDialogOpen(false);
       fetchExpenses();
     } catch (error) {
@@ -115,8 +120,9 @@ export default function ExpensePaymentPage() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Job</TableCell>
+                  <TableCell>Category</TableCell>
                   <TableCell>Type</TableCell>
+                  <TableCell>Expense Type</TableCell>
                   <TableCell>Description</TableCell>
                   <TableCell>Amount</TableCell>
                   <TableCell>Approved By</TableCell>
@@ -128,7 +134,7 @@ export default function ExpensePaymentPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} align="center">
+                    <TableCell colSpan={9} align="center">
                       <Typography color="text.secondary">
                         Loading expenses...
                       </Typography>
@@ -136,7 +142,7 @@ export default function ExpensePaymentPage() {
                   </TableRow>
                 ) : pendingPayments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} align="center">
+                    <TableCell colSpan={9} align="center">
                       <Typography color="text.secondary">
                         No pending payments
                       </Typography>
@@ -145,8 +151,17 @@ export default function ExpensePaymentPage() {
                 ) : (
                   pendingPayments.map((expense) => (
                     <TableRow key={expense.id}>
-                      <TableCell>{expense.job?.name || 'N/A'}</TableCell>
+                      <TableCell>
+                        {expense.operations ? expense.operationType?.name || 'N/A' : expense.job?.name || 'N/A'}
+                      </TableCell>
                       <TableCell>{expense.expenseType?.name}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={expense.operations ? 'Operation' : 'Job'}
+                          color={expense.operations ? 'primary' : 'secondary'}
+                          size="small"
+                        />
+                      </TableCell>
                       <TableCell>{expense.description}</TableCell>
                       <TableCell>{formatCurrency(expense.amount)}</TableCell>
                       <TableCell>

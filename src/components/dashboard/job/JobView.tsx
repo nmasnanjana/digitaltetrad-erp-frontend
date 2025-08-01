@@ -235,7 +235,13 @@ export const JobView: React.FC<JobViewProps> = ({
   onDelete,
   onUpdateStatus,
 }) => {
-  const { formatCurrency } = useSettings();
+  // Temporarily use a simple currency formatter without settings
+  const formatCurrency = (amount: number | string | undefined) => {
+    if (amount === undefined || amount === null) return '$0.00';
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return `$${num.toFixed(2)}`;
+  };
+  
   const router = useRouter();
   const [statusDialogOpen, setStatusDialogOpen] = React.useState(false);
   const [nextStatus, setNextStatus] = React.useState<Job['status'] | null>(null);

@@ -91,15 +91,12 @@ export const deleteExpense = (id: string) =>
     API.delete(`/expenses/${id}`);
 
 // Expense Approvals
-export const approveExpense = (id: string, data: { approved: boolean; comment?: string }) =>
-    API.post(`/expenses/${id}/approve`, data);
-
-export const rejectExpense = (id: string, data: { comment: string }) =>
-    API.post(`/expenses/${id}/reject`, data);
+export const reviewExpense = (id: string, data: { status: string; reviewer_comment?: string; reviewed_by: string }) =>
+    API.post(`/expenses/${id}/review`, data);
 
 // Expense Payments
-export const markAsPaid = (id: string, data: { paymentDate: string; paymentMethod: string; reference?: string }) =>
-    API.post(`/expenses/${id}/pay`, data);
+export const markAsPaid = (id: string, data: { paid: boolean }) =>
+    API.put(`/expenses/${id}/payment`, data);
 
 export const getExpensePayments = (id: string) =>
     API.get(`/expenses/${id}/payments`);

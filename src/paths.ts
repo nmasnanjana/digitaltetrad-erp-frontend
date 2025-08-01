@@ -18,7 +18,7 @@ export const paths = {
     job: '/dashboard/job',
     inventory: '/dashboard/inventory',
     expense: '/dashboard/expense',
-    expenseDashboard: '/dashboard/expense/dashboard',
+    expenseDashboard: '/dashboard/expenseDashboard',
     expenseApproval: '/dashboard/expense/approval',
     expensePayment: '/dashboard/expense/payment',
     invoiceGenerator: '/dashboard/invoice-generator',

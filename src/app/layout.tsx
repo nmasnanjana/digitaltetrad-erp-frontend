@@ -21,10 +21,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
       <body>
         <LocalizationProvider>
           <UserProvider>
-            <SettingsProvider>
-              <FaviconUpdater />
-              <ThemeProvider>{children}</ThemeProvider>
-            </SettingsProvider>
+            <ThemeProvider>{children}</ThemeProvider>
           </UserProvider>
         </LocalizationProvider>
       </body>

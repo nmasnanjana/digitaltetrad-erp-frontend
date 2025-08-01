@@ -115,12 +115,17 @@ class AuthClientImpl implements AuthClient {
 
   async getUser() {
     try {
+      console.log('getUser called');
       const token = this.getToken();
+      console.log('Token:', token ? 'exists' : 'not found');
       if (!token) {
+        console.log('No token, returning null');
         return { data: null, error: null };
       }
 
+      console.log('Making request to /api/users/me');
       const user = await this.request<User>('/api/users/me');
+      console.log('User response:', user);
 
       if (!user.avatar) {
         user.avatar = generateAvatar(user.username);
@@ -128,6 +133,7 @@ class AuthClientImpl implements AuthClient {
 
       return { data: user, error: null };
     } catch (error) {
+      console.log('getUser error:', error);
       this.removeToken();
       return { data: null, error: error instanceof Error ? error.message : 'Failed to get user' };
     }

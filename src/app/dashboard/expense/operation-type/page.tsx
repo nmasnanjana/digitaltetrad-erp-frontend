@@ -20,10 +20,12 @@ import {
   TextField,
   Alert,
   IconButton,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import { Plus, PencilSimple, Trash } from '@phosphor-icons/react/dist/ssr';
 import { getAllOperationTypes, createOperationType, updateOperationType, deleteOperationType } from '@/api/operationTypeApi';
-import { OperationType } from '@/types/expense';
+import { OperationType } from '@/types/operationType';
 
 export default function OperationTypePage() {
   const [operationTypes, setOperationTypes] = useState<OperationType[]>([]);
@@ -35,6 +37,7 @@ export default function OperationTypePage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    isActive: true,
   });
 
   useEffect(() => {
@@ -61,6 +64,7 @@ export default function OperationTypePage() {
       setFormData({
         name: type.name,
         description: type.description || '',
+        isActive: type.isActive,
       });
       setIsEdit(true);
     } else {
@@ -68,6 +72,7 @@ export default function OperationTypePage() {
       setFormData({
         name: '',
         description: '',
+        isActive: true,
       });
       setIsEdit(false);
     }
@@ -80,6 +85,7 @@ export default function OperationTypePage() {
     setFormData({
       name: '',
       description: '',
+      isActive: true,
     });
   };
 
@@ -245,6 +251,16 @@ export default function OperationTypePage() {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               multiline
               rows={3}
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  color="primary"
+                />
+              }
+              label="Active Status"
             />
           </Stack>
         </DialogContent>

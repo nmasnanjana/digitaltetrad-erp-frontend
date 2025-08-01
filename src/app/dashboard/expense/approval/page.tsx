@@ -23,18 +23,27 @@ import {
   Select,
   MenuItem,
   Alert,
+  Chip,
 } from '@mui/material';
 import { CheckCircle } from '@phosphor-icons/react/dist/ssr/CheckCircle';
-import { getAllExpenses, approveExpense, rejectExpense } from '@/api/expenseApi';
+import { getAllExpenses, reviewExpense } from '@/api/expenseApi';
 import { Expense } from '@/types/expense';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useUser } from '@/contexts/user-context';
 
 export default function ExpenseApprovalPage() {
-  const { formatCurrency } = useSettings();
+  const { user } = useUser();
+  
+  // Temporarily use a simple currency formatter without settings
+  const formatCurrency = (amount: number | string | undefined) => {
+    if (amount === undefined || amount === null) return '$0.00';
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return `$${num.toFixed(2)}`;
+  };
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
-  const [reviewStatus, setReviewStatus] = useState<'approved' | 'rejected'>('approved');
+  const [reviewStatus, setReviewStatus] = useState<'approved' | 'denied'>('approved');
   const [reviewComment, setReviewComment] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,20 +73,26 @@ export default function ExpenseApprovalPage() {
 
   const handleReviewSubmit = async () => {
     if (!selectedExpense) return;
+    
+    if (!user?.id) {
+      setError('User not loaded. Please refresh the page and try again.');
+      return;
+    }
+    
+    console.log('Current user:', user);
+    console.log('User ID:', user.id);
+    console.log('User ID type:', typeof user.id);
 
     try {
       setError(null);
       
-      if (reviewStatus === 'approved') {
-        await approveExpense(selectedExpense.id, {
-          approved: true,
-          comment: reviewComment
-        });
-      } else {
-        await rejectExpense(selectedExpense.id, {
-          comment: reviewComment
-        });
-      }
+      console.log('Reviewing expense with user ID:', user.id);
+      
+      await reviewExpense(selectedExpense.id, {
+        status: reviewStatus,
+        reviewer_comment: reviewComment,
+        reviewed_by: user.id
+      });
 
       await fetchExpenses();
       setReviewDialogOpen(false);
@@ -93,16 +108,16 @@ export default function ExpenseApprovalPage() {
     switch (status) {
       case 'approved':
         return 'success.main';
-      case 'rejected':
+      case 'denied':
         return 'error.main';
       default:
         return 'warning.main';
     }
   };
 
-  // Filter job-related expenses
-  const jobRelatedExpenses = expenses.filter(expense => 
-    !expense.operations && expense.job_id && expense.status === 'pending'
+  // Filter expenses that need approval (both job and operation expenses with on_progress status)
+  const pendingExpenses = expenses.filter(expense => 
+    expense.status === 'on_progress'
   );
 
   return (
@@ -140,8 +155,9 @@ export default function ExpenseApprovalPage() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Job</TableCell>
+                  <TableCell>Category</TableCell>
                   <TableCell>Type</TableCell>
+                  <TableCell>Expense Type</TableCell>
                   <TableCell>Description</TableCell>
                   <TableCell>Amount</TableCell>
                   <TableCell>Status</TableCell>
@@ -157,19 +173,28 @@ export default function ExpenseApprovalPage() {
                       </Typography>
                     </TableCell>
                   </TableRow>
-                ) : jobRelatedExpenses.length === 0 ? (
+                ) : pendingExpenses.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center">
+                    <TableCell colSpan={7} align="center">
                       <Typography color="text.secondary">
                         No expenses pending review
                       </Typography>
                     </TableCell>
                   </TableRow>
                 ) :
-                  jobRelatedExpenses.map((expense) => (
+                  pendingExpenses.map((expense) => (
                     <TableRow key={expense.id}>
-                      <TableCell>{expense.job?.name || 'N/A'}</TableCell>
+                      <TableCell>
+                        {expense.operations ? expense.operationType?.name || 'N/A' : expense.job?.name || 'N/A'}
+                      </TableCell>
                       <TableCell>{expense.expenseType?.name}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={expense.operations ? 'Operation' : 'Job'}
+                          color={expense.operations ? 'primary' : 'secondary'}
+                          size="small"
+                        />
+                      </TableCell>
                       <TableCell>{expense.description}</TableCell>
                       <TableCell>{formatCurrency(expense.amount)}</TableCell>
                       <TableCell>
@@ -212,10 +237,10 @@ export default function ExpenseApprovalPage() {
               <Select
                 value={reviewStatus}
                 label="Status"
-                onChange={(e) => setReviewStatus(e.target.value as 'approved' | 'rejected')}
+                onChange={(e) => setReviewStatus(e.target.value as 'approved' | 'denied')}
               >
                 <MenuItem value="approved">Approve</MenuItem>
-                <MenuItem value="rejected">Reject</MenuItem>
+                <MenuItem value="denied">Deny</MenuItem>
               </Select>
             </FormControl>
             <TextField
