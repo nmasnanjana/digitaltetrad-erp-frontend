@@ -12,6 +12,30 @@ export interface Team {
     lastName?: string;
     username: string;
   };
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+}
+
+export interface CreateTeamRequest {
+  name: string;
+  type: TeamType;
+  company?: string;
+  leader_id: string;
+}
+
+export interface UpdateTeamRequest extends Partial<CreateTeamRequest> {
+  id: number;
+}
+
+export interface TeamFilters {
+  search?: string;
+  type?: TeamType;
+  leader_id?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface TeamSummary {
+  total: number;
+  byType: Record<TeamType, number>;
 } 

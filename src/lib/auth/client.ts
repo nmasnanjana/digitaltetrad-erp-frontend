@@ -16,7 +16,7 @@ class AuthClientImpl implements AuthClient {
   private readonly storage: Storage;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4575';
+    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4575/api';
     this.storage = typeof window !== 'undefined' ? window.localStorage : ({} as Storage);
   }
 
@@ -64,7 +64,7 @@ class AuthClientImpl implements AuthClient {
 
   async signInWithPassword({ username, password, rememberMe }: SignInWithPasswordParams) {
     try {
-      const response = await this.request<{ token: string; user: User }>('/api/users/login', {
+      const response = await this.request<{ token: string; user: User }>('/users/login', {
         method: 'POST',
         body: JSON.stringify({ username, password, rememberMe }),
       });
@@ -90,7 +90,7 @@ class AuthClientImpl implements AuthClient {
 
   async signUp({ username, password, firstName, lastName, email, roleId }: SignUpParams) {
     try {
-      const response = await this.request<ApiResponse<null>>('/api/users/register', {
+      const response = await this.request<ApiResponse<null>>('/users/register', {
         method: 'POST',
         body: JSON.stringify({ 
           username, 
@@ -123,8 +123,8 @@ class AuthClientImpl implements AuthClient {
         return { data: null, error: null };
       }
 
-      console.log('Making request to /api/users/me');
-      const user = await this.request<User>('/api/users/me');
+      console.log('Making request to /users/me');
+      const user = await this.request<User>('/users/me');
       console.log('User response:', user);
 
       if (!user.avatar) {
@@ -141,7 +141,7 @@ class AuthClientImpl implements AuthClient {
 
   async updateUser(id: string, data: Partial<User>) {
     try {
-      const response = await this.request<ApiResponse<null>>(`/api/users/${id}`, {
+      const response = await this.request<ApiResponse<null>>(`/users/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
       });
@@ -154,7 +154,7 @@ class AuthClientImpl implements AuthClient {
 
   async updatePassword(id: string, currentPassword: string, newPassword: string) {
     try {
-      const response = await this.request<ApiResponse<null>>(`/api/users/${id}/password`, {
+      const response = await this.request<ApiResponse<null>>(`/users/${id}/password`, {
         method: 'PUT',
         body: JSON.stringify({ 
           currentPassword, 
@@ -171,7 +171,7 @@ class AuthClientImpl implements AuthClient {
 
   async updateActivity(id: string, isActive: boolean) {
     try {
-      const response = await this.request<ApiResponse<null>>(`/api/users/${id}/activity`, {
+      const response = await this.request<ApiResponse<null>>(`/users/${id}/activity`, {
         method: 'PUT',
         body: JSON.stringify({ isActive }),
       });
@@ -184,7 +184,7 @@ class AuthClientImpl implements AuthClient {
 
   async getAllUsers() {
     try {
-      const users = await this.request<User[]>('/api/users/all');
+      const users = await this.request<User[]>('/users/all');
       return { data: users, error: null };
     } catch (error) {
       return { data: null, error: error instanceof Error ? error.message : 'Failed to get users' };
@@ -193,7 +193,7 @@ class AuthClientImpl implements AuthClient {
 
   async deleteUser(id: string) {
     try {
-      const response = await this.request<ApiResponse<null>>(`/api/users/${id}`, {
+      const response = await this.request<ApiResponse<null>>(`/users/${id}`, {
         method: 'DELETE',
       });
 
@@ -205,7 +205,7 @@ class AuthClientImpl implements AuthClient {
 
   async getAllRoles() {
     try {
-      const roles = await this.request<Role[]>('/api/roles');
+      const roles = await this.request<Role[]>('/roles');
       return { data: roles, error: null };
     } catch (error) {
       return { data: null, error: error instanceof Error ? error.message : 'Failed to get roles' };
@@ -214,7 +214,7 @@ class AuthClientImpl implements AuthClient {
 
   async createRole(data: { name: string; description?: string }) {
     try {
-      const response = await this.request<ApiResponse<Role>>('/api/roles', {
+      const response = await this.request<ApiResponse<Role>>('/roles', {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -227,7 +227,7 @@ class AuthClientImpl implements AuthClient {
 
   async updateRole(id: string, data: { name: string; description?: string; isActive?: boolean }) {
     try {
-      const response = await this.request<ApiResponse<Role>>(`/api/roles/${id}`, {
+      const response = await this.request<ApiResponse<Role>>(`/roles/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
       });
@@ -240,7 +240,7 @@ class AuthClientImpl implements AuthClient {
 
   async deleteRole(id: string) {
     try {
-      const response = await this.request<ApiResponse<null>>(`/api/roles/${id}`, {
+      const response = await this.request<ApiResponse<null>>(`/roles/${id}`, {
         method: 'DELETE',
       });
 

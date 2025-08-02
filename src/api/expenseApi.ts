@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { Expense, ExpenseType, OperationType } from '@/types/expense';
+import { Expense, ExpenseType } from '@/types/expense';
+import { OperationType } from '@/types/operationType';
 
 const API = axios.create({
     baseURL: 'http://localhost:4575/api',

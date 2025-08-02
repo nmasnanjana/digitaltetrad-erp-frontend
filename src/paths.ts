@@ -1,6 +1,63 @@
-export const paths = {
+export interface PathConfig {
+  home: string;
+  auth: {
+    signIn: string;
+    signUp: string;
+    resetPassword: string;
+    jwt: {
+      login: string;
+      register: string;
+    };
+    login: string;
+    register: string;
+    forgotPassword: string;
+  };
+  dashboard: {
+    overview: string;
+    account: string;
+    integrations: string;
+    settings: string;
+    user: string;
+    role: string;
+    permission: string;
+    userCreation: string;
+    userEdit: (id: string) => string;
+    team: string;
+    teamCreation: string;
+    teamEdit: (id: string) => string;
+    customer: string;
+    job: string;
+    inventory: string;
+    expense: string;
+    expenseDashboard: string;
+    expenseApproval: string;
+    expensePayment: string;
+    expenseType: string;
+    operationType: string;
+    expenseView: (id: string) => string;
+    expenseEdit: (id: string) => string;
+    invoiceGenerator: string;
+    viewInvoices: string;
+  };
+  errors: {
+    notFound: string;
+  };
+}
+
+export const paths: PathConfig = {
   home: '/',
-  auth: { signIn: '/auth/sign-in', signUp: '/auth/sign-up', resetPassword: '/auth/reset-password', jwt: { login: '/auth/jwt/login', register: '/auth/jwt/register' }, login: '/auth/login', register: '/auth/register', forgotPassword: '/auth/forgot-password' },
+  auth: { 
+    signIn: '/auth/sign-in', 
+    signUp: '/auth/sign-up', 
+    resetPassword: '/auth/reset-password', 
+    jwt: { 
+      login: '/auth/jwt/login', 
+      register: '/auth/jwt/register' 
+    }, 
+    login: '/auth/login', 
+    register: '/auth/register', 
+    forgotPassword: '/auth/forgot-password' 
+  },
   dashboard: {
     overview: '/dashboard',
     account: '/dashboard/account',
@@ -21,6 +78,10 @@ export const paths = {
     expenseDashboard: '/dashboard/expenseDashboard',
     expenseApproval: '/dashboard/expense/approval',
     expensePayment: '/dashboard/expense/payment',
+    expenseType: '/dashboard/expense/type',
+    operationType: '/dashboard/expense/operation-type',
+    expenseView: (id: string) => `/dashboard/expense/${id}/view`,
+    expenseEdit: (id: string) => `/dashboard/expense/${id}/edit`,
     invoiceGenerator: '/dashboard/invoice-generator',
     viewInvoices: '/dashboard/view-invoices',
   },

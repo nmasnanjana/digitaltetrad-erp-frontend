@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getExpenseById, deleteExpense } from '@/api/expenseApi';
-import { Expense } from '@/types/expense';
+import type { Expense } from '@/types/expense';
 import {
   Box,
   Button,
@@ -49,13 +49,13 @@ interface ExpenseViewPageProps {
 }
 
 const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
-  const formatCurrency = (amount: number | string | undefined) => {
+  const formatCurrency = (amount: number | string | undefined): string => {
     if (amount === undefined || amount === null) return '$0.00';
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
     return `$${num.toFixed(2)}`;
   };
 
-  const formatDate = (dateString?: string) => {
+  const formatDate = (dateString?: string): string => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleString();
   };
@@ -74,7 +74,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
     }
   };
 
-  const getStatusColor = (status: string, paid: boolean) => {
+  const getStatusColor = (status: string, paid: boolean): 'success' | 'error' | 'warning' | 'default' => {
     if (paid) return 'success';
     switch (status) {
       case 'approved':
@@ -88,7 +88,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
     }
   };
 
-  const formatStatus = (status: string, paid: boolean) => {
+  const formatStatus = (status: string, paid: boolean): string => {
     if (paid) return 'Paid';
     switch (status) {
       case 'approved':
@@ -109,7 +109,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
 
-  const loadExpense = async () => {
+  const loadExpense = async (): Promise<void> => {
     try {
       setLoading(true);
       const response = await getExpenseById(params.id);
@@ -122,7 +122,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (): Promise<void> => {
     try {
       await deleteExpense(params.id);
       setDeleteDialogOpen(false);
@@ -170,7 +170,9 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Stack direction="row" spacing={2} alignItems="center">
             <IconButton
-              onClick={() => router.push('/dashboard/expense')}
+              onClick={() => {
+                router.push('/dashboard/expense');
+              }}
               sx={{ color: 'primary.main' }}
             >
               <ArrowBackIcon />
@@ -188,12 +190,16 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
           {!expense.paid && (
             <Stack direction="row" spacing={1}>
               <Tooltip title="Edit Expense">
-                <IconButton color="primary" onClick={() => setFormOpen(true)}>
+                <IconButton color="primary" onClick={() => {
+                  setFormOpen(true);
+                }}>
                   <EditIcon />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Delete Expense">
-                <IconButton color="error" onClick={() => setDeleteDialogOpen(true)}>
+                <IconButton color="error" onClick={() => {
+                  setDeleteDialogOpen(true);
+                }}>
                   <DeleteIcon />
                 </IconButton>
               </Tooltip>
@@ -303,7 +309,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
                       {getStatusIcon(expense.status || '', expense.paid)}
                       <Chip
                         label={formatStatus(expense.status || '', expense.paid)}
-                        color={getStatusColor(expense.status || '', expense.paid) as any}
+                        color={getStatusColor(expense.status || '', expense.paid)}
                         size="medium"
                       />
                     </Stack>
@@ -470,7 +476,9 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
       </Stack>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={() => {
+        setDeleteDialogOpen(false);
+      }}>
         <DialogTitle>Delete Expense</DialogTitle>
         <DialogContent>
           <Typography>
@@ -488,7 +496,9 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => {
+            setDeleteDialogOpen(false);
+          }}>Cancel</Button>
           <Button onClick={handleDelete} color="error" variant="contained">
             Delete
           </Button>
@@ -498,7 +508,9 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
       {/* Edit Form Dialog */}
       <ExpenseForm
         open={formOpen}
-        onClose={() => setFormOpen(false)}
+        onClose={() => {
+          setFormOpen(false);
+        }}
         onSuccess={loadExpense}
         expense={expense}
         mode="edit"

@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import { OperationType } from '@/types/expense';
+import { OperationType } from '@/types/operationType';
 
 export const getAllOperationTypes = () => {
   return apiClient.get<OperationType[]>('/operation-types');
