@@ -36,7 +36,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
   Pending as PendingIcon,
-  Payment as PaymentIcon,
+  CreditCard as CreditCardIcon,
   Work as WorkIcon,
   Business as BusinessIcon,
 } from '@mui/icons-material';
@@ -61,7 +61,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
   };
 
   const getStatusIcon = (status: string, paid: boolean) => {
-    if (paid) return <PaymentIcon color="success" />;
+    if (paid) return <CreditCardIcon color="success" />;
     switch (status) {
       case 'approved':
         return <CheckCircleIcon color="success" />;
