@@ -8,6 +8,7 @@ import { useTheme } from '@mui/material/styles';
 import type { SxProps } from '@mui/material/styles';
 import type { ApexOptions } from 'apexcharts';
 import { Chart } from '@/components/core/chart';
+import { useSettings } from '@/contexts/SettingsContext';
 
 export interface ExpenseOperationBreakdownProps {
   data: {
@@ -18,28 +19,10 @@ export interface ExpenseOperationBreakdownProps {
 }
 
 export function ExpenseOperationBreakdown({ data, sx }: ExpenseOperationBreakdownProps): React.JSX.Element {
-  const chartOptions = useChartOptions(data.map(item => item.operationType));
-  const chartSeries = [
-    {
-      name: 'Amount',
-      data: data.map(item => item.amount)
-    }
-  ];
-
-  return (
-    <Card sx={sx}>
-      <CardHeader title="Operation Type Breakdown" />
-      <CardContent>
-        <Chart height={350} options={chartOptions} series={chartSeries} type="bar" width="100%" />
-      </CardContent>
-    </Card>
-  );
-}
-
-function useChartOptions(categories: string[]): ApexOptions {
+  const { currencySymbol } = useSettings();
   const theme = useTheme();
 
-  return {
+  const chartOptions: ApexOptions = {
     chart: { 
       background: 'transparent', 
       stacked: false, 
@@ -73,27 +56,43 @@ function useChartOptions(categories: string[]): ApexOptions {
     },
     theme: { mode: theme.palette.mode },
     tooltip: {
-      shared: true,
-      intersect: false,
+      shared: false,
+      intersect: true,
       y: {
-        formatter: (value) => `$${value.toLocaleString()}`
+        formatter: (value) => `${currencySymbol}${value.toLocaleString()}`
       }
     },
     xaxis: {
       axisBorder: { color: theme.palette.divider, show: true },
       axisTicks: { color: theme.palette.divider, show: true },
-      categories,
+      categories: data.map(item => item.operationType),
       labels: { 
         offsetY: 5, 
         style: { colors: theme.palette.text.secondary } 
       },
     },
     yaxis: {
-      title: { text: 'Amount ($)' },
+      title: { text: `Amount (${currencySymbol})` },
       labels: {
-        formatter: (value) => value.toLocaleString(),
+        formatter: (value) => `${currencySymbol}${value.toLocaleString()}`,
         style: { colors: theme.palette.text.secondary },
       },
     },
   };
+
+  const chartSeries = [
+    {
+      name: 'Amount',
+      data: data.map(item => item.amount)
+    }
+  ];
+
+  return (
+    <Card sx={sx}>
+      <CardHeader title="Operation Type Breakdown" />
+      <CardContent>
+        <Chart height={350} options={chartOptions} series={chartSeries} type="bar" width="100%" />
+      </CardContent>
+    </Card>
+  );
 } 

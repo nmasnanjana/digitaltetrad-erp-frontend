@@ -57,7 +57,7 @@ export default function Page(): React.JSX.Element {
 
       <Grid container spacing={3}>
         {/* First Row - Expense Counts */}
-        <Grid lg={3} sm={6} xs={12}>
+        <Grid lg={3} sm={6} xs={12} sx={{ p: 1 }}>
           <ExpenseStats
             title="Total Expenses"
             value={data?.totalExpenses || 0}
@@ -67,41 +67,41 @@ export default function Page(): React.JSX.Element {
           />
         </Grid>
 
-        <Grid lg={3} sm={6} xs={12}>
+        <Grid lg={3} sm={6} xs={12} sx={{ p: 1 }}>
           <ExpenseStats
             title="Approved Expenses"
             value={data?.approvedExpenses || 0}
             trend={(data?.approvedExpensesChange || 0) >= 0 ? "up" : "down"}
             diff={Math.abs(data?.approvedExpensesChange || 0)}
-            sx={{ height: '100%' }}
             color="success"
+            sx={{ height: '100%' }}
           />
         </Grid>
 
-        <Grid lg={3} sm={6} xs={12}>
+        <Grid lg={3} sm={6} xs={12} sx={{ p: 1 }}>
           <ExpenseStats
             title="Pending Expenses"
             value={data?.pendingExpenses || 0}
             trend={(data?.pendingExpensesChange || 0) >= 0 ? "up" : "down"}
             diff={Math.abs(data?.pendingExpensesChange || 0)}
-            sx={{ height: '100%' }}
             color="warning"
+            sx={{ height: '100%' }}
           />
         </Grid>
 
-        <Grid lg={3} sm={6} xs={12}>
+        <Grid lg={3} sm={6} xs={12} sx={{ p: 1 }}>
           <ExpenseStats
             title="Paid Expenses"
             value={data?.paidExpenses || 0}
             trend={(data?.paidExpensesChange || 0) >= 0 ? "up" : "down"}
             diff={Math.abs(data?.paidExpensesChange || 0)}
-            sx={{ height: '100%' }}
             color="info"
+            sx={{ height: '100%' }}
           />
         </Grid>
 
         {/* Second Row - Expense Amounts */}
-        <Grid lg={3} sm={6} xs={12}>
+        <Grid lg={3} sm={6} xs={12} sx={{ p: 1 }}>
           <ExpenseAmounts
             title="Total Amount"
             value={data?.totalAmount || 0}
@@ -111,48 +111,48 @@ export default function Page(): React.JSX.Element {
           />
         </Grid>
 
-        <Grid lg={3} sm={6} xs={12}>
+        <Grid lg={3} sm={6} xs={12} sx={{ p: 1 }}>
           <ExpenseAmounts
             title="Approved Amount"
             value={data?.approvedAmount || 0}
             trend={(data?.approvedAmountChange || 0) >= 0 ? "up" : "down"}
             diff={Math.abs(data?.approvedAmountChange || 0)}
-            sx={{ height: '100%' }}
             color="success"
+            sx={{ height: '100%' }}
           />
         </Grid>
 
-        <Grid lg={3} sm={6} xs={12}>
+        <Grid lg={3} sm={6} xs={12} sx={{ p: 1 }}>
           <ExpenseAmounts
             title="Pending Amount"
             value={data?.pendingAmount || 0}
             trend={(data?.pendingAmountChange || 0) >= 0 ? "up" : "down"}
             diff={Math.abs(data?.pendingAmountChange || 0)}
-            sx={{ height: '100%' }}
             color="warning"
+            sx={{ height: '100%' }}
           />
         </Grid>
 
-        <Grid lg={3} sm={6} xs={12}>
+        <Grid lg={3} sm={6} xs={12} sx={{ p: 1 }}>
           <ExpenseAmounts
             title="Paid Amount"
             value={data?.paidAmount || 0}
             trend={(data?.paidAmountChange || 0) >= 0 ? "up" : "down"}
             diff={Math.abs(data?.paidAmountChange || 0)}
-            sx={{ height: '100%' }}
             color="info"
+            sx={{ height: '100%' }}
           />
         </Grid>
 
         {/* Third Row - Charts */}
-        <Grid lg={8} xs={12}>
+        <Grid lg={8} xs={12} sx={{ p: 1 }}>
           <ExpenseTrends
             data={data?.trendsData || []}
             sx={{ height: '100%' }}
           />
         </Grid>
 
-        <Grid lg={4} md={6} xs={12}>
+        <Grid lg={4} md={6} xs={12} sx={{ p: 1 }}>
           <ExpenseStatusDistribution
             data={data?.statusDistribution || []}
             sx={{ height: '100%' }}
@@ -160,21 +160,21 @@ export default function Page(): React.JSX.Element {
         </Grid>
 
         {/* Fourth Row - Additional Charts */}
-        <Grid lg={4} xs={12}>
+        <Grid lg={4} xs={12} sx={{ p: 1 }}>
           <ExpenseCategories
             data={data?.categoryData || []}
             sx={{ height: '100%' }}
           />
         </Grid>
 
-        <Grid lg={4} xs={12}>
+        <Grid lg={4} xs={12} sx={{ p: 1 }}>
           <ExpenseTypeBreakdown
             data={data?.typeBreakdown || []}
             sx={{ height: '100%' }}
           />
         </Grid>
 
-        <Grid lg={4} xs={12}>
+        <Grid lg={4} xs={12} sx={{ p: 1 }}>
           <ExpenseOperationBreakdown
             data={data?.operationBreakdown || []}
             sx={{ height: '100%' }}
@@ -182,7 +182,7 @@ export default function Page(): React.JSX.Element {
         </Grid>
 
         {/* Fifth Row - 30-Day Trends (Full Width) */}
-        <Grid xs={12}>
+        <Grid xs={12} sx={{ p: 1 }}>
           <ExpenseTimeChart
             data={data?.timeSeriesData || []}
             sx={{ height: '100%' }}
@@ -190,7 +190,7 @@ export default function Page(): React.JSX.Element {
         </Grid>
 
         {/* Sixth Row - Total Amount Trend (Full Width) */}
-        <Grid xs={12}>
+        <Grid xs={12} sx={{ p: 1 }}>
           <ExpenseAmountTrend
             data={data?.amountTrendData || []}
             sx={{ height: '100%' }}

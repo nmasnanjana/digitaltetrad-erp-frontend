@@ -8,6 +8,7 @@ import { useTheme } from '@mui/material/styles';
 import type { SxProps } from '@mui/material/styles';
 import type { ApexOptions } from 'apexcharts';
 import { Chart } from '@/components/core/chart';
+import { useSettings } from '@/contexts/SettingsContext';
 
 export interface ExpenseTimeChartProps {
   data: {
@@ -19,32 +20,10 @@ export interface ExpenseTimeChartProps {
 }
 
 export function ExpenseTimeChart({ data, sx }: ExpenseTimeChartProps): React.JSX.Element {
-  const chartOptions = useChartOptions();
-  const chartSeries = [
-    {
-      name: 'Job Expenses',
-      data: data.map(item => item.jobAmount || 0)
-    },
-    {
-      name: 'Operation Expenses',
-      data: data.map(item => item.operationAmount || 0)
-    }
-  ];
-
-  return (
-    <Card sx={sx}>
-      <CardHeader title="Expense Trends - Last 30 Days" />
-      <CardContent>
-        <Chart height={350} options={chartOptions} series={chartSeries} type="line" width="100%" />
-      </CardContent>
-    </Card>
-  );
-}
-
-function useChartOptions(): ApexOptions {
+  const { currencySymbol } = useSettings();
   const theme = useTheme();
 
-  return {
+  const chartOptions: ApexOptions = {
     chart: { 
       background: 'transparent',
       toolbar: { show: false },
@@ -53,7 +32,7 @@ function useChartOptions(): ApexOptions {
     colors: [theme.palette.primary.main, theme.palette.success.main],
     dataLabels: { enabled: false },
     fill: { 
-      opacity: 0.3,
+      opacity: 1,
       type: 'gradient',
       gradient: {
         shade: 'light',
@@ -61,8 +40,8 @@ function useChartOptions(): ApexOptions {
         shadeIntensity: 0.1,
         gradientToColors: undefined,
         inverseColors: true,
-        opacityFrom: 0.6,
-        opacityTo: 0.2,
+        opacityFrom: 1,
+        opacityTo: 0.4,
         stops: [0, 50, 100]
       }
     },
@@ -78,48 +57,61 @@ function useChartOptions(): ApexOptions {
       horizontalAlign: 'right'
     },
     markers: {
-      size: 5,
+      size: 4,
       colors: [theme.palette.primary.main, theme.palette.success.main],
       strokeColors: theme.palette.background.paper,
-      strokeWidth: 3,
+      strokeWidth: 2,
       hover: {
-        size: 8,
+        size: 6,
       }
     },
     stroke: { 
       curve: 'smooth',
-      width: 6,
-      colors: [theme.palette.primary.main, theme.palette.success.main]
+      width: 3
     },
     theme: { mode: theme.palette.mode },
     tooltip: {
       shared: true,
       intersect: false,
       y: {
-        formatter: (value) => `$${value.toLocaleString()}`
+        formatter: (value) => `${currencySymbol}${value.toLocaleString()}`
       }
     },
     xaxis: {
       axisBorder: { color: theme.palette.divider, show: true },
       axisTicks: { color: theme.palette.divider, show: true },
-      categories: Array.from({ length: 30 }, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (29 - i));
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      }),
+      categories: data.map(item => item.date),
       labels: { 
         offsetY: 5, 
-        style: { colors: theme.palette.text.secondary },
-        rotate: -45,
-        rotateAlways: false
+        style: { colors: theme.palette.text.secondary } 
       },
     },
     yaxis: {
-      title: { text: 'Value' },
+      title: { text: `Amount (${currencySymbol})` },
       labels: {
-        formatter: (value) => value.toLocaleString(),
+        formatter: (value) => `${currencySymbol}${value.toLocaleString()}`,
         style: { colors: theme.palette.text.secondary },
       },
     },
   };
+
+  const chartSeries = [
+    {
+      name: 'Job Expenses',
+      data: data.map(item => item.jobAmount)
+    },
+    {
+      name: 'Operation Expenses',
+      data: data.map(item => item.operationAmount)
+    }
+  ];
+
+  return (
+    <Card sx={sx}>
+      <CardHeader title="Expense Trends - Last 30 Days" />
+      <CardContent>
+        <Chart height={350} options={chartOptions} series={chartSeries} type="line" width="100%" />
+      </CardContent>
+    </Card>
+  );
 } 

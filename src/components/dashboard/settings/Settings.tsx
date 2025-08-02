@@ -30,10 +30,7 @@ import { getSettings, updateSettings, resetSettings, SettingsData } from '@/api/
 import { useSettings } from '@/contexts/SettingsContext';
 
 export const Settings: React.FC = () => {
-  // Temporarily use a simple refresh function without settings
-  const refreshSettings = async () => {
-    console.log('Settings refresh not available without SettingsProvider');
-  };
+  const { refreshSettings } = useSettings();
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

@@ -27,12 +27,7 @@ import { Expense } from '@/types/expense';
 import { useSettings } from '@/contexts/SettingsContext';
 
 export default function ExpensePaymentPage() {
-  // Temporarily use a simple currency formatter without settings
-  const formatCurrency = (amount: number | string | undefined) => {
-    if (amount === undefined || amount === null) return '$0.00';
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return `$${num.toFixed(2)}`;
-  };
+  const { formatCurrency } = useSettings();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);

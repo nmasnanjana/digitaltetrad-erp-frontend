@@ -8,6 +8,7 @@ import { useTheme } from '@mui/material/styles';
 import type { SxProps } from '@mui/material/styles';
 import type { ApexOptions } from 'apexcharts';
 import { Chart } from '@/components/core/chart';
+import { useSettings } from '@/contexts/SettingsContext';
 
 export interface ExpenseAmountTrendProps {
   data: {
@@ -18,37 +19,19 @@ export interface ExpenseAmountTrendProps {
 }
 
 export function ExpenseAmountTrend({ data, sx }: ExpenseAmountTrendProps): React.JSX.Element {
-  const chartOptions = useChartOptions();
-  const chartSeries = [
-    {
-      name: 'Total Expenses',
-      data: data.map(item => item.totalAmount)
-    }
-  ];
-
-  return (
-    <Card sx={sx}>
-      <CardHeader title="Total Expense Amount Trend - Last 30 Days" />
-      <CardContent>
-        <Chart height={350} options={chartOptions} series={chartSeries} type="line" width="100%" />
-      </CardContent>
-    </Card>
-  );
-}
-
-function useChartOptions(): ApexOptions {
+  const { currencySymbol } = useSettings();
   const theme = useTheme();
 
-  return {
+  const chartOptions: ApexOptions = {
     chart: { 
       background: 'transparent',
       toolbar: { show: false },
       zoom: { enabled: false }
     },
-    colors: [theme.palette.primary.main],
+    colors: [theme.palette.error.main],
     dataLabels: { enabled: false },
     fill: { 
-      opacity: 0.4,
+      opacity: 0.5,
       type: 'gradient',
       gradient: {
         shade: 'light',
@@ -56,8 +39,8 @@ function useChartOptions(): ApexOptions {
         shadeIntensity: 0.1,
         gradientToColors: undefined,
         inverseColors: true,
-        opacityFrom: 0.7,
-        opacityTo: 0.3,
+        opacityFrom: 0.5,
+        opacityTo: 0.5,
         stops: [0, 50, 100]
       }
     },
@@ -71,49 +54,57 @@ function useChartOptions(): ApexOptions {
       show: false
     },
     markers: {
-      size: 6,
-      colors: [theme.palette.primary.main],
+      size: 4,
+      colors: [theme.palette.error.main],
       strokeColors: theme.palette.background.paper,
-      strokeWidth: 3,
+      strokeWidth: 2,
       hover: {
-        size: 9,
+        size: 6,
       }
     },
     stroke: { 
-      curve: 'smooth',
-      width: 6,
-      colors: [theme.palette.primary.main],
-      dashArray: [8, 8] // Makes dots more spaced and visible
+      curve: 'straight',
+      width: 3
     },
     theme: { mode: theme.palette.mode },
     tooltip: {
       shared: false,
       intersect: true,
       y: {
-        formatter: (value) => `$${value.toLocaleString()}`
+        formatter: (value) => `${currencySymbol}${value.toLocaleString()}`
       }
     },
     xaxis: {
       axisBorder: { color: theme.palette.divider, show: true },
       axisTicks: { color: theme.palette.divider, show: true },
-      categories: Array.from({ length: 30 }, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (29 - i));
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      }),
+      categories: data.map(item => item.date),
       labels: { 
         offsetY: 5, 
-        style: { colors: theme.palette.text.secondary },
-        rotate: -45,
-        rotateAlways: false
+        style: { colors: theme.palette.text.secondary } 
       },
     },
     yaxis: {
-      title: { text: 'Total Amount ($)' },
+      title: { text: `Total Amount (${currencySymbol})` },
       labels: {
-        formatter: (value) => `$${value.toLocaleString()}`,
+        formatter: (value) => `${currencySymbol}${value.toLocaleString()}`,
         style: { colors: theme.palette.text.secondary },
       },
     },
   };
+
+  const chartSeries = [
+    {
+      name: 'Total Amount',
+      data: data.map(item => item.totalAmount)
+    }
+  ];
+
+  return (
+    <Card sx={sx}>
+      <CardHeader title="Total Expense Amount Trend - Last 30 Days" />
+      <CardContent>
+        <Chart height={350} options={chartOptions} series={chartSeries} type="line" width="100%" />
+      </CardContent>
+    </Card>
+  );
 } 

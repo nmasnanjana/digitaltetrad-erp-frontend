@@ -26,12 +26,7 @@ import ExpenseForm from '@/components/dashboard/expense/ExpenseForm';
 import { IconButton, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 
 export default function ExpensePage() {
-  // Temporarily use a simple currency formatter without settings
-  const formatCurrency = (amount: number | string | undefined) => {
-    if (amount === undefined || amount === null) return '$0.00';
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return `$${num.toFixed(2)}`;
-  };
+  const { formatCurrency } = useSettings();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

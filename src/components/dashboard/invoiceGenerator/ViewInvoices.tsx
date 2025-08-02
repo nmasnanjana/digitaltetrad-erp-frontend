@@ -51,14 +51,8 @@ interface FilterState {
 }
 
 export const ViewInvoices: React.FC = () => {
-  // Temporarily use simple currency formatters without settings
-  const formatCurrency = (amount: number | string | undefined) => {
-    if (amount === undefined || amount === null) return '$0.00';
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return `$${num.toFixed(2)}`;
-  };
+  const { formatCurrency, currencySymbol } = useSettings();
   
-  const currencySymbol = '$';
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [filteredInvoices, setFilteredInvoices] = useState<InvoiceRecord[]>([]);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -744,7 +738,7 @@ export const ViewInvoices: React.FC = () => {
                               {item.huaweiPo?.item_description}
                             </Typography>
                           </TableCell>
-                          <TableCell>${unitPrice.toFixed(2)}</TableCell>
+                          <TableCell>{formatCurrency(unitPrice)}</TableCell>
                           <TableCell>{requestedQty.toFixed(0)}</TableCell>
                           <TableCell>
                             <Chip 

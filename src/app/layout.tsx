@@ -20,9 +20,11 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
     <html lang="en">
       <body>
         <LocalizationProvider>
-          <UserProvider>
-            <ThemeProvider>{children}</ThemeProvider>
-          </UserProvider>
+          <SettingsProvider>
+            <UserProvider>
+              <ThemeProvider>{children}</ThemeProvider>
+            </UserProvider>
+          </SettingsProvider>
         </LocalizationProvider>
       </body>
     </html>

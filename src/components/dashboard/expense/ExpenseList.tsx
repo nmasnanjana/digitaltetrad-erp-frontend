@@ -35,12 +35,7 @@ import { ExpenseFilters, ExpenseFilters as ExpenseFiltersType } from './ExpenseF
 import { useRouter } from 'next/navigation';
 
 export const ExpenseList: React.FC = () => {
-  // Temporarily use a simple currency formatter without settings
-  const formatCurrency = (amount: number | string | undefined) => {
-    if (amount === undefined || amount === null) return '$0.00';
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return `$${num.toFixed(2)}`;
-  };
+  const { formatCurrency } = useSettings();
   
   const router = useRouter();
   const [expenses, setExpenses] = useState<Expense[]>([]);

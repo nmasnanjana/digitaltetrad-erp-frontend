@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { getExpenseById, deleteExpense } from '@/api/expenseApi';
 import type { Expense } from '@/types/expense';
@@ -41,6 +41,7 @@ import {
   Business as BusinessIcon,
 } from '@mui/icons-material';
 import ExpenseForm from '@/components/dashboard/expense/ExpenseForm';
+import { useSettings } from '@/contexts/SettingsContext';
 
 interface ExpenseViewPageProps {
   params: {
@@ -49,11 +50,7 @@ interface ExpenseViewPageProps {
 }
 
 const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
-  const formatCurrency = (amount: number | string | undefined): string => {
-    if (amount === undefined || amount === null) return '$0.00';
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return `$${num.toFixed(2)}`;
-  };
+  const { formatCurrency } = useSettings();
 
   const formatDate = (dateString?: string): string => {
     if (!dateString) return 'N/A';
@@ -103,11 +100,11 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
   };
 
   const router = useRouter();
-  const [expense, setExpense] = useState<Expense | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [formOpen, setFormOpen] = useState(false);
+  const [expense, setExpense] = React.useState<Expense | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [formOpen, setFormOpen] = React.useState(false);
 
   const loadExpense = async (): Promise<void> => {
     try {
@@ -132,7 +129,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
     }
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     void loadExpense();
   }, [params.id]);
 
@@ -385,7 +382,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
                                 Reviewed At
                               </Typography>
                               <Typography variant="body1" fontWeight="medium">
-                                {formatDate(expense.reviewed_at)}
+                                {formatDate(expense.reviewed_at?.toString())}
                               </Typography>
                             </Box>
                           </Stack>

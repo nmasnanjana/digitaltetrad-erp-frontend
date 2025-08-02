@@ -8,6 +8,7 @@ import { useTheme } from '@mui/material/styles';
 import type { SxProps } from '@mui/material/styles';
 import type { ApexOptions } from 'apexcharts';
 import { Chart } from '@/components/core/chart';
+import { useSettings } from '@/contexts/SettingsContext';
 
 export interface ExpenseTrendsProps {
   data: {
@@ -19,32 +20,10 @@ export interface ExpenseTrendsProps {
 }
 
 export function ExpenseTrends({ data, sx }: ExpenseTrendsProps): React.JSX.Element {
-  const chartOptions = useChartOptions();
-  const chartSeries = [
-    {
-      name: 'Job Expenses',
-      data: data.map(item => item.jobAmount || 0)
-    },
-    {
-      name: 'Operation Expenses',
-      data: data.map(item => item.operationAmount || 0)
-    }
-  ];
-
-  return (
-    <Card sx={sx}>
-      <CardHeader title="Weekly Expense Trends" />
-      <CardContent>
-        <Chart height={350} options={chartOptions} series={chartSeries} type="area" width="100%" />
-      </CardContent>
-    </Card>
-  );
-}
-
-function useChartOptions(): ApexOptions {
+  const { currencySymbol } = useSettings();
   const theme = useTheme();
 
-  return {
+  const chartOptions: ApexOptions = {
     chart: { 
       background: 'transparent',
       toolbar: { show: false },
@@ -95,13 +74,13 @@ function useChartOptions(): ApexOptions {
       shared: true,
       intersect: false,
       y: {
-        formatter: (value) => `$${value.toLocaleString()}`
+        formatter: (value) => `${currencySymbol}${value.toLocaleString()}`
       }
     },
     xaxis: {
       axisBorder: { color: theme.palette.divider, show: true },
       axisTicks: { color: theme.palette.divider, show: true },
-      categories: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+      categories: data.map(item => item.period),
       labels: { 
         offsetY: 5, 
         style: { colors: theme.palette.text.secondary } 
@@ -110,9 +89,29 @@ function useChartOptions(): ApexOptions {
     yaxis: {
       title: { text: 'Value' },
       labels: {
-        formatter: (value) => value.toLocaleString(),
+        formatter: (value) => `${currencySymbol}${value.toLocaleString()}`,
         style: { colors: theme.palette.text.secondary },
       },
     },
   };
+
+  const chartSeries = [
+    {
+      name: 'Job Expenses',
+      data: data.map(item => item.jobAmount)
+    },
+    {
+      name: 'Operation Expenses',
+      data: data.map(item => item.operationAmount)
+    }
+  ];
+
+  return (
+    <Card sx={sx}>
+      <CardHeader title="Weekly Expense Trends" />
+      <CardContent>
+        <Chart height={350} options={chartOptions} series={chartSeries} type="area" width="100%" />
+      </CardContent>
+    </Card>
+  );
 } 

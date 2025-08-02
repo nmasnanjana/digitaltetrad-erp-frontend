@@ -8,6 +8,7 @@ import { useTheme } from '@mui/material/styles';
 import type { SxProps } from '@mui/material/styles';
 import type { ApexOptions } from 'apexcharts';
 import { Chart } from '@/components/core/chart';
+import { useSettings } from '@/contexts/SettingsContext';
 
 export interface ExpenseCategoriesProps {
   data: {
@@ -18,34 +19,16 @@ export interface ExpenseCategoriesProps {
 }
 
 export function ExpenseCategories({ data, sx }: ExpenseCategoriesProps): React.JSX.Element {
-  const chartOptions = useChartOptions();
-  const chartSeries = [
-    {
-      name: 'Amount',
-      data: data.map(item => item.amount)
-    }
-  ];
-
-  return (
-    <Card sx={sx}>
-      <CardHeader title="Expense Categories (Job vs Operation)" />
-      <CardContent>
-        <Chart height={350} options={chartOptions} series={chartSeries} type="bar" width="100%" />
-      </CardContent>
-    </Card>
-  );
-}
-
-function useChartOptions(): ApexOptions {
+  const { currencySymbol } = useSettings();
   const theme = useTheme();
 
-  return {
+  const chartOptions: ApexOptions = {
     chart: { 
       background: 'transparent', 
       stacked: false, 
       toolbar: { show: false } 
     },
-    colors: [theme.palette.primary.main, theme.palette.success.main],
+    colors: [theme.palette.primary.main, theme.palette.secondary.main],
     dataLabels: { enabled: false },
     fill: { opacity: 1, type: 'solid' },
     grid: {
@@ -63,6 +46,7 @@ function useChartOptions(): ApexOptions {
       bar: { 
         columnWidth: '40px',
         borderRadius: 4,
+        horizontal: false,
       } 
     },
     stroke: { 
@@ -72,27 +56,43 @@ function useChartOptions(): ApexOptions {
     },
     theme: { mode: theme.palette.mode },
     tooltip: {
-      shared: true,
-      intersect: false,
+      shared: false,
+      intersect: true,
       y: {
-        formatter: (value) => `$${value.toLocaleString()}`
+        formatter: (value) => `${currencySymbol}${value.toLocaleString()}`
       }
     },
     xaxis: {
       axisBorder: { color: theme.palette.divider, show: true },
       axisTicks: { color: theme.palette.divider, show: true },
-      categories: ['Job', 'Operation'],
+      categories: data.map(item => item.category),
       labels: { 
         offsetY: 5, 
         style: { colors: theme.palette.text.secondary } 
       },
     },
     yaxis: {
-      title: { text: 'Value' },
+      title: { text: `Amount (${currencySymbol})` },
       labels: {
-        formatter: (value) => value.toLocaleString(),
+        formatter: (value) => `${currencySymbol}${value.toLocaleString()}`,
         style: { colors: theme.palette.text.secondary },
       },
     },
   };
+
+  const chartSeries = [
+    {
+      name: 'Amount',
+      data: data.map(item => item.amount)
+    }
+  ];
+
+  return (
+    <Card sx={sx}>
+      <CardHeader title="Expense Categories (Job vs Operation)" />
+      <CardContent>
+        <Chart height={350} options={chartOptions} series={chartSeries} type="bar" width="100%" />
+      </CardContent>
+    </Card>
+  );
 } 

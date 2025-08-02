@@ -63,14 +63,7 @@ interface CorrelatedData {
 }
 
 export const HuaweiInvoice: React.FC = () => {
-  // Temporarily use simple currency formatters without settings
-  const formatCurrency = (amount: number | string | undefined) => {
-    if (amount === undefined || amount === null) return '$0.00';
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return `$${num.toFixed(2)}`;
-  };
-  
-  const currencySymbol = '$';
+  const { formatCurrency, currencySymbol } = useSettings();
   
   // Temporarily use default settings
   const settings = {

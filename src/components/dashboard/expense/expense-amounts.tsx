@@ -11,14 +11,16 @@ import { CurrencyDollar as CurrencyDollarIcon } from '@phosphor-icons/react/dist
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
 import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
+import { useSettings } from '@/contexts/SettingsContext';
+import { Theme } from '@mui/material/styles';
 
 export interface ExpenseAmountsProps {
   title: string;
   value: number;
   trend: 'up' | 'down';
   diff: number;
-  sx?: SxProps;
-  color?: 'primary' | 'success' | 'warning' | 'error' | 'info';
+  color?: 'primary' | 'error' | 'info' | 'success' | 'warning';
+  sx?: SxProps<Theme>;
 }
 
 const iconMapping = {
@@ -37,16 +39,8 @@ const colorMapping = {
   info: 'var(--mui-palette-info-main)',
 };
 
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
-
-export function ExpenseAmounts({ title, value, trend, diff, sx, color = 'primary' }: ExpenseAmountsProps): React.JSX.Element {
+export const ExpenseAmounts = ({ title, value, trend, diff, color = 'primary', sx }: ExpenseAmountsProps) => {
+  const { formatCurrency } = useSettings();
   const TrendIcon = trend === 'up' ? ArrowUpIcon : ArrowDownIcon;
   const trendColor = trend === 'up' ? 'var(--mui-palette-success-main)' : 'var(--mui-palette-error-main)';
   const IconComponent = iconMapping[title as keyof typeof iconMapping] || CurrencyDollarIcon;
