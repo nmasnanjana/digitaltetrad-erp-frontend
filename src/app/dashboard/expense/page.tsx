@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useState, useEffect } from 'react';
 import {
   Box,
@@ -16,43 +17,30 @@ import {
   Alert,
   Chip,
   Grid,
+  CardContent,
 } from '@mui/material';
 import { Plus, List, Gear, PencilSimple, Trash, Eye } from '@phosphor-icons/react/dist/ssr';
-import { getAllExpenses, updateExpense, deleteExpense } from '@/api/expenseApi';
 import { Expense } from '@/types/expense';
 import { useSettings } from '@/contexts/SettingsContext';
 import Link from 'next/link';
 import ExpenseForm from '@/components/dashboard/expense/ExpenseForm';
 import { IconButton, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { useExpenses, useDeleteExpense } from '@/hooks/use-expenses';
 
 export default function ExpensePage() {
   const { formatCurrency } = useSettings();
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: expenses = [], isLoading } = useExpenses();
+  const deleteExpenseMutation = useDeleteExpense();
   const [formOpen, setFormOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchExpenses();
+    // The fetchExpenses function is now handled by useExpenses hook
   }, []);
-
-  const fetchExpenses = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await getAllExpenses();
-      setExpenses(response.data);
-    } catch (error) {
-      console.error('Error fetching expenses:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load expenses. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getStatusColor = (status: string, paid: boolean) => {
     // If expense is paid, show success color
@@ -103,12 +91,12 @@ export default function ExpensePage() {
 
   const handleFormSuccess = () => {
     setFormOpen(false);
-    fetchExpenses();
+    // The fetchExpenses function is now handled by useExpenses hook
   };
 
   const handleEdit = (expense: Expense) => {
     if (expense.paid) {
-      setError('Cannot edit a paid expense');
+      setLocalError('Cannot edit a paid expense');
       return;
     }
     setSelectedExpense(expense);
@@ -118,7 +106,7 @@ export default function ExpensePage() {
 
   const handleDelete = (expense: Expense) => {
     if (expense.paid) {
-      setError('Cannot delete a paid expense');
+      setLocalError('Cannot delete a paid expense');
       return;
     }
     setExpenseToDelete(expense);
@@ -129,14 +117,11 @@ export default function ExpensePage() {
     if (!expenseToDelete) return;
     
     try {
-      setError(null);
-      await deleteExpense(expenseToDelete.id.toString());
+      await deleteExpenseMutation.mutateAsync(expenseToDelete.id.toString());
       setDeleteDialogOpen(false);
       setExpenseToDelete(null);
-      fetchExpenses();
     } catch (error) {
-      console.error('Error deleting expense:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete expense. Please try again.');
+      setLocalError('Failed to delete expense. Please try again.');
     }
   };
 
@@ -144,7 +129,6 @@ export default function ExpensePage() {
   const totalExpenses = expenses.length;
   const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const pendingCount = expenses.filter(e => e.status === 'on_progress').length;
-  const approvedCount = expenses.filter(e => e.status === 'approved').length;
   const paidCount = expenses.filter(e => e.paid).length;
 
   return (
@@ -197,9 +181,9 @@ export default function ExpensePage() {
             </Stack>
           </Stack>
 
-          {error && (
-            <Alert severity="error" onClose={() => setError(null)}>
-              {error}
+          {localError && (
+            <Alert severity="error" onClose={() => setLocalError(null)}>
+              {localError}
             </Alert>
           )}
 
@@ -247,118 +231,132 @@ export default function ExpensePage() {
           </Grid>
 
           <Card>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Category</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell>Expense Type</TableCell>
-                  <TableCell>Description</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Created Date</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
+            <CardContent>
+              <Table>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={8} align="center">
-                      <Typography color="text.secondary">
-                        Loading expenses...
-                      </Typography>
-                    </TableCell>
+                    <TableCell>Category</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Expense Type</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell>Amount</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Created Date</TableCell>
+                    <TableCell>Actions</TableCell>
                   </TableRow>
-                ) : expenses.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} align="center">
-                      <Typography color="text.secondary">
-                        No expenses found
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  expenses.map((expense) => (
-                    <TableRow key={expense.id}>
-                      <TableCell>
-                        {expense.operations ? expense.operationType?.name || 'N/A' : expense.job?.name || 'N/A'}
-                      </TableCell>
-                      <TableCell>{expense.expenseType?.name}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={expense.operations ? 'Operation' : 'Job'}
-                          color={expense.operations ? 'primary' : 'secondary'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>{expense.description}</TableCell>
-                      <TableCell>{formatCurrency(expense.amount)}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={expense.status ? formatStatus(expense.status, expense.paid) : 'N/A'}
-                          color={expense.status ? getStatusColor(expense.status, expense.paid) : 'default'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>{formatDate(expense.createdAt || expense.created_at)}</TableCell>
-                      <TableCell>
-                        <Stack direction="row" spacing={1}>
-                          <IconButton
-                            size="small"
-                            color="info"
-                            component={Link}
-                            href={`/dashboard/expense/${expense.id}/view`}
-                          >
-                            <Eye />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() => handleEdit(expense)}
-                            disabled={expense.paid}
-                          >
-                            <PencilSimple />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleDelete(expense)}
-                            disabled={expense.paid}
-                          >
-                            <Trash />
-                          </IconButton>
-                        </Stack>
+                </TableHead>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center">
+                        <Typography color="text.secondary">
+                          Loading expenses...
+                        </Typography>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : expenses.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center">
+                        <Typography color="text.secondary">
+                          No expenses found
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    expenses.map((expense) => (
+                      <TableRow key={expense.id}>
+                        <TableCell>
+                          {expense.operations ? expense.operationType?.name || 'N/A' : expense.job?.name || 'N/A'}
+                        </TableCell>
+                        <TableCell>{expense.expenseType?.name}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={expense.operations ? 'Operation' : 'Job'}
+                            color={expense.operations ? 'primary' : 'secondary'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>{expense.description}</TableCell>
+                        <TableCell>{formatCurrency(expense.amount)}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={expense.status ? formatStatus(expense.status, expense.paid) : 'N/A'}
+                            color={expense.status ? getStatusColor(expense.status, expense.paid) : 'default'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>{formatDate(expense.createdAt || expense.created_at)}</TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={1}>
+                            <IconButton
+                              size="small"
+                              color="info"
+                              component={Link}
+                              href={`/dashboard/expense/${expense.id}/view`}
+                            >
+                              <Eye />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => handleEdit(expense)}
+                              disabled={expense.paid}
+                            >
+                              <PencilSimple />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDelete(expense)}
+                              disabled={expense.paid}
+                            >
+                              <Trash />
+                            </IconButton>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
           </Card>
         </Stack>
       </Container>
 
-      <ExpenseForm
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSuccess={handleFormSuccess}
-        expense={selectedExpense}
-        mode={formMode}
-      />
+      {/* Expense Form Dialog */}
+      <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {formMode === 'create' ? 'Create New Expense' : 'Edit Expense'}
+        </DialogTitle>
+        <DialogContent>
+          <ExpenseForm
+            expense={selectedExpense}
+            mode={formMode}
+            onSuccess={handleFormSuccess}
+            onCancel={() => setFormOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
+      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Delete Expense</DialogTitle>
         <DialogContent>
-          Are you sure you want to delete this expense?
+          <Typography>
+            Are you sure you want to delete this expense?
+          </Typography>
           {expenseToDelete && (
-            <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold' }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
               {expenseToDelete.description} - {formatCurrency(expenseToDelete.amount)}
             </Typography>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteConfirm} color="error">
+          <Button onClick={() => setDeleteDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
             Delete
           </Button>
         </DialogActions>

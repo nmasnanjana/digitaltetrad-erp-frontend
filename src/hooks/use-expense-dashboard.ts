@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getAllExpenses } from '@/api/expenseApi';
-import type { Expense } from '@/types/expense';
+import { CACHE_KEYS } from '@/lib/react-query/cache-manager';
 
 interface ExpenseDashboardData {
   totalExpenses: number;
@@ -55,23 +55,12 @@ interface ExpenseDashboardData {
   }[];
 }
 
-export function useExpenseDashboard() {
-  const [data, setData] = useState<ExpenseDashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Get all expenses
+export const useExpenseDashboard = () => {
+  const { data, isLoading, error } = useQuery({
+    queryKey: [CACHE_KEYS.EXPENSE_DASHBOARD],
+    queryFn: async (): Promise<ExpenseDashboardData> => {
       const response = await getAllExpenses();
-      const expenses: Expense[] = response.data || [];
+      const expenses = response.data;
 
       // Filter expenses for the last 30 days
       const thirtyDaysAgo = new Date();
@@ -148,7 +137,6 @@ export function useExpenseDashboard() {
 
       // Generate time series data (last 30 days)
       const timeSeriesData = [];
-      const amountTrendData = [];
       for (let i = 29; i >= 0; i--) {
         const date = new Date();
         date.setDate(date.getDate() - i);
@@ -158,156 +146,101 @@ export function useExpenseDashboard() {
           const expenseDate = new Date(expense.createdAt || expense.created_at || '');
           return expenseDate.toISOString().split('T')[0] === dateStr;
         });
-
-        const jobAmount = dayExpenses.filter(e => !e.operations).reduce((sum, e) => sum + (e.amount || 0), 0);
-        const operationAmount = dayExpenses.filter(e => e.operations).reduce((sum, e) => sum + (e.amount || 0), 0);
-        const dailyTotalAmount = jobAmount + operationAmount;
-
+        
+        const jobAmount = dayExpenses
+          .filter(e => !e.operations)
+          .reduce((sum, e) => sum + (e.amount || 0), 0);
+        const operationAmount = dayExpenses
+          .filter(e => e.operations)
+          .reduce((sum, e) => sum + (e.amount || 0), 0);
+        
         timeSeriesData.push({
           date: dateStr,
-          jobAmount: jobAmount,
-          operationAmount: operationAmount
-        });
-
-        amountTrendData.push({
-          date: dateStr,
-          totalAmount: dailyTotalAmount
+          jobAmount,
+          operationAmount
         });
       }
 
-      // If no data, add some sample data for demonstration
-      if (timeSeriesData.every(item => item.jobAmount === 0 && item.operationAmount === 0)) {
-        timeSeriesData.forEach((item, _index) => {
-          item.jobAmount = Math.floor(Math.random() * 1000) + 100;
-          item.operationAmount = Math.floor(Math.random() * 500) + 50;
-        });
-        
-        amountTrendData.forEach((item, _index) => {
-          item.totalAmount = Math.floor(Math.random() * 1500) + 200;
-        });
-      }
+      // Generate amount trend data
+      const amountTrendData = timeSeriesData.map(item => ({
+        date: item.date,
+        totalAmount: item.jobAmount + item.operationAmount
+      }));
 
-      // Status distribution
+      // Generate status distribution
       const statusDistribution = [
-        { status: 'Approved', count: approvedExpenses, percentage: totalExpenses > 0 ? (approvedExpenses / totalExpenses) * 100 : 0 },
-        { status: 'Pending', count: pendingExpenses, percentage: totalExpenses > 0 ? (pendingExpenses / totalExpenses) * 100 : 0 },
-        { status: 'Rejected', count: rejectedExpenses, percentage: totalExpenses > 0 ? (rejectedExpenses / totalExpenses) * 100 : 0 }
+        { status: 'Approved', count: approvedExpenses, percentage: totalExpenses > 0 ? Math.round((approvedExpenses / totalExpenses) * 100) : 0 },
+        { status: 'Pending', count: pendingExpenses, percentage: totalExpenses > 0 ? Math.round((pendingExpenses / totalExpenses) * 100) : 0 },
+        { status: 'Rejected', count: rejectedExpenses, percentage: totalExpenses > 0 ? Math.round((rejectedExpenses / totalExpenses) * 100) : 0 }
       ];
 
-      // Category data (Job vs Operation)
-      const jobExpenses = recentExpenses.filter(e => !e.operations);
-      const operationExpenses = recentExpenses.filter(e => e.operations);
+      // Generate category data
+      const jobAmount = recentExpenses
+        .filter(e => !e.operations)
+        .reduce((sum, e) => sum + (e.amount || 0), 0);
+      const operationAmount = recentExpenses
+        .filter(e => e.operations)
+        .reduce((sum, e) => sum + (e.amount || 0), 0);
       
-      let categoryData = [
-        {
-          category: 'Job',
-          amount: jobExpenses.reduce((sum, e) => sum + (e.amount || 0), 0)
-        },
-        {
-          category: 'Operation',
-          amount: operationExpenses.reduce((sum, e) => sum + (e.amount || 0), 0)
-        }
+      const categoryData = [
+        { category: 'Job', amount: jobAmount },
+        { category: 'Operation', amount: operationAmount }
       ];
 
-      // If no data, add sample data
-      if (categoryData.every(item => item.amount === 0)) {
-        categoryData = [
-          { category: 'Job', amount: 2500 },
-          { category: 'Operation', amount: 1800 }
-        ];
-      }
-
-      // Type breakdown (by expense type)
+      // Generate type breakdown
       const typeBreakdown = recentExpenses.reduce<{ type: string; amount: number }[]>((acc, expense) => {
-        const typeName = expense.expenseType?.name || 'Unknown';
-        const existing = acc.find(item => item.type === typeName);
-        
+        const type = expense.expenseType?.name || 'Unknown';
+        const existing = acc.find(item => item.type === type);
         if (existing) {
           existing.amount += expense.amount || 0;
         } else {
-          acc.push({
-            type: typeName,
-            amount: expense.amount || 0
-          });
+          acc.push({ type, amount: expense.amount || 0 });
         }
-        
         return acc;
       }, []);
 
-      // If no data, add sample data
-      if (typeBreakdown.length === 0 || typeBreakdown.every(item => item.amount === 0)) {
-        typeBreakdown.length = 0; // Clear array
-        typeBreakdown.push(
-          { type: 'Travel', amount: 1200 },
-          { type: 'Equipment', amount: 800 },
-          { type: 'Supplies', amount: 600 },
-          { type: 'Services', amount: 400 }
-        );
-      }
-
-      // Operation breakdown (by operation type)
-      const operationBreakdown = recentExpenses.reduce<{ operationType: string; amount: number }[]>((acc, expense) => {
-        // Only include expenses that are operation-type and have a valid operation type
-        if (expense.operations && expense.operationType?.name && expense.operationType.name !== 'Unknown') {
-          const operationType = expense.operationType.name;
+      // Generate operation breakdown
+      const operationBreakdown = recentExpenses
+        .filter(e => e.operations && e.operationType?.name)
+        .reduce<{ operationType: string; amount: number }[]>((acc, expense) => {
+          const operationType = expense.operationType?.name || 'Unknown';
           const existing = acc.find(item => item.operationType === operationType);
-          
           if (existing) {
             existing.amount += expense.amount || 0;
           } else {
-            acc.push({
-              operationType: operationType,
-              amount: expense.amount || 0
-            });
+            acc.push({ operationType, amount: expense.amount || 0 });
           }
-        }
-        
-        return acc;
-      }, []);
+          return acc;
+        }, []);
 
-      // If no data, add sample data
-      if (operationBreakdown.length === 0 || operationBreakdown.every(item => item.amount === 0)) {
-        operationBreakdown.length = 0; // Clear array
-        operationBreakdown.push(
-          { operationType: 'Maintenance', amount: 1200 },
-          { operationType: 'Installation', amount: 800 },
-          { operationType: 'Repair', amount: 450 },
-          { operationType: 'Inspection', amount: 300 }
-        );
-      }
-
-      // Trends data (weekly breakdown)
+      // Generate trends data (weekly)
       const trendsData = [];
       for (let i = 3; i >= 0; i--) {
         const weekStart = new Date();
         weekStart.setDate(weekStart.getDate() - (i * 7));
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
-
+        
         const weekExpenses = recentExpenses.filter(expense => {
           const expenseDate = new Date(expense.createdAt || expense.created_at || '');
           return expenseDate >= weekStart && expenseDate <= weekEnd;
         });
-
-        const jobAmount = weekExpenses.filter(e => !e.operations).reduce((sum, e) => sum + (e.amount || 0), 0);
-        const operationAmount = weekExpenses.filter(e => e.operations).reduce((sum, e) => sum + (e.amount || 0), 0);
-
+        
+        const weekJobAmount = weekExpenses
+          .filter(e => !e.operations)
+          .reduce((sum, e) => sum + (e.amount || 0), 0);
+        const weekOperationAmount = weekExpenses
+          .filter(e => e.operations)
+          .reduce((sum, e) => sum + (e.amount || 0), 0);
+        
         trendsData.push({
           period: `Week ${4 - i}`,
-          jobAmount: jobAmount,
-          operationAmount: operationAmount
+          jobAmount: weekJobAmount,
+          operationAmount: weekOperationAmount
         });
       }
 
-      // If no data, add sample data
-      if (trendsData.every(item => item.jobAmount === 0 && item.operationAmount === 0)) {
-        trendsData.forEach((item, _index) => {
-          item.jobAmount = Math.floor(Math.random() * 2000) + 500;
-          item.operationAmount = Math.floor(Math.random() * 1000) + 200;
-        });
-      }
-
-      setData({
+      return {
         totalExpenses,
         approvedExpenses,
         pendingExpenses,
@@ -333,13 +266,11 @@ export function useExpenseDashboard() {
         typeBreakdown,
         operationBreakdown,
         trendsData
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load expense dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
+      };
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
 
   const downloadReport = () => {
     if (!data) return;
@@ -391,9 +322,8 @@ export function useExpenseDashboard() {
 
   return {
     data,
-    loading,
+    loading: isLoading,
     error,
-    downloadReport,
-    refetch: fetchDashboardData
+    downloadReport
   };
-} 
+}; 

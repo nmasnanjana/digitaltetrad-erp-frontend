@@ -26,39 +26,70 @@ import {
   Chip,
 } from '@mui/material';
 import { CheckCircle } from '@phosphor-icons/react/dist/ssr/CheckCircle';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllExpenses, reviewExpense } from '@/api/expenseApi';
+import { CACHE_KEYS, invalidateCache } from '@/lib/react-query/cache-manager';
 import { Expense } from '@/types/expense';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useUser } from '@/contexts/user-context';
 
 export default function ExpenseApprovalPage() {
   const { formatCurrency } = useSettings();
+  const { user } = useUser();
+  const queryClient = useQueryClient();
   
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  // Get pending expenses with React Query
+  const { data: expenses = [], isLoading, error: queryError } = useQuery({
+    queryKey: [CACHE_KEYS.EXPENSES, 'pending'],
+    queryFn: async () => {
+      const response = await getAllExpenses();
+      return response.data.filter(expense => expense.status === 'on_progress');
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes for approval data
+    gcTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Review expense mutation
+  const reviewMutation = useMutation({
+    mutationFn: async ({ expenseId, status }: { expenseId: string; status: 'approved' | 'denied' }) => {
+      return reviewExpense(expenseId, {
+        status,
+        reviewed_by: user?.id?.toString() || '0',
+        reviewed_at: new Date().toISOString()
+      });
+    },
+    onSuccess: () => {
+      // Invalidate expenses cache to refresh the list
+      invalidateCache.expenses();
+      // Also invalidate dashboard data
+      queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.EXPENSE_DASHBOARD] });
+    },
+  });
+
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewStatus, setReviewStatus] = useState<'approved' | 'denied'>('approved');
   const [reviewComment, setReviewComment] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [localError, setLocalError] = useState<string | null>(null);
+  // const [loading, setLoading] = useState(true); // This state is now managed by React Query
 
-  useEffect(() => {
-    fetchExpenses();
-  }, []);
+  // useEffect(() => {
+  //   fetchExpenses();
+  // }, []);
 
-  const fetchExpenses = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await getAllExpenses();
-      setExpenses(response.data);
-    } catch (error) {
-      console.error('Error fetching expenses:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load expenses. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const fetchExpenses = async () => {
+  //   try {
+  //     setLoading(true);
+  //     setError(null);
+  //     const response = await getAllExpenses();
+  //     setExpenses(response.data);
+  //   } catch (error) {
+  //     console.error('Error fetching expenses:', error);
+  //     setError(error instanceof Error ? error.message : 'Failed to load expenses. Please try again later.');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const handleReview = (expense: Expense) => {
     setSelectedExpense(expense);
@@ -69,7 +100,7 @@ export default function ExpenseApprovalPage() {
     if (!selectedExpense) return;
     
     if (!user?.id) {
-      setError('User not loaded. Please refresh the page and try again.');
+      setLocalError('User not loaded. Please refresh the page and try again.');
       return;
     }
     
@@ -78,23 +109,19 @@ export default function ExpenseApprovalPage() {
     console.log('User ID type:', typeof user.id);
 
     try {
-      setError(null);
+      setLocalError(null);
       
       console.log('Reviewing expense with user ID:', user.id);
       
-      await reviewExpense(selectedExpense.id, {
-        status: reviewStatus,
-        reviewer_comment: reviewComment,
-        reviewed_by: user.id
-      });
+      await reviewMutation.mutate({ expenseId: selectedExpense.id, status: reviewStatus });
 
-      await fetchExpenses();
+      // await fetchExpenses(); // This is now handled by onSuccess of reviewMutation
       setReviewDialogOpen(false);
       setReviewComment('');
       setSelectedExpense(null);
     } catch (error) {
       console.error('Error reviewing expense:', error);
-      setError(error instanceof Error ? error.message : 'Failed to submit review. Please try again.');
+      setLocalError(error instanceof Error ? error.message : 'Failed to submit review. Please try again.');
     }
   };
 
@@ -110,9 +137,7 @@ export default function ExpenseApprovalPage() {
   };
 
   // Filter expenses that need approval (both job and operation expenses with on_progress status)
-  const pendingExpenses = expenses.filter(expense => 
-    expense.status === 'on_progress'
-  );
+  const pendingExpenses = expenses;
 
   return (
     <Box
@@ -139,9 +164,9 @@ export default function ExpenseApprovalPage() {
             </Stack>
           </Stack>
 
-          {error && (
-            <Alert severity="error" onClose={() => setError(null)}>
-              {error}
+          {localError && (
+            <Alert severity="error" onClose={() => setLocalError(null)}>
+              {localError}
             </Alert>
           )}
 
@@ -159,7 +184,7 @@ export default function ExpenseApprovalPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {loading ? (
+                {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center">
                       <Typography color="text.secondary">

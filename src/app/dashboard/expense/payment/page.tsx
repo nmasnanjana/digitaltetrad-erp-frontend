@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import * as React from 'react';
+import { useState } from 'react';
 import {
   Box,
   Card,
@@ -22,35 +23,45 @@ import {
   Chip,
 } from '@mui/material';
 import { CheckCircle, XCircle } from '@phosphor-icons/react/dist/ssr';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllExpenses, markAsPaid } from '@/api/expenseApi';
+import { CACHE_KEYS, invalidateCache } from '@/lib/react-query/cache-manager';
 import { Expense } from '@/types/expense';
 import { useSettings } from '@/contexts/SettingsContext';
 
 export default function ExpensePaymentPage() {
   const { formatCurrency } = useSettings();
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const queryClient = useQueryClient();
+  
+  // Get approved expenses with React Query
+  const { data: expenses = [], isLoading, error } = useQuery({
+    queryKey: [CACHE_KEYS.EXPENSES, 'approved'],
+    queryFn: async () => {
+      const response = await getAllExpenses();
+      return response.data.filter(expense => 
+        expense.status === 'approved' && !expense.paid
+      );
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes for payment data
+    gcTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Mark as paid mutation
+  const markAsPaidMutation = useMutation({
+    mutationFn: async (expenseId: string) => {
+      return markAsPaid(expenseId, { paid: true });
+    },
+    onSuccess: () => {
+      // Invalidate expenses cache to refresh the list
+      invalidateCache.expenses();
+      // Also invalidate dashboard data
+      queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.EXPENSE_DASHBOARD] });
+    },
+  });
+
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchExpenses();
-  }, []);
-
-  const fetchExpenses = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await getAllExpenses();
-      setExpenses(response.data);
-    } catch (error) {
-      console.error('Error fetching expenses:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load expenses. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [errorState, setErrorState] = useState<string | null>(null);
 
   const handlePayment = (expense: Expense) => {
     setSelectedExpense(expense);
@@ -61,19 +72,13 @@ export default function ExpensePaymentPage() {
     if (!selectedExpense) return;
     
     try {
-      await markAsPaid(selectedExpense.id.toString(), { paid: true });
+      await markAsPaidMutation.mutateAsync(selectedExpense.id.toString());
       setPaymentDialogOpen(false);
-      fetchExpenses();
     } catch (error) {
       console.error('Error marking expense as paid:', error);
-      setError(error instanceof Error ? error.message : 'Failed to mark expense as paid. Please try again later.');
+      setErrorState(error instanceof Error ? error.message : 'Failed to mark expense as paid. Please try again later.');
     }
   };
-
-  // Filter approved expenses that are not paid
-  const pendingPayments = expenses.filter(expense => 
-    expense.status === 'approved' && !expense.paid
-  );
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -105,9 +110,9 @@ export default function ExpensePaymentPage() {
             </Stack>
           </Stack>
 
-          {error && (
-            <Alert severity="error" onClose={() => setError(null)}>
-              {error}
+          {errorState && (
+            <Alert severity="error" onClose={() => setErrorState(null)}>
+              {errorState}
             </Alert>
           )}
 
@@ -127,7 +132,7 @@ export default function ExpensePaymentPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {loading ? (
+                {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={9} align="center">
                       <Typography color="text.secondary">
@@ -135,7 +140,15 @@ export default function ExpensePaymentPage() {
                       </Typography>
                     </TableCell>
                   </TableRow>
-                ) : pendingPayments.length === 0 ? (
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={9} align="center">
+                      <Typography color="text.secondary">
+                        Failed to load expenses. Please try again later.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : expenses.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} align="center">
                       <Typography color="text.secondary">
@@ -144,7 +157,7 @@ export default function ExpensePaymentPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  pendingPayments.map((expense) => (
+                  expenses.map((expense) => (
                     <TableRow key={expense.id}>
                       <TableCell>
                         {expense.operations ? expense.operationType?.name || 'N/A' : expense.job?.name || 'N/A'}
