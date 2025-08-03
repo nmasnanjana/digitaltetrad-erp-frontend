@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getAllJobs, deleteJob, JobFilters as JobFiltersType } from '@/api/jobApi';
-import { getAllCustomers } from '@/api/customerApi';
-import { Job } from '@/types/job';
-import { Customer } from '@/types/customer';
+import { getAllJobs, deleteJob, type JobFilters as JobFiltersType } from '@/api/job-api';
+import { getAllCustomers } from '@/api/customer-api';
+import { type Job } from '@/types/job';
+import { type Customer } from '@/types/customer';
 import {
   Box,
   Button,
@@ -145,11 +145,9 @@ export const ListJob: React.FC = () => {
         </Button>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+      {error ? <Alert severity="error" sx={{ mb: 2 }}>
           {error}
-        </Alert>
-      )}
+        </Alert> : null}
 
       <JobFilters
         filters={filters}
@@ -196,13 +194,13 @@ export const ListJob: React.FC = () => {
                 <TableCell align="right">
                   <IconButton
                     color="primary"
-                    onClick={() => router.push(`/dashboard/job/${job.id}/view`)}
+                    onClick={() => { router.push(`/dashboard/job/${job.id}/view`); }}
                   >
                     <VisibilityIcon />
                   </IconButton>
                   <IconButton
                     color="primary"
-                    onClick={() => handleEdit(job)}
+                    onClick={() => { handleEdit(job); }}
                   >
                     <EditIcon />
                   </IconButton>
@@ -222,13 +220,13 @@ export const ListJob: React.FC = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={() => { setDeleteDialogOpen(false); }}>
         <DialogTitle>Delete Job</DialogTitle>
         <DialogContent>
           Are you sure you want to delete job {selectedJob?.name}?
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => { setDeleteDialogOpen(false); }}>Cancel</Button>
           <Button onClick={handleDelete} color="error">
             Delete
           </Button>
@@ -237,7 +235,7 @@ export const ListJob: React.FC = () => {
 
       <JobForm
         open={formOpen}
-        onClose={() => setFormOpen(false)}
+        onClose={() => { setFormOpen(false); }}
         onSuccess={loadJobs}
         job={selectedJob}
         mode={formMode}

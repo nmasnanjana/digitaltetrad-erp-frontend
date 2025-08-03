@@ -24,8 +24,8 @@ import {
   Switch,
 } from '@mui/material';
 import { Plus, PencilSimple, Trash } from '@phosphor-icons/react/dist/ssr';
-import { getAllExpenseTypes, createExpenseType, updateExpenseType, deleteExpenseType } from '@/api/expenseTypeApi';
-import { ExpenseType } from '@/types/expense';
+import { getAllExpenseTypes, createExpenseType, updateExpenseType, deleteExpenseType } from '@/api/expense-type-api';
+import { type ExpenseType } from '@/types/expense';
 import { useUser } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
 import { paths } from '@/paths';
@@ -198,7 +198,7 @@ export default function ExpenseTypePage() {
             <Button
               variant="contained"
               startIcon={<Plus />}
-              onClick={() => handleOpenDialog()}
+              onClick={() => { handleOpenDialog(); }}
               sx={{
                 backgroundColor: 'primary.main',
                 color: 'white',
@@ -211,11 +211,9 @@ export default function ExpenseTypePage() {
             </Button>
           </Stack>
 
-          {error && (
-            <Alert severity="error" onClose={() => setError(null)}>
+          {error ? <Alert severity="error" onClose={() => { setError(null); }}>
               {error}
-            </Alert>
-          )}
+            </Alert> : null}
 
           <Card>
             <Table>
@@ -264,11 +262,10 @@ export default function ExpenseTypePage() {
                         {type.createdAt ? new Date(type.createdAt).toLocaleDateString() : 'N/A'}
                       </TableCell>
                       <TableCell>
-                        {user?.role?.permissions?.some(p => p.module === 'expensetype' && (p.action === 'update' || p.action === 'delete') && p.isActive) && (
-                          <Stack direction="row" spacing={1}>
+                        {user?.role?.permissions?.some(p => p.module === 'expensetype' && (p.action === 'update' || p.action === 'delete') && p.isActive) ? <Stack direction="row" spacing={1}>
                             <IconButton
                               size="small"
-                              onClick={() => handleOpenDialog(type)}
+                              onClick={() => { handleOpenDialog(type); }}
                             >
                               <PencilSimple />
                             </IconButton>
@@ -279,8 +276,7 @@ export default function ExpenseTypePage() {
                             >
                               <Trash />
                             </IconButton>
-                          </Stack>
-                        )}
+                          </Stack> : null}
                       </TableCell>
                     </TableRow>
                   ))
@@ -301,14 +297,14 @@ export default function ExpenseTypePage() {
               fullWidth
               label="Name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => { setFormData({ ...formData, name: e.target.value }); }}
               required
             />
             <TextField
               fullWidth
               label="Description"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) => { setFormData({ ...formData, description: e.target.value }); }}
               multiline
               rows={3}
             />
@@ -316,7 +312,7 @@ export default function ExpenseTypePage() {
               control={
                 <Switch
                   checked={formData.isActive}
-                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  onChange={(e) => { setFormData({ ...formData, isActive: e.target.checked }); }}
                   color="primary"
                 />
               }

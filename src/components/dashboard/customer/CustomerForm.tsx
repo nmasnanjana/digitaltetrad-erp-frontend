@@ -10,8 +10,8 @@ import {
   TextField,
   Alert,
 } from '@mui/material';
-import { createCustomer, updateCustomer } from '@/api/customerApi';
-import { Customer } from '@/types/customer';
+import { createCustomer, updateCustomer } from '@/api/customer-api';
+import { type Customer } from '@/types/customer';
 
 interface CustomerFormProps {
   open: boolean;
@@ -81,11 +81,9 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
           {mode === 'create' ? 'Create Customer' : 'Edit Customer'}
         </DialogTitle>
         <DialogContent>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+          {error ? <Alert severity="error" sx={{ mb: 2 }}>
               {error}
-            </Alert>
-          )}
+            </Alert> : null}
           <TextField
             autoFocus
             margin="dense"
@@ -93,7 +91,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
             type="text"
             fullWidth
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => { setName(e.target.value); }}
             required
             sx={{ mb: 2 }}
           />
@@ -105,7 +103,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
             multiline
             rows={4}
             value={address}
-            onChange={(e) => setAddress(e.target.value)}
+            onChange={(e) => { setAddress(e.target.value); }}
             placeholder="Enter complete address including street, city, state, postal code, country"
           />
         </DialogContent>

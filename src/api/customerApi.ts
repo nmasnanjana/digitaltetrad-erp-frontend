@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Customer } from '@/types/customer';
+import type { Customer } from '@/types/customer';
 
 const API = axios.create({
     baseURL: 'http://localhost:4575/api',
@@ -19,30 +19,33 @@ API.interceptors.request.use((config) => {
 API.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response) {
-            console.error('Error response:', error.response.data);
-            return Promise.reject(error.response.data);
-        } else if (error.request) {
-            console.error('Error request:', error.request);
-            return Promise.reject(new Error('No response received from server'));
-        } else {
-            console.error('Error message:', error.message);
-            return Promise.reject(error);
+        // Type-safe error handling
+        if (error && typeof error === 'object' && 'response' in error) {
+            const axiosError = error as { response?: { data?: unknown } };
+            if (axiosError.response?.data) {
+                return Promise.reject(new Error(`API Error: ${JSON.stringify(axiosError.response.data)}`));
+            }
         }
+        
+        if (error && typeof error === 'object' && 'request' in error) {
+            return Promise.reject(new Error('No response received from server'));
+        }
+        
+        return Promise.reject(new Error(error instanceof Error ? error.message : 'Unknown error occurred'));
     }
 );
 
-export const getAllCustomers = () =>
+export const getAllCustomers = (): Promise<{ data: Customer[] }> =>
     API.get<Customer[]>('/customers');
 
-export const getCustomerById = (id: string) =>
+export const getCustomerById = (id: string): Promise<{ data: Customer }> =>
     API.get<Customer>(`/customers/${id}`);
 
-export const createCustomer = (customerData: Partial<Customer>) =>
+export const createCustomer = (customerData: Partial<Customer>): Promise<{ data: Customer }> =>
     API.post('/customers', customerData);
 
-export const updateCustomer = (id: string, data: Partial<Customer>) =>
+export const updateCustomer = (id: string, data: Partial<Customer>): Promise<{ data: Customer }> =>
     API.put(`/customers/${id}`, data);
 
-export const deleteCustomer = (id: string) =>
+export const deleteCustomer = (id: string): Promise<{ data: void }> =>
     API.delete(`/customers/${id}`); 

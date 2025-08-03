@@ -10,7 +10,7 @@ export function FaviconUpdater(): null {
     const updateFavicon = () => {
       // Remove existing favicon links
       const existingLinks = document.querySelectorAll('link[rel*="icon"]');
-      existingLinks.forEach(link => link.remove());
+      existingLinks.forEach(link => { link.remove(); });
 
       if (settings?.company_logo) {
         // Create a new favicon link using the company logo

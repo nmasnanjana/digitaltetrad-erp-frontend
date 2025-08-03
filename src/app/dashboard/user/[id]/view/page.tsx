@@ -7,16 +7,17 @@ import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Unstable_Grid2';
 import { getUserById, deleteUser, updateUserActivity } from '@/api/userApi';
 import { UserView } from '@/components/dashboard/user/UserView';
-import { User } from '@/types/user';
+import { type User } from '@/types/user';
 import { Alert } from '@mui/material';
 
 export default function ViewUserPage(): React.JSX.Element {
   const params = useParams();
   const router = useRouter();
-  const userId = params.id as string;
   const [user, setUser] = React.useState<User | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
+
+  const userId = params?.id as string;
 
   const fetchUser = async () => {
     try {
@@ -31,7 +32,9 @@ export default function ViewUserPage(): React.JSX.Element {
   };
 
   React.useEffect(() => {
-    fetchUser();
+    if (userId) {
+      fetchUser();
+    }
   }, [userId]);
 
   const handleDelete = async () => {
@@ -63,6 +66,10 @@ export default function ViewUserPage(): React.JSX.Element {
       setError(err instanceof Error ? err.message : 'Failed to update user status');
     }
   };
+
+  if (!userId) {
+    return <Alert severity="error">Invalid user ID</Alert>;
+  }
 
   if (loading) {
     return <Typography>Loading...</Typography>;

@@ -32,6 +32,10 @@ export interface SignUpParams {
   password_confirmation: string;
 }
 
+export interface ResetPasswordParams {
+  email: string;
+}
+
 export interface AuthClient {
   signInWithPassword: (params: SignInWithPasswordParams) => Promise<SignInResponse>;
   signUp: (params: SignUpParams) => Promise<SignUpResponse>;
@@ -46,4 +50,5 @@ export interface AuthClient {
   createRole: (data: { name: string; description?: string }) => Promise<{ data: Role | null; error: string | null; info?: string }>;
   updateRole: (id: string, data: { name: string; description?: string; isActive?: boolean }) => Promise<{ data: Role | null; error: string | null; info?: string }>;
   deleteRole: (id: string) => Promise<{ error: string | null; info?: string }>;
+  resetPassword: (params: ResetPasswordParams) => Promise<{ error: string | null; info?: string }>;
 } 

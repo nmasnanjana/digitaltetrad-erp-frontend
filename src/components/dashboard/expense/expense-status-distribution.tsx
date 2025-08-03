@@ -21,11 +21,11 @@ const iconMapping = {
 };
 
 export interface ExpenseStatusDistributionProps {
-  data: Array<{
+  data: {
     status: string;
     count: number;
     percentage: number;
-  }>;
+  }[];
   sx?: SxProps;
 }
 
@@ -87,7 +87,7 @@ function useChartOptions(labels: string[]): ApexOptions {
               fontSize: '16px',
               fontFamily: 'inherit',
               color: theme.palette.text.primary,
-              formatter: (value) => `${value}`,
+              formatter: (value) => value.toString(),
             },
             total: {
               show: true,
@@ -96,7 +96,7 @@ function useChartOptions(labels: string[]): ApexOptions {
               fontFamily: 'inherit',
               color: theme.palette.text.primary,
               formatter: (w) => {
-                const total = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                const total = w.globals.seriesTotals.reduce((a: number, b: number) => a + b, 0);
                 return `${total}`;
               },
             },

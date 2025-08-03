@@ -7,9 +7,15 @@ import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Unstable_Grid2';
 import { updateUserPassword } from '@/api/userApi';
 import { UpdatePasswordForm } from '@/components/dashboard/user/UpdatePasswordForm';
+import Alert from '@mui/material/Alert';
 
 export default function UpdatePasswordPage(): React.JSX.Element {
   const params = useParams();
+  
+  if (!params?.id) {
+    return <Alert severity="error">Invalid user ID</Alert>;
+  }
+  
   const userId = params.id as string;
 
   const handleUpdatePassword = async (data: { currentPassword: string; newPassword: string; newPasswordConfirm: string }) => {

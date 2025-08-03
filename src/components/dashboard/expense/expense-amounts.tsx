@@ -3,7 +3,7 @@ import Avatar from '@mui/material/Avatar';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Stack from '@mui/material/Stack';
-import type { SxProps } from '@mui/material/styles';
+import type { SxProps, Theme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import { ArrowDown as ArrowDownIcon } from '@phosphor-icons/react/dist/ssr/ArrowDown';
 import { ArrowUp as ArrowUpIcon } from '@phosphor-icons/react/dist/ssr/ArrowUp';
@@ -12,7 +12,6 @@ import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/C
 import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
 import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
 import { useSettings } from '@/contexts/SettingsContext';
-import { Theme } from '@mui/material/styles';
 
 export interface ExpenseAmountsProps {
   title: string;
@@ -39,7 +38,7 @@ const colorMapping = {
   info: 'var(--mui-palette-info-main)',
 };
 
-export const ExpenseAmounts = ({ title, value, trend, diff, color = 'primary', sx }: ExpenseAmountsProps) => {
+export function ExpenseAmounts({ title, value, trend, diff, color = 'primary', sx }: ExpenseAmountsProps) {
   const { formatCurrency } = useSettings();
   const TrendIcon = trend === 'up' ? ArrowUpIcon : ArrowDownIcon;
   const trendColor = trend === 'up' ? 'var(--mui-palette-success-main)' : 'var(--mui-palette-error-main)';

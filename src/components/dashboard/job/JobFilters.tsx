@@ -17,8 +17,8 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { JobFilters as JobFiltersType } from '@/api/jobApi';
-import { Customer } from '@/types/customer';
+import { type JobFilters as JobFiltersType } from '@/api/job-api';
+import { type Customer } from '@/types/customer';
 import { Job } from '@/types/job';
 import ClearIcon from '@mui/icons-material/Clear';
 
@@ -93,17 +93,16 @@ export const JobFilters: React.FC<JobFiltersProps> = ({
                             <DatePicker
                                 label="From"
                                 value={getDateValue(filters.createdStartDate)}
-                                onChange={(date) => handleDateChange('createdStartDate', date)}
+                                onChange={(date) => { handleDateChange('createdStartDate', date); }}
                                 slotProps={{ textField: { size: 'small', sx: { width: 130 } } }}
                             />
                             <DatePicker
                                 label="To"
                                 value={getDateValue(filters.createdEndDate)}
-                                onChange={(date) => handleDateChange('createdEndDate', date)}
+                                onChange={(date) => { handleDateChange('createdEndDate', date); }}
                                 slotProps={{ textField: { size: 'small', sx: { width: 130 } } }}
                             />
-                            {(filters.createdStartDate || filters.createdEndDate) && (
-                                <Tooltip title="Clear dates">
+                            {(filters.createdStartDate || filters.createdEndDate) ? <Tooltip title="Clear dates">
                                     <IconButton 
                                         size="small" 
                                         onClick={clearCreatedDates}
@@ -111,8 +110,7 @@ export const JobFilters: React.FC<JobFiltersProps> = ({
                                     >
                                         <ClearIcon fontSize="small" />
                                     </IconButton>
-                                </Tooltip>
-                            )}
+                                </Tooltip> : null}
                         </Stack>
                     </LocalizationProvider>
                 </Paper>
@@ -138,17 +136,16 @@ export const JobFilters: React.FC<JobFiltersProps> = ({
                             <DatePicker
                                 label="From"
                                 value={getDateValue(filters.completedStartDate)}
-                                onChange={(date) => handleDateChange('completedStartDate', date)}
+                                onChange={(date) => { handleDateChange('completedStartDate', date); }}
                                 slotProps={{ textField: { size: 'small', sx: { width: 130 } } }}
                             />
                             <DatePicker
                                 label="To"
                                 value={getDateValue(filters.completedEndDate)}
-                                onChange={(date) => handleDateChange('completedEndDate', date)}
+                                onChange={(date) => { handleDateChange('completedEndDate', date); }}
                                 slotProps={{ textField: { size: 'small', sx: { width: 130 } } }}
                             />
-                            {(filters.completedStartDate || filters.completedEndDate) && (
-                                <Tooltip title="Clear dates">
+                            {(filters.completedStartDate || filters.completedEndDate) ? <Tooltip title="Clear dates">
                                     <IconButton 
                                         size="small" 
                                         onClick={clearCompletedDates}
@@ -156,8 +153,7 @@ export const JobFilters: React.FC<JobFiltersProps> = ({
                                     >
                                         <ClearIcon fontSize="small" />
                                     </IconButton>
-                                </Tooltip>
-                            )}
+                                </Tooltip> : null}
                         </Stack>
                     </LocalizationProvider>
                 </Paper>
@@ -167,7 +163,7 @@ export const JobFilters: React.FC<JobFiltersProps> = ({
                     <Select
                         value={filters.status || ''}
                         label="Status"
-                        onChange={(e) => handleSelectChange('status', e.target.value || undefined)}
+                        onChange={(e) => { handleSelectChange('status', e.target.value || undefined); }}
                     >
                         <MenuItem value="">All</MenuItem>
                         <MenuItem value="open">Open</MenuItem>
@@ -184,7 +180,7 @@ export const JobFilters: React.FC<JobFiltersProps> = ({
                     <Select
                         value={filters.type || ''}
                         label="Type"
-                        onChange={(e) => handleSelectChange('type', e.target.value || undefined)}
+                        onChange={(e) => { handleSelectChange('type', e.target.value || undefined); }}
                     >
                         <MenuItem value="">All</MenuItem>
                         <MenuItem value="supply and installation">Supply and Installation</MenuItem>
@@ -196,9 +192,9 @@ export const JobFilters: React.FC<JobFiltersProps> = ({
                 <FormControl size="small" sx={{ minWidth: 150 }}>
                     <InputLabel>Customer</InputLabel>
                     <Select
-                        value={filters.customer_id?.toString() || ''}
+                        value={filters.customerId?.toString() || ''}
                         label="Customer"
-                        onChange={(e) => handleSelectChange('customer_id', e.target.value ? Number(e.target.value) : undefined)}
+                        onChange={(e) => { handleSelectChange('customerId', e.target.value ? Number(e.target.value) : undefined); }}
                     >
                         <MenuItem value="">All</MenuItem>
                         {customers.map((customer) => (

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { User } from '@/types/user';
+import { type User } from '@/types/user';
 
 const API = axios.create({
     baseURL: 'http://localhost:4575/api',
@@ -56,10 +56,10 @@ API.interceptors.response.use(
             // The request was made but no response was received
             console.error('Error request:', error.request);
             return Promise.reject(new Error('No response received from server'));
-        } else {
+        } 
             // Something happened in setting up the request that triggered an Error
             console.error('Error message:', error.message);
             return Promise.reject(error);
-        }
+        
     }
 );

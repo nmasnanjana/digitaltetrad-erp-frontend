@@ -22,8 +22,8 @@ import {
   Chip,
 } from '@mui/material';
 import { CheckCircle, XCircle } from '@phosphor-icons/react/dist/ssr';
-import { getAllExpenses, markAsPaid } from '@/api/expenseApi';
-import { Expense } from '@/types/expense';
+import { getAllExpenses, markAsPaid } from '@/api/expense-api';
+import { type Expense } from '@/types/expense';
 import { useSettings } from '@/contexts/SettingsContext';
 
 export default function ExpensePaymentPage() {
@@ -62,11 +62,7 @@ export default function ExpensePaymentPage() {
 
     try {
       setError(null);
-      await markAsPaid(selectedExpense.id, {
-        paymentDate: new Date().toISOString(),
-        paymentMethod: 'Bank Transfer',
-        reference: `PAY-${selectedExpense.id}`
-      });
+      await markAsPaid(selectedExpense.id.toString(), { paid: true });
 
       await fetchExpenses();
       setPaymentDialogOpen(false);
@@ -112,11 +108,9 @@ export default function ExpensePaymentPage() {
             </Stack>
           </Stack>
 
-          {error && (
-            <Alert severity="error" onClose={() => setError(null)}>
+          {error ? <Alert severity="error" onClose={() => { setError(null); }}>
               {error}
-            </Alert>
-          )}
+            </Alert> : null}
 
           <Card>
             <Table>
@@ -162,7 +156,7 @@ export default function ExpensePaymentPage() {
                           : 'N/A'
                         }
                       </TableCell>
-                      <TableCell>{formatDate(expense.reviewed_at)}</TableCell>
+                      <TableCell>{formatDate(expense.reviewed_at ? expense.reviewed_at.toString() : undefined)}</TableCell>
                       <TableCell>
                         <Chip
                           label={expense.paid ? 'Paid' : 'Pending'}
@@ -176,7 +170,7 @@ export default function ExpensePaymentPage() {
                             variant="contained"
                             color="success"
                             startIcon={<CheckCircle />}
-                            onClick={() => handlePayment(expense)}
+                            onClick={() => { handlePayment(expense); }}
                             disabled={expense.paid}
                           >
                             Mark as Paid
@@ -192,25 +186,23 @@ export default function ExpensePaymentPage() {
         </Stack>
       </Container>
 
-      <Dialog open={paymentDialogOpen} onClose={() => setPaymentDialogOpen(false)}>
+      <Dialog open={paymentDialogOpen} onClose={() => { setPaymentDialogOpen(false); }}>
         <DialogTitle>Confirm Payment</DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 2 }}>
             <Typography>
               Are you sure you want to mark this expense as paid?
             </Typography>
-            {selectedExpense && (
-              <Stack spacing={1}>
+            {selectedExpense ? <Stack spacing={1}>
                 <Typography variant="subtitle2">Expense Details:</Typography>
                 <Typography>Job: {selectedExpense.job?.name || 'N/A'}</Typography>
                 <Typography>Amount: {formatCurrency(selectedExpense.amount)}</Typography>
                 <Typography>Description: {selectedExpense.description}</Typography>
-              </Stack>
-            )}
+              </Stack> : null}
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPaymentDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => { setPaymentDialogOpen(false); }}>Cancel</Button>
           <Button onClick={handlePaymentSubmit} variant="contained" color="success">
             Confirm Payment
           </Button>

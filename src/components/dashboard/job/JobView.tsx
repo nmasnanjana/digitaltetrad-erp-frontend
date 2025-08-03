@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Job } from '@/types/job';
-import { Expense } from '@/types/expense';
+import { type Job } from '@/types/job';
+import { type Expense } from '@/types/expense';
 import {
   Box,
   Card,
@@ -28,8 +28,8 @@ import {
   IconButton,
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
-import { getExpensesByJob } from '@/api/expenseApi';
-import { uploadHuaweiPoExcel, getHuaweiPosByJobId, deleteHuaweiPoByJobId, downloadHuaweiPoFile, createHuaweiPo, updateHuaweiPo, deleteHuaweiPo } from '@/api/huaweiPoApi';
+import { getExpensesByJob } from '@/api/expense-api';
+import { uploadHuaweiPoExcel, getHuaweiPosByJobId, deleteHuaweiPoByJobId, downloadHuaweiPoFile, createHuaweiPo, updateHuaweiPo, deleteHuaweiPo } from '@/api/huawei-po-api';
 import { useSettings } from '@/contexts/SettingsContext';
 import * as XLSX from 'xlsx';
 import LockIcon from '@mui/icons-material/Lock';
@@ -104,7 +104,7 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
             fullWidth
             label="Site Code"
             value={formData.site_code}
-            onChange={(e) => handleInputChange('site_code', e.target.value)}
+            onChange={(e) => { handleInputChange('site_code', e.target.value); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -115,7 +115,7 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
             fullWidth
             label="Site ID"
             value={formData.site_id}
-            onChange={(e) => handleInputChange('site_id', e.target.value)}
+            onChange={(e) => { handleInputChange('site_id', e.target.value); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -126,7 +126,7 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
             fullWidth
             label="Site Name"
             value={formData.site_name}
-            onChange={(e) => handleInputChange('site_name', e.target.value)}
+            onChange={(e) => { handleInputChange('site_name', e.target.value); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -137,7 +137,7 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
             fullWidth
             label="PO Number"
             value={formData.po_no}
-            onChange={(e) => handleInputChange('po_no', e.target.value)}
+            onChange={(e) => { handleInputChange('po_no', e.target.value); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -148,7 +148,7 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
             fullWidth
             label="PO Line Number"
             value={formData.line_no}
-            onChange={(e) => handleInputChange('line_no', e.target.value)}
+            onChange={(e) => { handleInputChange('line_no', e.target.value); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -159,7 +159,7 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
             fullWidth
             label="Item Code"
             value={formData.item_code}
-            onChange={(e) => handleInputChange('item_code', e.target.value)}
+            onChange={(e) => { handleInputChange('item_code', e.target.value); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -171,7 +171,7 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
             label="Unit Price"
             type="number"
             value={formData.unit_price}
-            onChange={(e) => handleInputChange('unit_price', parseFloat(e.target.value) || 0)}
+            onChange={(e) => { handleInputChange('unit_price', parseFloat(e.target.value) || 0); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -184,7 +184,7 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
             label="Requested Quantity"
             type="number"
             value={formData.requested_quantity}
-            onChange={(e) => handleInputChange('requested_quantity', parseInt(e.target.value) || 0)}
+            onChange={(e) => { handleInputChange('requested_quantity', parseInt(e.target.value) || 0); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -196,7 +196,7 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
             fullWidth
             label="Item Description"
             value={formData.item_description}
-            onChange={(e) => handleInputChange('item_description', e.target.value)}
+            onChange={(e) => { handleInputChange('item_description', e.target.value); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -463,7 +463,7 @@ export const JobView: React.FC<JobViewProps> = ({
       
       // Show success message (you can add a toast notification here)
       const actionText = huaweiPoData.length === 0 ? 'uploaded' : 'updated';
-      alert(`Successfully ${actionText} ${response.data.records_imported} records for job ${job.id}`);
+      alert(`Successfully ${actionText} ${response.data.recordsImported} records for job ${job.id}`);
       
       // Close dialog and reset state
       setUploadDialogOpen(false);
@@ -506,7 +506,7 @@ export const JobView: React.FC<JobViewProps> = ({
       console.log('Delete successful:', response);
       
       // Show success message
-      alert(`Successfully deleted ${response.data.records_deleted} Huawei PO records for job ${job.id}`);
+      alert(`Successfully deleted Huawei PO records for job ${job.id}`);
       
       // Close dialog
       setDeleteDialogOpen(false);
@@ -753,21 +753,17 @@ export const JobView: React.FC<JobViewProps> = ({
           </Grid>
         </Grid>
 
-        {loading && (
-          <Box sx={{ mt: 4 }}>
+        {loading ? <Box sx={{ mt: 4 }}>
             <Typography variant="h6" gutterBottom>
               Loading expenses...
             </Typography>
-          </Box>
-        )}
+          </Box> : null}
 
-        {error && (
-          <Box sx={{ mt: 4 }}>
+        {error ? <Box sx={{ mt: 4 }}>
             <Typography variant="h6" color="error" gutterBottom>
               Error loading expenses: {error}
             </Typography>
-          </Box>
-        )}
+          </Box> : null}
 
         {!loading && !error && expenses.length > 0 && (
           <Box sx={{ mt: 4 }}>
@@ -835,7 +831,7 @@ export const JobView: React.FC<JobViewProps> = ({
                     variant="outlined"
                     color="primary"
                     size="small"
-                    onClick={() => setAddPoDialogOpen(true)}
+                    onClick={() => { setAddPoDialogOpen(true); }}
                     disabled={areAllPosFrozen()}
                     title={areAllPosFrozen() ? "Cannot add - all PO records have been invoiced and are frozen" : ""}
                   >
@@ -854,7 +850,7 @@ export const JobView: React.FC<JobViewProps> = ({
                     variant="outlined"
                     color="error"
                     size="small"
-                    onClick={() => setDeleteDialogOpen(true)}
+                    onClick={() => { setDeleteDialogOpen(true); }}
                     disabled={isDeleting || hasInvoicedPos()}
                     title={hasInvoicedPos() ? "Cannot delete - some PO records have been invoiced" : ""}
                   >
@@ -864,22 +860,18 @@ export const JobView: React.FC<JobViewProps> = ({
               )}
             </Box>
             
-            {huaweiPoLoading && (
-              <Box sx={{ mt: 2 }}>
+            {huaweiPoLoading ? <Box sx={{ mt: 2 }}>
                 <Typography variant="body2" gutterBottom>
                   Loading Huawei PO data...
                 </Typography>
                 <LinearProgress />
-              </Box>
-            )}
+              </Box> : null}
 
-            {huaweiPoError && (
-              <Box sx={{ mt: 2 }}>
+            {huaweiPoError ? <Box sx={{ mt: 2 }}>
                 <Typography variant="body2" color="error" gutterBottom>
                   Error loading Huawei PO data: {huaweiPoError}
                 </Typography>
-              </Box>
-            )}
+              </Box> : null}
 
             {!huaweiPoLoading && !huaweiPoError && huaweiPoData.length > 0 && (
               <TableContainer component={Paper} sx={{ maxHeight: 400, overflowX: 'auto' }}>
@@ -967,7 +959,7 @@ export const JobView: React.FC<JobViewProps> = ({
                           <TableCell sx={{ minWidth: 100 }}>
                             <IconButton
                               size="small"
-                              onClick={() => openEditPoDialog(po)}
+                              onClick={() => { openEditPoDialog(po); }}
                               disabled={isFrozen}
                               title="Edit PO"
                             >
@@ -1061,13 +1053,13 @@ export const JobView: React.FC<JobViewProps> = ({
         </Box>
       </CardContent>
 
-      <Dialog open={statusDialogOpen} onClose={() => setStatusDialogOpen(false)}>
+      <Dialog open={statusDialogOpen} onClose={() => { setStatusDialogOpen(false); }}>
         <DialogTitle>Update Job Status</DialogTitle>
         <DialogContent>
           Are you sure you want to update the job status to {nextStatus}?
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => { setStatusDialogOpen(false); }}>Cancel</Button>
           <Button onClick={handleStatusUpdate} color="primary">
             Update
           </Button>
@@ -1077,7 +1069,7 @@ export const JobView: React.FC<JobViewProps> = ({
       {/* Upload Dialog */}
       <Dialog 
         open={uploadDialogOpen} 
-        onClose={() => setUploadDialogOpen(false)}
+        onClose={() => { setUploadDialogOpen(false); }}
         maxWidth="lg"
         fullWidth
       >
@@ -1085,8 +1077,7 @@ export const JobView: React.FC<JobViewProps> = ({
           {huaweiPoData.length === 0 ? 'Upload PO Excel File' : 'PO Variations - Update Existing PO Data'}
         </DialogTitle>
         <DialogContent>
-          {isProcessing && (
-            <Box sx={{ mb: 2 }}>
+          {isProcessing ? <Box sx={{ mb: 2 }}>
               <Typography variant="body2" gutterBottom>
                 Processing Excel file...
               </Typography>
@@ -1094,8 +1085,7 @@ export const JobView: React.FC<JobViewProps> = ({
               <Typography variant="caption" color="text.secondary">
                 {processingProgress}% Complete
               </Typography>
-            </Box>
-          )}
+            </Box> : null}
 
           {!isProcessing && excelData.length > 0 && (
             <Box>
@@ -1131,7 +1121,7 @@ export const JobView: React.FC<JobViewProps> = ({
                           <TextField
                             size="small"
                             value={row.site_code}
-                            onChange={(e) => handleDataEdit(index, 'site_code', e.target.value)}
+                            onChange={(e) => { handleDataEdit(index, 'site_code', e.target.value); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1140,7 +1130,7 @@ export const JobView: React.FC<JobViewProps> = ({
                           <TextField
                             size="small"
                             value={row.site_id}
-                            onChange={(e) => handleDataEdit(index, 'site_id', e.target.value)}
+                            onChange={(e) => { handleDataEdit(index, 'site_id', e.target.value); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1149,7 +1139,7 @@ export const JobView: React.FC<JobViewProps> = ({
                           <TextField
                             size="small"
                             value={row.site_name}
-                            onChange={(e) => handleDataEdit(index, 'site_name', e.target.value)}
+                            onChange={(e) => { handleDataEdit(index, 'site_name', e.target.value); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1158,7 +1148,7 @@ export const JobView: React.FC<JobViewProps> = ({
                           <TextField
                             size="small"
                             value={row.po_no}
-                            onChange={(e) => handleDataEdit(index, 'po_no', e.target.value)}
+                            onChange={(e) => { handleDataEdit(index, 'po_no', e.target.value); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1167,7 +1157,7 @@ export const JobView: React.FC<JobViewProps> = ({
                           <TextField
                             size="small"
                             value={row.line_no}
-                            onChange={(e) => handleDataEdit(index, 'line_no', e.target.value)}
+                            onChange={(e) => { handleDataEdit(index, 'line_no', e.target.value); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1176,7 +1166,7 @@ export const JobView: React.FC<JobViewProps> = ({
                           <TextField
                             size="small"
                             value={row.item_code}
-                            onChange={(e) => handleDataEdit(index, 'item_code', e.target.value)}
+                            onChange={(e) => { handleDataEdit(index, 'item_code', e.target.value); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1185,7 +1175,7 @@ export const JobView: React.FC<JobViewProps> = ({
                           <TextField
                             size="small"
                             value={row.item_description}
-                            onChange={(e) => handleDataEdit(index, 'item_description', e.target.value)}
+                            onChange={(e) => { handleDataEdit(index, 'item_description', e.target.value); }}
                             variant="standard"
                             multiline
                             maxRows={2}
@@ -1197,7 +1187,7 @@ export const JobView: React.FC<JobViewProps> = ({
                             size="small"
                             type="number"
                             value={row.unit_price}
-                            onChange={(e) => handleDataEdit(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                            onChange={(e) => { handleDataEdit(index, 'unit_price', parseFloat(e.target.value) || 0); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1207,7 +1197,7 @@ export const JobView: React.FC<JobViewProps> = ({
                             size="small"
                             type="number"
                             value={row.requested_quantity}
-                            onChange={(e) => handleDataEdit(index, 'requested_quantity', parseInt(e.target.value) || 0)}
+                            onChange={(e) => { handleDataEdit(index, 'requested_quantity', parseInt(e.target.value) || 0); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1220,14 +1210,12 @@ export const JobView: React.FC<JobViewProps> = ({
             </Box>
           )}
 
-          {isProcessing && (
-            <Box sx={{ mt: 2 }}>
+          {isProcessing ? <Box sx={{ mt: 2 }}>
               <Typography variant="body2" gutterBottom>
                 Uploading data to server...
               </Typography>
               <LinearProgress />
-            </Box>
-          )}
+            </Box> : null}
 
           {!isProcessing && excelData.length === 0 && !error && (
             <Typography variant="body2" color="text.secondary">
@@ -1235,14 +1223,12 @@ export const JobView: React.FC<JobViewProps> = ({
             </Typography>
           )}
 
-          {error && (
-            <Typography variant="body2" color="error">
+          {error ? <Typography variant="body2" color="error">
               {error}
-            </Typography>
-          )}
+            </Typography> : null}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUploadDialogOpen(false)} disabled={isProcessing}>
+          <Button onClick={() => { setUploadDialogOpen(false); }} disabled={isProcessing}>
             Cancel
           </Button>
           {excelData.length > 0 && (
@@ -1262,7 +1248,7 @@ export const JobView: React.FC<JobViewProps> = ({
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={() => { setDeleteDialogOpen(false); }}>
         <DialogTitle>Delete Huawei PO Data</DialogTitle>
         <DialogContent>
           {hasInvoicedPos() ? (
@@ -1317,7 +1303,7 @@ export const JobView: React.FC<JobViewProps> = ({
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
+          <Button onClick={() => { setDeleteDialogOpen(false); }} disabled={isDeleting}>
             {hasInvoicedPos() ? 'Close' : 'Cancel'}
           </Button>
           {!hasInvoicedPos() && (
@@ -1336,7 +1322,7 @@ export const JobView: React.FC<JobViewProps> = ({
       {/* Add PO Dialog */}
       <Dialog 
         open={addPoDialogOpen} 
-        onClose={() => setAddPoDialogOpen(false)}
+        onClose={() => { setAddPoDialogOpen(false); }}
         maxWidth="md"
         fullWidth
       >
@@ -1344,7 +1330,7 @@ export const JobView: React.FC<JobViewProps> = ({
         <DialogContent>
           <AddPoForm 
             onSubmit={handleAddPo}
-            onCancel={() => setAddPoDialogOpen(false)}
+            onCancel={() => { setAddPoDialogOpen(false); }}
             isSubmitting={isEditingPo}
             jobId={job.id}
             customerId={job.customer_id}
@@ -1364,8 +1350,7 @@ export const JobView: React.FC<JobViewProps> = ({
       >
         <DialogTitle>Edit PO</DialogTitle>
         <DialogContent>
-          {selectedPoForEdit && (
-            <AddPoForm 
+          {selectedPoForEdit ? <AddPoForm 
               onSubmit={handleEditPo}
               onCancel={() => {
                 setEditPoDialogOpen(false);
@@ -1375,9 +1360,8 @@ export const JobView: React.FC<JobViewProps> = ({
               jobId={job.id}
               customerId={job.customer_id}
               initialData={selectedPoForEdit}
-              isEdit={true}
-            />
-          )}
+              isEdit
+            /> : null}
         </DialogContent>
       </Dialog>
     </Card>

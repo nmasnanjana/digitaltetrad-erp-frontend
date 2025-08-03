@@ -29,15 +29,11 @@ import {
     Grid,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
-import { getAllInventory, createInventory, updateInventory, deleteInventory } from '@/api/inventoryApi';
-import { Inventory } from '@/types/inventory';
+import { getAllInventory, createInventory, updateInventory, deleteInventory } from '@/api/inventory-api';
+import { type Inventory, type ReturnCause } from '@/types/inventory';
 
-// Return cause enum
-enum ReturnCause {
-    FAULTY = 'faulty',
-    REMOVED = 'removed',
-    SURPLUS = 'surplus'
-}
+// Return cause values for the select dropdown
+const RETURN_CAUSE_VALUES: ReturnCause[] = ['faulty', 'removed', 'surplus'];
 
 interface InventoryItem extends Inventory {
     serialNumber?: string;
@@ -161,17 +157,15 @@ export default function InventoryPage() {
                         <Button
                             startIcon={<AddIcon />}
                             variant="contained"
-                            onClick={() => handleOpen()}
+                            onClick={() => { handleOpen(); }}
                         >
                             Add Item
                         </Button>
                     </Stack>
 
-                    {error && (
-                        <Alert severity="error" onClose={() => setError(null)}>
+                    {error ? <Alert severity="error" onClose={() => { setError(null); }}>
                             {error}
-                        </Alert>
-                    )}
+                        </Alert> : null}
 
                     <Card>
                         <TableContainer component={Paper}>
@@ -218,7 +212,7 @@ export default function InventoryPage() {
                                                 <TableCell>{item.arStatus}</TableCell>
                                                 <TableCell>{item.mrnStatus}</TableCell>
                                                 <TableCell>
-                                                    <IconButton onClick={() => handleOpen(item)}>
+                                                    <IconButton onClick={() => { handleOpen(item); }}>
                                                         <EditIcon />
                                                     </IconButton>
                                                     <IconButton onClick={() => handleDelete(item.id)}>
@@ -246,7 +240,7 @@ export default function InventoryPage() {
                                 fullWidth
                                 label="Name"
                                 value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                onChange={(e) => { setFormData({ ...formData, name: e.target.value }); }}
                                 required
                             />
                         </Grid>
@@ -255,7 +249,7 @@ export default function InventoryPage() {
                                 fullWidth
                                 label="Description"
                                 value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                onChange={(e) => { setFormData({ ...formData, description: e.target.value }); }}
                                 multiline
                                 rows={2}
                             />
@@ -265,7 +259,7 @@ export default function InventoryPage() {
                                 fullWidth
                                 label="Serial Number"
                                 value={formData.serialNumber}
-                                onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+                                onChange={(e) => { setFormData({ ...formData, serialNumber: e.target.value }); }}
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -274,7 +268,7 @@ export default function InventoryPage() {
                                 label="Quantity"
                                 type="number"
                                 value={formData.quantity}
-                                onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                                onChange={(e) => { setFormData({ ...formData, quantity: Number(e.target.value) }); }}
                                 required
                             />
                         </Grid>
@@ -284,7 +278,7 @@ export default function InventoryPage() {
                                 label="Unit Price"
                                 type="number"
                                 value={formData.unitPrice}
-                                onChange={(e) => setFormData({ ...formData, unitPrice: Number(e.target.value) })}
+                                onChange={(e) => { setFormData({ ...formData, unitPrice: Number(e.target.value) }); }}
                                 required
                             />
                         </Grid>
@@ -295,39 +289,37 @@ export default function InventoryPage() {
                                     labelId="return-item-label"
                                     label="Return Item"
                                     value={formData.isReturnItem ? 'true' : 'false'}
-                                    onChange={(e) => setFormData({ ...formData, isReturnItem: e.target.value === 'true' })}
+                                    onChange={(e) => { setFormData({ ...formData, isReturnItem: e.target.value === 'true' }); }}
                                 >
                                     <MenuItem value="false">No</MenuItem>
                                     <MenuItem value="true">Yes</MenuItem>
                                 </Select>
                             </FormControl>
                         </Grid>
-                        {formData.isReturnItem && (
-                            <Grid item xs={12} sm={6}>
+                        {formData.isReturnItem ? <Grid item xs={12} sm={6}>
                                 <FormControl fullWidth variant="outlined">
                                     <InputLabel id="return-cause-label">Return Cause</InputLabel>
                                     <Select
                                         labelId="return-cause-label"
                                         label="Return Cause"
                                         value={formData.returnCause || ''}
-                                        onChange={(e) => setFormData({ ...formData, returnCause: e.target.value as ReturnCause })}
+                                        onChange={(e) => { setFormData({ ...formData, returnCause: e.target.value as ReturnCause }); }}
                                         required
                                     >
-                                        {Object.values(ReturnCause).map((cause) => (
+                                        {RETURN_CAUSE_VALUES.map((cause) => (
                                             <MenuItem key={cause} value={cause}>
                                                 {cause.charAt(0).toUpperCase() + cause.slice(1)}
                                             </MenuItem>
                                         ))}
                                     </Select>
                                 </FormControl>
-                            </Grid>
-                        )}
+                            </Grid> : null}
                         <Grid item xs={12} sm={6}>
                             <TextField
                                 fullWidth
                                 label="AR Status"
                                 value={formData.arStatus}
-                                onChange={(e) => setFormData({ ...formData, arStatus: e.target.value })}
+                                onChange={(e) => { setFormData({ ...formData, arStatus: e.target.value }); }}
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
@@ -335,7 +327,7 @@ export default function InventoryPage() {
                                 fullWidth
                                 label="MRN Status"
                                 value={formData.mrnStatus}
-                                onChange={(e) => setFormData({ ...formData, mrnStatus: e.target.value })}
+                                onChange={(e) => { setFormData({ ...formData, mrnStatus: e.target.value }); }}
                             />
                         </Grid>
                     </Grid>

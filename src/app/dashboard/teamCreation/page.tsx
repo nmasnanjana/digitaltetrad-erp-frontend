@@ -5,11 +5,20 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Unstable_Grid2';
 import TeamForm from '@/components/dashboard/team/TeamForm';
-import { createTeam } from '@/api/teamApi';
+import { useRouter } from 'next/navigation';
 
 export default function TeamCreatePage(): React.JSX.Element {
-  const handleCreate = async (data: any) => {
-    await createTeam(data);
+  const router = useRouter();
+  const [open, setOpen] = React.useState(true);
+
+  const handleClose = () => {
+    setOpen(false);
+    router.push('/dashboard/team');
+  };
+
+  const handleSuccess = () => {
+    setOpen(false);
+    router.push('/dashboard/team');
   };
 
   return (
@@ -21,7 +30,12 @@ export default function TeamCreatePage(): React.JSX.Element {
       </Grid>
       <Grid container spacing={3}>
         <Grid xs={12}>
-          <TeamForm onSubmit={handleCreate} mode="create" />
+          <TeamForm 
+            open={open}
+            onClose={handleClose}
+            onSuccess={handleSuccess}
+            mode="create"
+          />
         </Grid>
       </Grid>
     </Stack>

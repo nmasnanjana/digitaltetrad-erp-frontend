@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { getExpenseById, deleteExpense } from '@/api/expenseApi';
+import { getExpenseById, deleteExpense } from '@/api/expense-api';
 import type { Expense } from '@/types/expense';
 import {
   Box,
@@ -253,8 +253,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
                     </Stack>
                   </Grid>
 
-                  {expense.operations && expense.operationType && (
-                    <Grid item xs={12} sm={6}>
+                  {expense.operations && expense.operationType ? <Grid item xs={12} sm={6}>
                       <Stack direction="row" spacing={2} alignItems="center">
                         <BusinessIcon color="action" sx={{ fontSize: 28 }} />
                         <Box>
@@ -266,11 +265,9 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
                           </Typography>
                         </Box>
                       </Stack>
-                    </Grid>
-                  )}
+                    </Grid> : null}
 
-                  {!expense.operations && expense.job && (
-                    <Grid item xs={12} sm={6}>
+                  {!expense.operations && expense.job ? <Grid item xs={12} sm={6}>
                       <Stack direction="row" spacing={2} alignItems="center">
                         <WorkIcon color="action" sx={{ fontSize: 28 }} />
                         <Box>
@@ -282,8 +279,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
                           </Typography>
                         </Box>
                       </Stack>
-                    </Grid>
-                  )}
+                    </Grid> : null}
                 </Grid>
               </CardContent>
             </Card>
@@ -357,8 +353,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
                         </Stack>
                       </Box>
 
-                      {expense.updated_at && expense.updated_at !== expense.created_at && (
-                        <Box>
+                      {expense.updated_at && expense.updated_at !== expense.created_at ? <Box>
                           <Stack direction="row" spacing={2} alignItems="center">
                             <ScheduleIcon color="action" />
                             <Box>
@@ -370,11 +365,9 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
                               </Typography>
                             </Box>
                           </Stack>
-                        </Box>
-                      )}
+                        </Box> : null}
 
-                      {expense.reviewed_at && (
-                        <Box>
+                      {expense.reviewed_at ? <Box>
                           <Stack direction="row" spacing={2} alignItems="center">
                             <ScheduleIcon color="action" />
                             <Box>
@@ -386,8 +379,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
                               </Typography>
                             </Box>
                           </Stack>
-                        </Box>
-                      )}
+                        </Box> : null}
                     </Stack>
                   </Grid>
 
@@ -396,8 +388,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
                       Users & Actions
                     </Typography>
                     <Stack spacing={3}>
-                      {expense.editor && (
-                        <Box>
+                      {expense.editor ? <Box>
                           <Stack direction="row" spacing={2} alignItems="center">
                             <PersonIcon color="action" />
                             <Box>
@@ -409,11 +400,9 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
                               </Typography>
                             </Box>
                           </Stack>
-                        </Box>
-                      )}
+                        </Box> : null}
 
-                      {expense.reviewer && (
-                        <Box>
+                      {expense.reviewer ? <Box>
                           <Stack direction="row" spacing={2} alignItems="center">
                             <PersonIcon color="action" />
                             <Box>
@@ -425,13 +414,11 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
                               </Typography>
                             </Box>
                           </Stack>
-                        </Box>
-                      )}
+                        </Box> : null}
                     </Stack>
                   </Grid>
 
-                  {expense.reason_to_edit && (
-                    <Grid item xs={12}>
+                  {expense.reason_to_edit ? <Grid item xs={12}>
                       <Box>
                         <Stack direction="row" spacing={2} alignItems="flex-start">
                           <CommentIcon color="action" sx={{ mt: 0.5 }} />
@@ -445,11 +432,9 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
                           </Box>
                         </Stack>
                       </Box>
-                    </Grid>
-                  )}
+                    </Grid> : null}
 
-                  {expense.reviewer_comment && (
-                    <Grid item xs={12}>
+                  {expense.reviewer_comment ? <Grid item xs={12}>
                       <Box>
                         <Stack direction="row" spacing={2} alignItems="flex-start">
                           <CommentIcon color="action" sx={{ mt: 0.5 }} />
@@ -463,8 +448,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
                           </Box>
                         </Stack>
                       </Box>
-                    </Grid>
-                  )}
+                    </Grid> : null}
                 </Grid>
               </CardContent>
             </Card>
@@ -481,16 +465,14 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
           <Typography>
             Are you sure you want to delete this expense? This action cannot be undone.
           </Typography>
-          {expense && (
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+          {expense ? <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 Expense Details:
               </Typography>
               <Typography variant="body2">
                 {expense.description} - {formatCurrency(expense.amount)}
               </Typography>
-            </Box>
-          )}
+            </Box> : null}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => {

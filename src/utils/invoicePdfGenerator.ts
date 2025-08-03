@@ -1,8 +1,8 @@
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import { InvoiceRecord } from '@/api/huaweiInvoiceApi';
-import { SettingsData } from '@/api/settingsApi';
-import { Customer } from '@/types/customer';
+import { type InvoiceRecord } from '@/api/huawei-invoice-api';
+import { type SettingsData } from '@/api/settingsApi';
+import { type Customer } from '@/types/customer';
 
 interface InvoicePdfData {
   invoiceDetails: InvoiceRecord[];
@@ -19,25 +19,25 @@ export const generateInvoicePDF = async (data: InvoicePdfData): Promise<void> =>
 
   // Calculate totals
   const subtotal = invoiceDetails.reduce((sum, item) => {
-    const subtotalAmount = typeof item.subtotal_amount === 'string' ? parseFloat(item.subtotal_amount) : 
-                         typeof item.subtotal_amount === 'number' ? item.subtotal_amount : 0;
+    const subtotalAmount = typeof item.subtotalAmount === 'string' ? parseFloat(item.subtotalAmount) : 
+                         typeof item.subtotalAmount === 'number' ? item.subtotalAmount : 0;
     return sum + subtotalAmount;
   }, 0);
   
   const vatTotal = invoiceDetails.reduce((sum, item) => {
-    const vatAmount = typeof item.vat_amount === 'string' ? parseFloat(item.vat_amount) : 
-                     typeof item.vat_amount === 'number' ? item.vat_amount : 0;
+    const vatAmount = typeof item.vatAmount === 'string' ? parseFloat(item.vatAmount) : 
+                     typeof item.vatAmount === 'number' ? item.vatAmount : 0;
     return sum + vatAmount;
   }, 0);
   
   const totalAmount = invoiceDetails.reduce((sum, item) => {
-    const totalAmount = typeof item.total_amount === 'string' ? parseFloat(item.total_amount) : 
-                       typeof item.total_amount === 'number' ? item.total_amount : 0;
+    const totalAmount = typeof item.totalAmount === 'string' ? parseFloat(item.totalAmount) : 
+                       typeof item.totalAmount === 'number' ? item.totalAmount : 0;
     return sum + totalAmount;
   }, 0);
 
   // Get unique PO numbers and format them
-  const uniquePOs = Array.from(new Set(invoiceDetails.map(item => item.huaweiPo?.po_no).filter(Boolean)));
+  const uniquePOs = Array.from(new Set(invoiceDetails.map(item => item.huaweiPo?.poNo).filter(Boolean)));
   const formattedPOs = uniquePOs.map(po => {
     // Extract the base PO number (before the dash)
     const basePO = po?.split('-')[0] || '';
@@ -313,7 +313,7 @@ export const generateInvoicePDF = async (data: InvoicePdfData): Promise<void> =>
                     To:<br>
                     ${huaweiCustomer.address ? huaweiCustomer.address.split('\n').map(line => `&nbsp;&nbsp;&nbsp;${line}`).join('<br>') : '&nbsp;&nbsp;&nbsp;Address not available'}
                 </td>
-                <td style="width: 33.33%;"><strong>Invoice No. :</strong><br>${invoiceDetails[0].invoice_no}</td>
+                <td style="width: 33.33%;"><strong>Invoice No. :</strong><br>${invoiceDetails[0].invoiceNo}</td>
                 <td style="width: 33.33%;">Date:<br>${formattedDate}</td>
             </tr>
             <tr>
@@ -469,7 +469,7 @@ export const generateInvoicePDF = async (data: InvoicePdfData): Promise<void> =>
     }
 
     // Download the PDF
-    const fileName = `Huawei_Invoice_${invoiceDetails[0].invoice_no}_${new Date().toISOString().split('T')[0]}.pdf`;
+    const fileName = `Huawei_Invoice_${invoiceDetails[0].invoiceNo}_${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(fileName);
   } finally {
     // Clean up
@@ -489,10 +489,10 @@ const numberToWords = (num: number, currencySymbol: string): string => {
     if (n < 10) return ones[n];
     if (n < 20) return teens[n - 10];
     if (n < 100) {
-      return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
+      return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ` ${  ones[n % 10]}` : '');
     }
     if (n < 1000) {
-      return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' and ' + convertLessThanOneThousand(n % 100) : '');
+      return `${ones[Math.floor(n / 100)]  } Hundred${  n % 100 !== 0 ? ` and ${  convertLessThanOneThousand(n % 100)}` : ''}`;
     }
     return '';
   };
@@ -501,12 +501,12 @@ const numberToWords = (num: number, currencySymbol: string): string => {
     if (n === 0) return 'Zero';
     if (n < 1000) return convertLessThanOneThousand(n);
     if (n < 100000) {
-      return convertLessThanOneThousand(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 !== 0 ? ' ' + convertLessThanOneThousand(n % 1000) : '');
+      return `${convertLessThanOneThousand(Math.floor(n / 1000))  } Thousand${  n % 1000 !== 0 ? ` ${  convertLessThanOneThousand(n % 1000)}` : ''}`;
     }
     if (n < 10000000) {
-      return convertLessThanOneThousand(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 !== 0 ? ' ' + convert(n % 100000) : '');
+      return `${convertLessThanOneThousand(Math.floor(n / 100000))  } Lakh${  n % 100000 !== 0 ? ` ${  convert(n % 100000)}` : ''}`;
     }
-    return convertLessThanOneThousand(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 !== 0 ? ' ' + convert(n % 10000000) : '');
+    return `${convertLessThanOneThousand(Math.floor(n / 10000000))  } Crore${  n % 10000000 !== 0 ? ` ${  convert(n % 10000000)}` : ''}`;
   };
 
   // Handle decimal part
@@ -516,7 +516,7 @@ const numberToWords = (num: number, currencySymbol: string): string => {
   let result = convert(integerPart);
   
   if (decimalPart > 0) {
-    result += ' and ' + convert(decimalPart) + ' Cents';
+    result += ` and ${  convert(decimalPart)  } Cents`;
   }
 
   return `${currencySymbol} ${result}`;

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Team } from '@/types/team';
+import { type Team } from '@/types/team';
 
 const API = axios.create({
     baseURL: 'http://localhost:4575/api',
@@ -40,9 +40,9 @@ API.interceptors.response.use(
         } else if (error.request) {
             console.error('Error request:', error.request);
             return Promise.reject(new Error('No response received from server'));
-        } else {
+        } 
             console.error('Error message:', error.message);
             return Promise.reject(error);
-        }
+        
     }
 ); 

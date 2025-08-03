@@ -94,7 +94,7 @@ export function UserProvider({ children }: UserProviderProps): React.JSX.Element
       // noop
     });
 
-    return () => clearTimeout(timeoutId);
+    return () => { clearTimeout(timeoutId); };
   }, []); // Empty dependency array - only run once
 
   console.log('UserProvider state:', state);

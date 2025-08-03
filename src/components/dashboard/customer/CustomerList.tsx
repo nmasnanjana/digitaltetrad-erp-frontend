@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getAllCustomers, deleteCustomer } from '@/api/customerApi';
-import { Customer } from '@/types/customer';
+import { getAllCustomers, deleteCustomer } from '@/api/customer-api';
+import { type Customer } from '@/types/customer';
 import {
   Box,
   Button,
@@ -90,11 +90,9 @@ export const ListCustomer: React.FC = () => {
         </Button>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+      {error ? <Alert severity="error" sx={{ mb: 2 }}>
           {error}
-        </Alert>
-      )}
+        </Alert> : null}
 
       <TableContainer component={Paper}>
         <Table>
@@ -123,7 +121,7 @@ export const ListCustomer: React.FC = () => {
                 <TableCell align="right">
                   <IconButton
                     color="primary"
-                    onClick={() => handleEdit(customer)}
+                    onClick={() => { handleEdit(customer); }}
                   >
                     <EditIcon />
                   </IconButton>
@@ -143,13 +141,13 @@ export const ListCustomer: React.FC = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={() => { setDeleteDialogOpen(false); }}>
         <DialogTitle>Delete Customer</DialogTitle>
         <DialogContent>
           Are you sure you want to delete customer {selectedCustomer?.name}?
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => { setDeleteDialogOpen(false); }}>Cancel</Button>
           <Button onClick={handleDelete} color="error">
             Delete
           </Button>
@@ -158,7 +156,7 @@ export const ListCustomer: React.FC = () => {
 
       <CustomerForm
         open={formOpen}
-        onClose={() => setFormOpen(false)}
+        onClose={() => { setFormOpen(false); }}
         onSuccess={loadCustomers}
         customer={selectedCustomer}
         mode={formMode}

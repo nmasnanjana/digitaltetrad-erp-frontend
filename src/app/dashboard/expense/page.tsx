@@ -18,13 +18,12 @@ import {
   Chip,
   Grid,
   CardContent,
-} from '@mui/material';
+ IconButton, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { Plus, List, Gear, PencilSimple, Trash, Eye } from '@phosphor-icons/react/dist/ssr';
-import { Expense } from '@/types/expense';
+import { type Expense } from '@/types/expense';
 import { useSettings } from '@/contexts/SettingsContext';
 import Link from 'next/link';
 import ExpenseForm from '@/components/dashboard/expense/ExpenseForm';
-import { IconButton, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { useExpenses, useDeleteExpense } from '@/hooks/use-expenses';
 
 export default function ExpensePage() {
@@ -181,11 +180,9 @@ export default function ExpensePage() {
             </Stack>
           </Stack>
 
-          {localError && (
-            <Alert severity="error" onClose={() => setLocalError(null)}>
+          {localError ? <Alert severity="error" onClose={() => { setLocalError(null); }}>
               {localError}
-            </Alert>
-          )}
+            </Alert> : null}
 
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6} md={3}>
@@ -299,7 +296,7 @@ export default function ExpensePage() {
                             <IconButton
                               size="small"
                               color="primary"
-                              onClick={() => handleEdit(expense)}
+                              onClick={() => { handleEdit(expense); }}
                               disabled={expense.paid}
                             >
                               <PencilSimple />
@@ -307,7 +304,7 @@ export default function ExpensePage() {
                             <IconButton
                               size="small"
                               color="error"
-                              onClick={() => handleDelete(expense)}
+                              onClick={() => { handleDelete(expense); }}
                               disabled={expense.paid}
                             >
                               <Trash />
@@ -325,7 +322,7 @@ export default function ExpensePage() {
       </Container>
 
       {/* Expense Form Dialog */}
-      <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={formOpen} onClose={() => { setFormOpen(false); }} maxWidth="md" fullWidth>
         <DialogTitle>
           {formMode === 'create' ? 'Create New Expense' : 'Edit Expense'}
         </DialogTitle>
@@ -334,26 +331,25 @@ export default function ExpensePage() {
             expense={selectedExpense}
             mode={formMode}
             onSuccess={handleFormSuccess}
-            onCancel={() => setFormOpen(false)}
+            onClose={() => { setFormOpen(false); }}
+            open={formOpen}
           />
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={() => { setDeleteDialogOpen(false); }}>
         <DialogTitle>Delete Expense</DialogTitle>
         <DialogContent>
           <Typography>
             Are you sure you want to delete this expense?
           </Typography>
-          {expenseToDelete && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          {expenseToDelete ? <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
               {expenseToDelete.description} - {formatCurrency(expenseToDelete.amount)}
-            </Typography>
-          )}
+            </Typography> : null}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>
+          <Button onClick={() => { setDeleteDialogOpen(false); }}>
             Cancel
           </Button>
           <Button onClick={handleDeleteConfirm} color="error" variant="contained">

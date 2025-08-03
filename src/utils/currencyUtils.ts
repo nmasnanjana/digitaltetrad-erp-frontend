@@ -26,7 +26,7 @@ export const getCurrencySymbol = (currency: string): string => {
   }
 };
 
-export const formatCurrency = (amount: number | string | undefined, currency: string = 'USD'): string => {
+export const formatCurrency = (amount: number | string | undefined, currency = 'USD'): string => {
   const symbol = getCurrencySymbol(currency);
   
   // Handle different input types
@@ -45,7 +45,7 @@ export const formatCurrency = (amount: number | string | undefined, currency: st
   return `${symbol} ${numericAmount.toFixed(2)}`;
 };
 
-export const formatCurrencyWithSpace = (amount: number | string | undefined, currency: string = 'USD'): string => {
+export const formatCurrencyWithSpace = (amount: number | string | undefined, currency = 'USD'): string => {
   const symbol = getCurrencySymbol(currency);
   
   // Handle different input types

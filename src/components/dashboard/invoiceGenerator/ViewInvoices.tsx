@@ -36,9 +36,9 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import DownloadIcon from '@mui/icons-material/Download';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
-import { getAllInvoices, deleteInvoice, InvoiceRecord } from '@/api/huaweiInvoiceApi';
+import { getAllInvoices, deleteInvoice, type InvoiceRecord } from '@/api/huawei-invoice-api';
 import { getSettings } from '@/api/settingsApi';
-import { getAllCustomers } from '@/api/customerApi';
+import { getAllCustomers } from '@/api/customer-api';
 import { useSettings } from '@/contexts/SettingsContext';
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
 
@@ -85,10 +85,10 @@ export const ViewInvoices: React.FC = () => {
       filtered = filtered.filter(invoice => {
         const searchLower = searchTerm.toLowerCase();
         return (
-          invoice.invoice_no.toLowerCase().includes(searchLower) ||
-          invoice.huaweiPo?.po_no?.toLowerCase().includes(searchLower) ||
-          invoice.huaweiPo?.item_code?.toLowerCase().includes(searchLower) ||
-          invoice.huaweiPo?.item_description?.toLowerCase().includes(searchLower) ||
+          invoice.invoiceNo.toLowerCase().includes(searchLower) ||
+          invoice.huaweiPo?.poNo?.toLowerCase().includes(searchLower) ||
+          invoice.huaweiPo?.itemCode?.toLowerCase().includes(searchLower) ||
+          invoice.huaweiPo?.itemDescription?.toLowerCase().includes(searchLower) ||
           invoice.huaweiPo?.job?.name?.toLowerCase().includes(searchLower)
         );
       });
@@ -104,8 +104,8 @@ export const ViewInvoices: React.FC = () => {
     // Apply amount filters
     if (filters.minAmount || filters.maxAmount) {
       filtered = filtered.filter(invoice => {
-        const totalAmount = typeof invoice.total_amount === 'string' ? parseFloat(invoice.total_amount) : 
-                           typeof invoice.total_amount === 'number' ? invoice.total_amount : 0;
+        const totalAmount = typeof invoice.totalAmount === 'string' ? parseFloat(invoice.totalAmount) : 
+                           typeof invoice.totalAmount === 'number' ? invoice.totalAmount : 0;
         
         const minAmount = filters.minAmount ? parseFloat(filters.minAmount) : 0;
         const maxAmount = filters.maxAmount ? parseFloat(filters.maxAmount) : Infinity;
@@ -184,7 +184,7 @@ export const ViewInvoices: React.FC = () => {
 
   const handleViewInvoice = async (invoiceNo: string) => {
     try {
-      const details = invoices.filter(invoice => invoice.invoice_no === invoiceNo);
+      const details = invoices.filter(invoice => invoice.invoiceNo === invoiceNo);
       setSelectedInvoiceDetails(details);
       setViewDialogOpen(true);
     } catch (err) {
@@ -237,7 +237,7 @@ export const ViewInvoices: React.FC = () => {
       await generateInvoicePDF({
         invoiceDetails: selectedInvoiceDetails,
         settings: settingsResponse.data,
-        huaweiCustomer: huaweiCustomer
+        huaweiCustomer
       });
       
       console.log('PDF generation completed successfully');
@@ -252,27 +252,27 @@ export const ViewInvoices: React.FC = () => {
   };
 
   // Group invoices by invoice number
-  const groupedInvoices = filteredInvoices.reduce((groups, invoice) => {
-    const invoiceNo = invoice.invoice_no;
+  const groupedInvoices = filteredInvoices.reduce<Record<string, InvoiceRecord[]>>((groups, invoice) => {
+    const invoiceNo = invoice.invoiceNo;
     if (!groups[invoiceNo]) {
       groups[invoiceNo] = [];
     }
     groups[invoiceNo].push(invoice);
     return groups;
-  }, {} as Record<string, InvoiceRecord[]>);
+  }, {});
 
   // Calculate summaries for each invoice group
   const invoiceSummaries = Object.entries(groupedInvoices).map(([invoiceNo, invoices]) => {
     const totalAmount = invoices.reduce((sum, invoice) => {
-      const totalAmount = typeof invoice.total_amount === 'string' ? parseFloat(invoice.total_amount) : 
-                         typeof invoice.total_amount === 'number' ? invoice.total_amount : 0;
+      const totalAmount = typeof invoice.totalAmount === 'string' ? parseFloat(invoice.totalAmount) : 
+                         typeof invoice.totalAmount === 'number' ? invoice.totalAmount : 0;
       return sum + totalAmount;
     }, 0);
 
     return {
-      invoice_no: invoiceNo,
+      invoiceNo,
       total_records: invoices.length,
-      total_amount: totalAmount,
+      totalAmount,
       created_at: invoices[0].createdAt,
       customer_name: invoices[0].huaweiPo?.job?.customer?.name || 'Unknown',
       job_name: invoices[0].huaweiPo?.job?.name || 'Unknown'
@@ -296,7 +296,7 @@ export const ViewInvoices: React.FC = () => {
             variant="outlined"
             placeholder="Search by invoice number, PO number, item code, description, or job name..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => { setSearchTerm(e.target.value); }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -331,7 +331,7 @@ export const ViewInvoices: React.FC = () => {
                     <InputLabel>Customer</InputLabel>
                     <Select
                       value={filters.customer}
-                      onChange={(e) => setFilters({ ...filters, customer: e.target.value })}
+                      onChange={(e) => { setFilters({ ...filters, customer: e.target.value }); }}
                       label="Customer"
                     >
                       <MenuItem value="">All Customers</MenuItem>
@@ -352,7 +352,7 @@ export const ViewInvoices: React.FC = () => {
                       type="number"
                       size="small"
                       value={filters.minAmount}
-                      onChange={(e) => setFilters({ ...filters, minAmount: e.target.value })}
+                      onChange={(e) => { setFilters({ ...filters, minAmount: e.target.value }); }}
                       placeholder="0.00"
                       InputProps={{
                         startAdornment: <InputAdornment position="start">$</InputAdornment>,
@@ -364,7 +364,7 @@ export const ViewInvoices: React.FC = () => {
                       type="number"
                       size="small"
                       value={filters.maxAmount}
-                      onChange={(e) => setFilters({ ...filters, maxAmount: e.target.value })}
+                      onChange={(e) => { setFilters({ ...filters, maxAmount: e.target.value }); }}
                       placeholder="∞"
                       InputProps={{
                         startAdornment: <InputAdornment position="start">$</InputAdornment>,
@@ -382,7 +382,7 @@ export const ViewInvoices: React.FC = () => {
                       type="date"
                       size="small"
                       value={filters.fromDate}
-                      onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })}
+                      onChange={(e) => { setFilters({ ...filters, fromDate: e.target.value }); }}
                       InputLabelProps={{ shrink: true }}
                       sx={{ flex: 1 }}
                     />
@@ -391,7 +391,7 @@ export const ViewInvoices: React.FC = () => {
                       type="date"
                       size="small"
                       value={filters.toDate}
-                      onChange={(e) => setFilters({ ...filters, toDate: e.target.value })}
+                      onChange={(e) => { setFilters({ ...filters, toDate: e.target.value }); }}
                       InputLabelProps={{ shrink: true }}
                       sx={{ flex: 1 }}
                     />
@@ -413,55 +413,43 @@ export const ViewInvoices: React.FC = () => {
               </Grid>
 
               {/* Active Filters Display */}
-              {(filters.customer || filters.minAmount || filters.maxAmount || filters.fromDate || filters.toDate) && (
-                <Box sx={{ mt: 1.5, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {(filters.customer || filters.minAmount || filters.maxAmount || filters.fromDate || filters.toDate) ? <Box sx={{ mt: 1.5, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                   <Typography variant="caption" sx={{ alignSelf: 'center', mr: 1 }}>
                     Active Filters:
                   </Typography>
-                  {filters.customer && (
-                    <Chip
+                  {filters.customer ? <Chip
                       label={`Customer: ${filters.customer}`}
                       size="small"
-                      onDelete={() => setFilters({ ...filters, customer: '' })}
-                    />
-                  )}
-                  {(filters.minAmount || filters.maxAmount) && (
-                    <Chip
+                      onDelete={() => { setFilters({ ...filters, customer: '' }); }}
+                    /> : null}
+                  {(filters.minAmount || filters.maxAmount) ? <Chip
                       label={`Amount: $${filters.minAmount || '0'} - $${filters.maxAmount || '∞'}`}
                       size="small"
-                      onDelete={() => setFilters({ ...filters, minAmount: '', maxAmount: '' })}
-                    />
-                  )}
-                  {(filters.fromDate || filters.toDate) && (
-                    <Chip
+                      onDelete={() => { setFilters({ ...filters, minAmount: '', maxAmount: '' }); }}
+                    /> : null}
+                  {(filters.fromDate || filters.toDate) ? <Chip
                       label={`Date: ${filters.fromDate || 'Any'} to ${filters.toDate || 'Any'}`}
                       size="small"
-                      onDelete={() => setFilters({ ...filters, fromDate: '', toDate: '' })}
-                    />
-                  )}
-                </Box>
-              )}
+                      onDelete={() => { setFilters({ ...filters, fromDate: '', toDate: '' }); }}
+                    /> : null}
+                </Box> : null}
             </Card>
           </Box>
         </CardContent>
       </Card>
 
       {/* Error/Success Messages */}
-      {error && (
-        <Card sx={{ mt: 1.5, bgcolor: 'error.light' }}>
+      {error ? <Card sx={{ mt: 1.5, bgcolor: 'error.light' }}>
           <CardContent sx={{ p: 1.5 }}>
             <Typography color="error">{error}</Typography>
           </CardContent>
-        </Card>
-      )}
+        </Card> : null}
 
-      {success && (
-        <Card sx={{ mt: 1.5, bgcolor: 'success.light' }}>
+      {success ? <Card sx={{ mt: 1.5, bgcolor: 'success.light' }}>
           <CardContent sx={{ p: 1.5 }}>
             <Typography color="success.main">{success}</Typography>
           </CardContent>
-        </Card>
-      )}
+        </Card> : null}
 
       {/* Invoices List */}
       <Card sx={{ mt: 1.5 }}>
@@ -484,10 +472,10 @@ export const ViewInvoices: React.FC = () => {
               </TableHead>
               <TableBody>
                 {invoiceSummaries.map((summary) => (
-                  <TableRow key={summary.invoice_no}>
+                  <TableRow key={summary.invoiceNo}>
                     <TableCell>
                       <Typography variant="body2" fontWeight="bold">
-                        {summary.invoice_no}
+                        {summary.invoiceNo}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -505,7 +493,7 @@ export const ViewInvoices: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight="bold" color="primary">
-                        {formatCurrency(summary.total_amount)}
+                        {formatCurrency(summary.totalAmount)}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -516,7 +504,7 @@ export const ViewInvoices: React.FC = () => {
                         <IconButton
                           color="primary"
                           size="small"
-                          onClick={() => handleViewInvoice(summary.invoice_no)}
+                          onClick={() => handleViewInvoice(summary.invoiceNo)}
                         >
                           <VisibilityIcon />
                         </IconButton>
@@ -524,7 +512,7 @@ export const ViewInvoices: React.FC = () => {
                           color="error"
                           size="small"
                           onClick={() => {
-                            const firstInvoice = groupedInvoices[summary.invoice_no][0];
+                            const firstInvoice = groupedInvoices[summary.invoiceNo][0];
                             handleDeleteInvoice(firstInvoice.id);
                           }}
                         >
@@ -543,7 +531,7 @@ export const ViewInvoices: React.FC = () => {
       {/* View Invoice Details Dialog */}
       <Dialog 
         open={viewDialogOpen} 
-        onClose={() => setViewDialogOpen(false)}
+        onClose={() => { setViewDialogOpen(false); }}
         maxWidth="lg"
         fullWidth
       >
@@ -552,7 +540,7 @@ export const ViewInvoices: React.FC = () => {
             Invoice Details
             {selectedInvoiceDetails.length > 0 && (
               <Typography variant="subtitle1" color="primary" sx={{ mt: 1 }}>
-                {selectedInvoiceDetails[0].invoice_no}
+                {selectedInvoiceDetails[0].invoiceNo}
               </Typography>
             )}
           </Typography>
@@ -566,7 +554,7 @@ export const ViewInvoices: React.FC = () => {
                     Invoice Number
                   </Typography>
                   <Typography variant="body1" fontWeight="bold">
-                    {selectedInvoiceDetails[0].invoice_no}
+                    {selectedInvoiceDetails[0].invoiceNo}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
@@ -582,7 +570,7 @@ export const ViewInvoices: React.FC = () => {
                     VAT Percentage
                   </Typography>
                   <Typography variant="body1" fontWeight="bold" color="#1e40af">
-                    {selectedInvoiceDetails[0].vat_percentage}%
+                    {selectedInvoiceDetails[0].vatPercentage}%
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
@@ -622,8 +610,8 @@ export const ViewInvoices: React.FC = () => {
                       <Typography variant="h6" fontWeight="600" color="text.primary">
                         ${(() => {
                           const subtotal = selectedInvoiceDetails.reduce((sum, item) => {
-                            const subtotalAmount = typeof item.subtotal_amount === 'string' ? parseFloat(item.subtotal_amount) : 
-                                                 typeof item.subtotal_amount === 'number' ? item.subtotal_amount : 0;
+                            const subtotalAmount = typeof item.subtotalAmount === 'string' ? parseFloat(item.subtotalAmount) : 
+                                                 typeof item.subtotalAmount === 'number' ? item.subtotalAmount : 0;
                             return sum + subtotalAmount;
                           }, 0);
                           return subtotal.toFixed(2);
@@ -640,13 +628,13 @@ export const ViewInvoices: React.FC = () => {
                       textAlign: 'center'
                     }}>
                       <Typography variant="caption" color="text.secondary">
-                        VAT ({selectedInvoiceDetails[0].vat_percentage}%)
+                        VAT ({selectedInvoiceDetails[0].vatPercentage}%)
                       </Typography>
                       <Typography variant="h6" fontWeight="600" color="#1e40af">
                         ${(() => {
                           const vatTotal = selectedInvoiceDetails.reduce((sum, item) => {
-                            const vatAmount = typeof item.vat_amount === 'string' ? parseFloat(item.vat_amount) : 
-                                            typeof item.vat_amount === 'number' ? item.vat_amount : 0;
+                            const vatAmount = typeof item.vatAmount === 'string' ? parseFloat(item.vatAmount) : 
+                                            typeof item.vatAmount === 'number' ? item.vatAmount : 0;
                             return sum + vatAmount;
                           }, 0);
                           return vatTotal.toFixed(2);
@@ -668,8 +656,8 @@ export const ViewInvoices: React.FC = () => {
                       <Typography variant="h6" fontWeight="600" color="#059669">
                         ${(() => {
                           const total = selectedInvoiceDetails.reduce((sum, item) => {
-                            const totalAmount = typeof item.total_amount === 'string' ? parseFloat(item.total_amount) : 
-                                              typeof item.total_amount === 'number' ? item.total_amount : 0;
+                            const totalAmount = typeof item.totalAmount === 'string' ? parseFloat(item.totalAmount) : 
+                                              typeof item.totalAmount === 'number' ? item.totalAmount : 0;
                             return sum + totalAmount;
                           }, 0);
                           return total.toFixed(2);
@@ -720,29 +708,29 @@ export const ViewInvoices: React.FC = () => {
                   </TableHead>
                   <TableBody>
                     {selectedInvoiceDetails.map((item) => {
-                      const unitPriceStr = item.huaweiPo?.unit_price;
+                      const unitPriceStr = item.huaweiPo?.unitPrice;
                       const unitPrice = typeof unitPriceStr === 'string' ? parseFloat(unitPriceStr) : 
                                        typeof unitPriceStr === 'number' ? unitPriceStr : 0;
                       
-                      const qtyStr = item.huaweiPo?.requested_quantity;
+                      const qtyStr = item.huaweiPo?.requestedQuantity;
                       const requestedQty = typeof qtyStr === 'string' ? parseFloat(qtyStr) : 
                                          typeof qtyStr === 'number' ? qtyStr : 0;
                       
                       return (
                         <TableRow key={item.id}>
-                          <TableCell>{item.huaweiPo?.po_no}</TableCell>
-                          <TableCell>{item.huaweiPo?.line_no}</TableCell>
-                          <TableCell>{item.huaweiPo?.item_code}</TableCell>
+                          <TableCell>{item.huaweiPo?.poNo}</TableCell>
+                          <TableCell>{item.huaweiPo?.lineNo}</TableCell>
+                          <TableCell>{item.huaweiPo?.itemCode}</TableCell>
                           <TableCell>
                             <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
-                              {item.huaweiPo?.item_description}
+                              {item.huaweiPo?.itemDescription}
                             </Typography>
                           </TableCell>
                           <TableCell>{formatCurrency(unitPrice)}</TableCell>
                           <TableCell>{requestedQty.toFixed(0)}</TableCell>
                           <TableCell>
                             <Chip 
-                              label={`${item.invoiced_percentage}%`} 
+                              label={`${item.invoicedPercentage}%`} 
                               color="primary" 
                               size="small" 
                             />
@@ -750,8 +738,8 @@ export const ViewInvoices: React.FC = () => {
                           <TableCell>
                             <Typography variant="body2" fontWeight="500" color="text.primary">
                               ${(() => {
-                                const subtotalAmount = typeof item.subtotal_amount === 'string' ? parseFloat(item.subtotal_amount) : 
-                                                     typeof item.subtotal_amount === 'number' ? item.subtotal_amount : 0;
+                                const subtotalAmount = typeof item.subtotalAmount === 'string' ? parseFloat(item.subtotalAmount) : 
+                                                     typeof item.subtotalAmount === 'number' ? item.subtotalAmount : 0;
                                 return subtotalAmount.toFixed(2);
                               })()}
                             </Typography>
@@ -759,8 +747,8 @@ export const ViewInvoices: React.FC = () => {
                           <TableCell>
                             <Typography variant="body2" fontWeight="500" color="#1e40af">
                               ${(() => {
-                                const vatAmount = typeof item.vat_amount === 'string' ? parseFloat(item.vat_amount) : 
-                                                typeof item.vat_amount === 'number' ? item.vat_amount : 0;
+                                const vatAmount = typeof item.vatAmount === 'string' ? parseFloat(item.vatAmount) : 
+                                                typeof item.vatAmount === 'number' ? item.vatAmount : 0;
                                 return vatAmount.toFixed(2);
                               })()}
                             </Typography>
@@ -768,8 +756,8 @@ export const ViewInvoices: React.FC = () => {
                           <TableCell>
                             <Typography variant="body2" fontWeight="600" color="#059669">
                               ${(() => {
-                                const totalAmount = typeof item.total_amount === 'string' ? parseFloat(item.total_amount) : 
-                                                  typeof item.total_amount === 'number' ? item.total_amount : 0;
+                                const totalAmount = typeof item.totalAmount === 'string' ? parseFloat(item.totalAmount) : 
+                                                  typeof item.totalAmount === 'number' ? item.totalAmount : 0;
                                 return totalAmount.toFixed(2);
                               })()}
                             </Typography>
@@ -788,7 +776,7 @@ export const ViewInvoices: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setViewDialogOpen(false)}>
+          <Button onClick={() => { setViewDialogOpen(false); }}>
             Close
           </Button>
           {selectedInvoiceDetails.length > 0 && (

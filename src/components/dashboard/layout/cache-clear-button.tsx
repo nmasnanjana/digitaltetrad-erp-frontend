@@ -36,7 +36,7 @@ export const CacheClearButton: React.FC = () => {
       <Tooltip title="Clear System Cache (Developer Only)">
         <IconButton
           color="warning"
-          onClick={() => setIsOpen(true)}
+          onClick={() => { setIsOpen(true); }}
           sx={{ 
             backgroundColor: 'warning.light',
             color: 'warning.contrastText',
@@ -49,7 +49,7 @@ export const CacheClearButton: React.FC = () => {
         </IconButton>
       </Tooltip>
 
-      <Dialog open={isOpen} onClose={() => setIsOpen(false)}>
+      <Dialog open={isOpen} onClose={() => { setIsOpen(false); }}>
         <DialogTitle>Clear System Cache</DialogTitle>
         <DialogContent>
           <Typography>
@@ -66,7 +66,7 @@ export const CacheClearButton: React.FC = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIsOpen(false)} disabled={isClearing}>
+          <Button onClick={() => { setIsOpen(false); }} disabled={isClearing}>
             Cancel
           </Button>
           <Button 

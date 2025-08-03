@@ -58,7 +58,7 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({
         Update Password
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
 
       <Box component="form" onSubmit={handleSubmit} noValidate>
         <Box sx={{ mb: 3 }}>
@@ -100,7 +100,7 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({
           <Button
             variant="outlined"
             color="secondary"
-            onClick={() => router.push(`/dashboard/user/${userId}/view`)}
+            onClick={() => { router.push(`/dashboard/user/${userId}/view`); }}
           >
             Cancel
           </Button>

@@ -27,9 +27,9 @@ import {
 } from '@mui/material';
 import { CheckCircle } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAllExpenses, reviewExpense } from '@/api/expenseApi';
+import { getAllExpenses, reviewExpense } from '@/api/expense-api';
 import { CACHE_KEYS, invalidateCache } from '@/lib/react-query/cache-manager';
-import { Expense } from '@/types/expense';
+import { type Expense } from '@/types/expense';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useUser } from '@/contexts/user-context';
 
@@ -55,7 +55,7 @@ export default function ExpenseApprovalPage() {
       return reviewExpense(expenseId, {
         status,
         reviewed_by: user?.id?.toString() || '0',
-        reviewed_at: new Date().toISOString()
+        reviewer_comment: reviewComment
       });
     },
     onSuccess: () => {
@@ -113,7 +113,7 @@ export default function ExpenseApprovalPage() {
       
       console.log('Reviewing expense with user ID:', user.id);
       
-      await reviewMutation.mutate({ expenseId: selectedExpense.id, status: reviewStatus });
+      reviewMutation.mutate({ expenseId: selectedExpense.id.toString(), status: reviewStatus });
 
       // await fetchExpenses(); // This is now handled by onSuccess of reviewMutation
       setReviewDialogOpen(false);
@@ -164,11 +164,9 @@ export default function ExpenseApprovalPage() {
             </Stack>
           </Stack>
 
-          {localError && (
-            <Alert severity="error" onClose={() => setLocalError(null)}>
+          {localError ? <Alert severity="error" onClose={() => { setLocalError(null); }}>
               {localError}
-            </Alert>
-          )}
+            </Alert> : null}
 
           <Card>
             <Table>
@@ -219,11 +217,11 @@ export default function ExpenseApprovalPage() {
                       <TableCell>
                         <Typography
                           sx={{
-                            color: getStatusColor(expense.status),
+                            color: getStatusColor(expense.status || 'on_progress'),
                             fontWeight: 'bold',
                           }}
                         >
-                          {expense.status}
+                          {expense.status || 'on_progress'}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -232,7 +230,7 @@ export default function ExpenseApprovalPage() {
                             variant="contained"
                             color="success"
                             startIcon={<CheckCircle />}
-                            onClick={() => handleReview(expense)}
+                            onClick={() => { handleReview(expense); }}
                           >
                             Review
                           </Button>
@@ -247,7 +245,7 @@ export default function ExpenseApprovalPage() {
         </Stack>
       </Container>
 
-      <Dialog open={reviewDialogOpen} onClose={() => setReviewDialogOpen(false)}>
+      <Dialog open={reviewDialogOpen} onClose={() => { setReviewDialogOpen(false); }}>
         <DialogTitle>Review Expense</DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 2 }}>
@@ -256,7 +254,7 @@ export default function ExpenseApprovalPage() {
               <Select
                 value={reviewStatus}
                 label="Status"
-                onChange={(e) => setReviewStatus(e.target.value as 'approved' | 'denied')}
+                onChange={(e) => { setReviewStatus(e.target.value as 'approved' | 'denied'); }}
               >
                 <MenuItem value="approved">Approve</MenuItem>
                 <MenuItem value="denied">Deny</MenuItem>
@@ -268,12 +266,12 @@ export default function ExpenseApprovalPage() {
               multiline
               rows={4}
               value={reviewComment}
-              onChange={(e) => setReviewComment(e.target.value)}
+              onChange={(e) => { setReviewComment(e.target.value); }}
             />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setReviewDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => { setReviewDialogOpen(false); }}>Cancel</Button>
           <Button onClick={handleReviewSubmit} variant="contained">
             Submit Review
           </Button>

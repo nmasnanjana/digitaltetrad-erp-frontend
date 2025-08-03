@@ -33,33 +33,42 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
 import * as XLSX from 'xlsx';
-import { getAllHuaweiPos, HuaweiPoData as ApiHuaweiPoData } from '@/api/huaweiPoApi';
-import { getAllCustomers } from '@/api/customerApi';
-import { createInvoice, getInvoiceSummaries, deleteInvoice, getInvoicesByInvoiceNo, deleteInvoicesByInvoiceNo, InvoiceRecord } from '@/api/huaweiInvoiceApi';
+import { getAllHuaweiPos, HuaweiPoData as ApiHuaweiPoData } from '@/api/huawei-po-api';
+import { getAllCustomers } from '@/api/customer-api';
+import { createInvoice, getInvoiceSummaries, deleteInvoice, getInvoicesByInvoiceNo, deleteInvoicesByInvoiceNo, type InvoiceRecord } from '@/api/huawei-invoice-api';
 import { getSettings } from '@/api/settingsApi';
 import { useSettings } from '@/contexts/SettingsContext';
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
 
 interface ExtractedData {
-  po_no: string;
-  line_no: string;
+  poNo: string;
+  lineNo: string;
 }
 
-interface HuaweiPoData extends ApiHuaweiPoData {
+interface HuaweiPoData {
   id: number;
-  invoiced_percentage: number;
+  siteCode: string;
+  siteId: string;
+  siteName: string;
+  poNo: string;
+  lineNo: string;
+  itemCode: string;
+  itemDescription: string;
+  unitPrice: number;
+  requestedQuantity: number;
+  invoicedPercentage: number;
 }
 
 interface CorrelatedData {
-  po_no: string;
-  line_no: string;
-  item_code: string;
-  item_description: string;
-  unit_price: number;
-  invoiced_percentage: number;
+  poNo: string;
+  lineNo: string;
+  itemCode: string;
+  itemDescription: string;
+  unitPrice: number;
+  invoicedPercentage: number;
   need_to_invoice_percentage: number;
   isCorrelated: boolean;
-  huawei_po_id?: number;
+  huaweiPoId?: number;
 }
 
 export const HuaweiInvoice: React.FC = () => {
@@ -125,17 +134,17 @@ export const HuaweiInvoice: React.FC = () => {
       // Now load Huawei PO data for this customer
       console.log('Loading Huawei PO data for customer ID:', huaweiCustomerId);
       
-      const response = await getAllHuaweiPos({ customer_id: huaweiCustomerId });
+      const response = await getAllHuaweiPos({ customerId: huaweiCustomerId });
       console.log('Huawei PO API response:', response);
       
       // Debug: Check the structure of the first record
       if (response && response.length > 0) {
         console.log('First PO record structure:', response[0]);
-        console.log('Unit price from first record:', response[0].unit_price);
-        console.log('Unit price type:', typeof response[0].unit_price);
+        console.log('Unit price from first record:', response[0].unitPrice);
+        console.log('Unit price type:', typeof response[0].unitPrice);
       }
       
-      setHuaweiPoData(response);
+      setHuaweiPoData(response as HuaweiPoData[]);
       console.log('Set Huawei PO data:', response);
     } catch (err) {
       console.error('Error loading Huawei PO data:', err);
@@ -172,21 +181,21 @@ export const HuaweiInvoice: React.FC = () => {
       console.log('Number of items in invoice:', details.length);
       console.log('First item structure:', details[0]);
       console.log('First item huaweiPo:', details[0]?.huaweiPo);
-      console.log('Unit price type:', typeof details[0]?.huaweiPo?.unit_price);
-      console.log('Unit price value:', details[0]?.huaweiPo?.unit_price);
-      console.log('Requested Qty type:', typeof details[0]?.huaweiPo?.requested_quantity);
-      console.log('Requested Qty value:', details[0]?.huaweiPo?.requested_quantity);
+      console.log('Unit price type:', typeof details[0]?.huaweiPo?.unitPrice);
+      console.log('Unit price value:', details[0]?.huaweiPo?.unitPrice);
+      console.log('Requested Qty type:', typeof details[0]?.huaweiPo?.requestedQuantity);
+      console.log('Requested Qty value:', details[0]?.huaweiPo?.requestedQuantity);
       console.log('All huaweiPo fields:', Object.keys(details[0]?.huaweiPo || {}));
       console.log('Full huaweiPo object:', JSON.stringify(details[0]?.huaweiPo, null, 2));
       
       // Check all items for consistency
       details.forEach((item, index) => {
         console.log(`Item ${index + 1}:`, {
-          po_no: item.huaweiPo?.po_no,
-          line_no: item.huaweiPo?.line_no,
-          unit_price: item.huaweiPo?.unit_price,
-          requested_quantity: item.huaweiPo?.requested_quantity,
-          invoiced_percentage: item.invoiced_percentage
+          poNo: item.huaweiPo?.poNo,
+          lineNo: item.huaweiPo?.lineNo,
+          unitPrice: item.huaweiPo?.unitPrice,
+          requestedQuantity: item.huaweiPo?.requestedQuantity,
+                      invoicedPercentage: item.invoicedPercentage
         });
       });
       
@@ -249,7 +258,7 @@ export const HuaweiInvoice: React.FC = () => {
       await generateInvoicePDF({
         invoiceDetails: selectedInvoiceDetails,
         settings: settingsResponse.data,
-        huaweiCustomer: huaweiCustomer
+        huaweiCustomer
       });
 
       console.log('PDF document created successfully');
@@ -282,9 +291,9 @@ export const HuaweiInvoice: React.FC = () => {
 
     try {
       const invoiceData = matchedRecords.map(item => ({
-        invoice_no: invoiceNumber,
-        huawei_po_id: item.huawei_po_id!,
-        invoiced_percentage: item.need_to_invoice_percentage
+        invoiceNo: invoiceNumber,
+                  huaweiPoId: item.huaweiPoId!,
+        invoicedPercentage: item.need_to_invoice_percentage
       }));
 
       console.log('Sending invoice data to backend:', invoiceData);
@@ -292,14 +301,14 @@ export const HuaweiInvoice: React.FC = () => {
       console.log('Correlated data:', correlatedData);
 
       const response = await createInvoice({
-        invoice_no: invoiceNumber,
-        invoice_data: invoiceData,
-        vat_percentage: vatPercentage
+        invoiceNo: invoiceNumber,
+        invoiceData,
+        vatPercentage
       });
 
       console.log('Backend response:', response);
 
-      setSuccess(`Successfully created invoice ${invoiceNumber} with ${response.data.created_invoices} records`);
+      setSuccess(`Successfully created invoice ${invoiceNumber} with ${response.data.createdInvoices} records`);
       
       // Reload data
       await loadInvoiceSummaries();
@@ -390,8 +399,8 @@ export const HuaweiInvoice: React.FC = () => {
       
       // Find column indices for the expected columns
       const columnMap = {
-        po_no: headers.findIndex(h => h?.toString().trim() === 'PO No.'),
-        line_no: headers.findIndex(h => h?.toString().trim() === 'Line No.'),
+        poNo: headers.findIndex(h => h?.toString().trim() === 'PO No.'),
+        lineNo: headers.findIndex(h => h?.toString().trim() === 'Line No.'),
       };
 
       console.log('Column map:', columnMap);
@@ -417,16 +426,16 @@ export const HuaweiInvoice: React.FC = () => {
         }
 
         // Extract values using column indices
-        const po_no = row[columnMap.po_no]?.toString() || '';
-        const line_no = row[columnMap.line_no]?.toString() || '';
+        const poNo = row[columnMap.poNo]?.toString() || '';
+        const lineNo = row[columnMap.lineNo]?.toString() || '';
 
-        console.log(`Row ${i}: Extracted PO=${po_no}, Line=${line_no}`);
+        console.log(`Row ${i}: Extracted PO=${poNo}, Line=${lineNo}`);
 
         // Only include rows with valid PO and Line numbers
-        if (po_no && line_no) {
+        if (poNo && lineNo) {
           extractedData.push({
-            po_no,
-            line_no
+            poNo,
+            lineNo
           });
         }
       }
@@ -456,55 +465,55 @@ export const HuaweiInvoice: React.FC = () => {
     console.log('Huawei PO data from DB:', huaweiPoData);
     
     const correlated: CorrelatedData[] = data.map(item => {
-      console.log(`Looking for match: PO=${item.po_no}, Line=${item.line_no}`);
+      console.log(`Looking for match: PO=${item.poNo}, Line=${item.lineNo}`);
       
       // Find matching PO in existing data
       const existingPo = huaweiPoData.find(po => {
-        const match = po.po_no === item.po_no && po.line_no === item.line_no;
-        console.log(`Comparing: DB_PO=${po.po_no}, DB_Line=${po.line_no}, Match=${match}`);
+        const match = po.poNo === item.poNo && po.lineNo === item.lineNo;
+        console.log(`Comparing: DB_PO=${po.poNo}, DB_Line=${po.lineNo}, Match=${match}`);
         return match;
       });
 
       if (existingPo) {
-        console.log(`✅ Found match for PO=${item.po_no}, Line=${item.line_no}`);
+        console.log(`✅ Found match for PO=${item.poNo}, Line=${item.lineNo}`);
         console.log('Existing PO data:', existingPo);
-        console.log('Unit price from DB:', existingPo.unit_price, 'Type:', typeof existingPo.unit_price);
+        console.log('Unit price from DB:', existingPo.unitPrice, 'Type:', typeof existingPo.unitPrice);
         
-        // Handle unit_price - ensure it's a number
+        // Handle unitPrice - ensure it's a number
         let unitPrice = 0;
-        if (existingPo.unit_price !== null && existingPo.unit_price !== undefined) {
-          unitPrice = typeof existingPo.unit_price === 'string' ? parseFloat(existingPo.unit_price) : existingPo.unit_price;
+        if (existingPo.unitPrice !== null && existingPo.unitPrice !== undefined) {
+          unitPrice = typeof existingPo.unitPrice === 'string' ? parseFloat(existingPo.unitPrice) : existingPo.unitPrice;
         }
         
         console.log('Processed unit price:', unitPrice);
         
         // Found correlation
         return {
-          po_no: item.po_no,
-          line_no: item.line_no,
-          item_code: existingPo.item_code || 'N/A',
-          item_description: existingPo.item_description || 'N/A',
-          unit_price: unitPrice,
-          invoiced_percentage: existingPo.invoiced_percentage || 0,
+          poNo: item.poNo,
+          lineNo: item.lineNo,
+          itemCode: existingPo.itemCode || 'N/A',
+          itemDescription: existingPo.itemDescription || 'N/A',
+          unitPrice,
+          invoicedPercentage: existingPo.invoicedPercentage || 0,
           need_to_invoice_percentage: 0,
           isCorrelated: true,
           huawei_po_id: existingPo.id
         };
-      } else {
-        console.log(`❌ No match found for PO=${item.po_no}, Line=${item.line_no}`);
+      } 
+        console.log(`❌ No match found for PO=${item.poNo}, Line=${item.lineNo}`);
         // No correlation found
         return {
-          po_no: item.po_no,
-          line_no: item.line_no,
-          item_code: 'N/A',
-          item_description: 'N/A',
-          unit_price: 0,
-          invoiced_percentage: 0,
+          poNo: item.poNo,
+          lineNo: item.lineNo,
+          itemCode: 'N/A',
+          itemDescription: 'N/A',
+          unitPrice: 0,
+          invoicedPercentage: 0,
           need_to_invoice_percentage: 0,
           isCorrelated: false,
           huawei_po_id: undefined
         };
-      }
+      
     });
 
     console.log('Final correlated data:', correlated);
@@ -517,7 +526,7 @@ export const HuaweiInvoice: React.FC = () => {
     setCorrelatedData(updatedData);
   };
 
-  const handleDataEdit = (index: number, field: 'po_no' | 'line_no', value: string) => {
+  const handleDataEdit = (index: number, field: 'poNo' | 'lineNo', value: string) => {
     const updatedData = [...extractedData];
     updatedData[index] = { ...updatedData[index], [field]: value };
     setExtractedData(updatedData);
@@ -528,8 +537,8 @@ export const HuaweiInvoice: React.FC = () => {
 
   const validatePercentages = () => {
     return correlatedData.every(item => {
-      const currentInvoiced = typeof item.invoiced_percentage === 'string' ? parseFloat(item.invoiced_percentage) : 
-                             typeof item.invoiced_percentage === 'number' ? item.invoiced_percentage : 0;
+      const currentInvoiced = typeof item.invoicedPercentage === 'string' ? parseFloat(item.invoicedPercentage) : 
+                             typeof item.invoicedPercentage === 'number' ? item.invoicedPercentage : 0;
       const newInvoice = typeof item.need_to_invoice_percentage === 'string' ? parseFloat(item.need_to_invoice_percentage) : 
                         typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
       const total = currentInvoiced + newInvoice;
@@ -550,8 +559,8 @@ export const HuaweiInvoice: React.FC = () => {
     const errors: string[] = [];
     
     correlatedData.forEach((item, index) => {
-      const currentInvoiced = typeof item.invoiced_percentage === 'string' ? parseFloat(item.invoiced_percentage) : 
-                             typeof item.invoiced_percentage === 'number' ? item.invoiced_percentage : 0;
+      const currentInvoiced = typeof item.invoicedPercentage === 'string' ? parseFloat(item.invoicedPercentage) : 
+                             typeof item.invoicedPercentage === 'number' ? item.invoicedPercentage : 0;
       const newInvoice = typeof item.need_to_invoice_percentage === 'string' ? parseFloat(item.need_to_invoice_percentage) : 
                         typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
       const total = currentInvoiced + newInvoice;
@@ -620,36 +629,36 @@ export const HuaweiInvoice: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {invoiceSummaries.slice(0, 5).map((summary) => (
-                    <TableRow key={summary.invoice_no}>
+                    <TableRow key={summary.invoiceNo}>
                       <TableCell>
                         <Typography variant="body2" fontWeight="bold">
-                          {summary.invoice_no}
+                          {summary.invoiceNo}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip label={summary.total_records} color="primary" size="small" />
+                        <Chip label={summary.totalRecords} color="primary" size="small" />
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" fontWeight="bold" color="primary">
-                          {formatCurrency(summary.total_amount)}
+                          {formatCurrency(summary.totalAmount)}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        {new Date(summary.created_at).toLocaleDateString()}
+                        {new Date(summary.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                           <IconButton
                             color="primary"
                             size="small"
-                            onClick={() => handleViewInvoice(summary.invoice_no)}
+                            onClick={() => handleViewInvoice(summary.invoiceNo)}
                           >
                             <VisibilityIcon />
                           </IconButton>
                           <IconButton
                             color="error"
                             size="small"
-                            onClick={() => handleDeleteInvoice(summary.invoice_no)}
+                            onClick={() => handleDeleteInvoice(summary.invoiceNo)}
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -667,7 +676,7 @@ export const HuaweiInvoice: React.FC = () => {
       {/* Upload and Process Dialog */}
       <Dialog 
         open={uploadDialogOpen} 
-        onClose={() => setUploadDialogOpen(false)}
+        onClose={() => { setUploadDialogOpen(false); }}
         maxWidth="xl"
         fullWidth
         PaperProps={{
@@ -689,8 +698,7 @@ export const HuaweiInvoice: React.FC = () => {
           </Typography>
         </DialogTitle>
         <DialogContent>
-          {isProcessing && (
-            <Box sx={{ mb: 2 }}>
+          {isProcessing ? <Box sx={{ mb: 2 }}>
               <Typography variant="body2" gutterBottom>
                 Processing Excel file...
               </Typography>
@@ -698,20 +706,15 @@ export const HuaweiInvoice: React.FC = () => {
               <Typography variant="caption" color="text.secondary">
                 {processingProgress}% Complete
               </Typography>
-            </Box>
-          )}
+            </Box> : null}
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+          {error ? <Alert severity="error" sx={{ mb: 2 }}>
               {error}
-            </Alert>
-          )}
+            </Alert> : null}
 
-          {success && (
-            <Alert severity="success" sx={{ mb: 2 }}>
+          {success ? <Alert severity="success" sx={{ mb: 2 }}>
               {success}
-            </Alert>
-          )}
+            </Alert> : null}
 
           {!isProcessing && extractedData.length > 0 && (
             <Box>
@@ -736,8 +739,8 @@ export const HuaweiInvoice: React.FC = () => {
                         <TableCell>
                           <TextField
                             size="small"
-                            value={item.po_no}
-                            onChange={(e) => handleDataEdit(index, 'po_no', e.target.value)}
+                            value={item.poNo}
+                            onChange={(e) => { handleDataEdit(index, 'poNo', e.target.value); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -745,8 +748,8 @@ export const HuaweiInvoice: React.FC = () => {
                         <TableCell>
                           <TextField
                             size="small"
-                            value={item.line_no}
-                            onChange={(e) => handleDataEdit(index, 'line_no', e.target.value)}
+                            value={item.lineNo}
+                            onChange={(e) => { handleDataEdit(index, 'lineNo', e.target.value); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -783,7 +786,7 @@ export const HuaweiInvoice: React.FC = () => {
                   placeholder="Enter invoice number (e.g., INV-2024-001)"
                   variant="outlined"
                   value={invoiceNumber}
-                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                  onChange={(e) => { setInvoiceNumber(e.target.value); }}
                   sx={{ 
                     maxWidth: 400,
                     '& .MuiOutlinedInput-root': {
@@ -895,7 +898,7 @@ export const HuaweiInvoice: React.FC = () => {
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Typography variant="body2" fontWeight="500" color={item.isCorrelated ? 'text.primary' : 'text.disabled'}>
-                              {item.po_no}
+                              {item.poNo}
                             </Typography>
                             {!item.isCorrelated && (
                               <Chip 
@@ -911,8 +914,7 @@ export const HuaweiInvoice: React.FC = () => {
                                 }}
                               />
                             )}
-                            {item.isCorrelated && (
-                              <Chip 
+                            {item.isCorrelated ? <Chip 
                                 label="Matched" 
                                 color="success" 
                                 size="small" 
@@ -923,28 +925,27 @@ export const HuaweiInvoice: React.FC = () => {
                                   color: '#10b981',
                                   fontWeight: 500
                                 }}
-                              />
-                            )}
+                              /> : null}
                           </Box>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color={item.isCorrelated ? 'text.secondary' : 'text.disabled'}>
-                            {item.item_code}
+                            {item.itemCode}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" sx={{ wordBreak: 'break-word' }} color={item.isCorrelated ? 'text.primary' : 'text.disabled'}>
-                            {item.item_description}
+                            {item.itemDescription}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" fontWeight="500" color={item.isCorrelated ? 'text.primary' : 'text.disabled'}>
-                            {formatCurrency(item.unit_price)}
+                            {formatCurrency(item.unitPrice)}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Chip 
-                            label={`${item.invoiced_percentage}%`} 
+                            label={`${item.invoicedPercentage}%`} 
                             color="primary" 
                             size="small"
                             sx={{ 
@@ -960,7 +961,7 @@ export const HuaweiInvoice: React.FC = () => {
                             size="small"
                             type="number"
                             value={item.need_to_invoice_percentage}
-                            onChange={(e) => handlePercentageChange(index, parseFloat(e.target.value) || 0)}
+                            onChange={(e) => { handlePercentageChange(index, parseFloat(e.target.value) || 0); }}
                             variant="standard"
                             disabled={isProcessing || isSaving || !item.isCorrelated}
                             inputProps={{
@@ -974,8 +975,8 @@ export const HuaweiInvoice: React.FC = () => {
                               '& .MuiInput-root': {
                                 color: (() => {
                                   if (!item.isCorrelated) return 'text.disabled';
-                                  const currentInvoiced = typeof item.invoiced_percentage === 'string' ? parseFloat(item.invoiced_percentage) : 
-                                                   typeof item.invoiced_percentage === 'number' ? item.invoiced_percentage : 0;
+                                  const currentInvoiced = typeof item.invoicedPercentage === 'string' ? parseFloat(item.invoicedPercentage) : 
+                                                   typeof item.invoicedPercentage === 'number' ? item.invoicedPercentage : 0;
                                   const newInvoice = typeof item.need_to_invoice_percentage === 'string' ? parseFloat(item.need_to_invoice_percentage) : 
                                               typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
                                   const total = currentInvoiced + newInvoice;
@@ -984,9 +985,9 @@ export const HuaweiInvoice: React.FC = () => {
                               }
                             }}
                           />
-                          {item.isCorrelated && (() => {
-                            const currentInvoiced = typeof item.invoiced_percentage === 'string' ? parseFloat(item.invoiced_percentage) : 
-                                                 typeof item.invoiced_percentage === 'number' ? item.invoiced_percentage : 0;
+                          {item.isCorrelated ? (() => {
+                            const currentInvoiced = typeof item.invoicedPercentage === 'string' ? parseFloat(item.invoicedPercentage) : 
+                                                 typeof item.invoicedPercentage === 'number' ? item.invoicedPercentage : 0;
                             const newInvoice = typeof item.need_to_invoice_percentage === 'string' ? parseFloat(item.need_to_invoice_percentage) : 
                                             typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
                             const total = currentInvoiced + newInvoice;
@@ -1012,7 +1013,7 @@ export const HuaweiInvoice: React.FC = () => {
                               );
                             }
                             return null;
-                          })()}
+                          })() : null}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1079,7 +1080,7 @@ export const HuaweiInvoice: React.FC = () => {
                       <Typography variant="h5" fontWeight="600" color="text.primary">
                         {(() => {
                           const subtotal = correlatedData.reduce((sum, item) => {
-                            const unitPrice = typeof item.unit_price === 'number' ? item.unit_price : 0;
+                            const unitPrice = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
                             const percentage = typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
                             return sum + (unitPrice * percentage / 100);
                           }, 0);
@@ -1102,7 +1103,7 @@ export const HuaweiInvoice: React.FC = () => {
                       <Typography variant="h5" fontWeight="600" color="#1e40af">
                         {(() => {
                           const subtotal = correlatedData.reduce((sum, item) => {
-                            const unitPrice = typeof item.unit_price === 'number' ? item.unit_price : 0;
+                            const unitPrice = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
                             const percentage = typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
                             return sum + (unitPrice * percentage / 100);
                           }, 0);
@@ -1126,7 +1127,7 @@ export const HuaweiInvoice: React.FC = () => {
                       <Typography variant="h5" fontWeight="600" color="#059669">
                         {(() => {
                           const subtotal = correlatedData.reduce((sum, item) => {
-                            const unitPrice = typeof item.unit_price === 'number' ? item.unit_price : 0;
+                            const unitPrice = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
                             const percentage = typeof item.need_to_invoice_percentage === 'number' ? item.need_to_invoice_percentage : 0;
                             return sum + (unitPrice * percentage / 100);
                           }, 0);
@@ -1149,7 +1150,7 @@ export const HuaweiInvoice: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUploadDialogOpen(false)} disabled={isProcessing || isSaving}>
+          <Button onClick={() => { setUploadDialogOpen(false); }} disabled={isProcessing || isSaving}>
             Cancel
           </Button>
           {correlatedData.length > 0 && (
@@ -1168,7 +1169,7 @@ export const HuaweiInvoice: React.FC = () => {
       {/* View Invoice Details Dialog */}
       <Dialog 
         open={viewDialogOpen} 
-        onClose={() => setViewDialogOpen(false)}
+        onClose={() => { setViewDialogOpen(false); }}
         maxWidth="lg"
         fullWidth
       >
@@ -1177,7 +1178,7 @@ export const HuaweiInvoice: React.FC = () => {
             Invoice Details
             {selectedInvoiceDetails.length > 0 && (
               <Typography variant="subtitle1" color="primary" sx={{ mt: 1 }}>
-                {selectedInvoiceDetails[0].invoice_no}
+                {selectedInvoiceDetails[0].invoiceNo}
               </Typography>
             )}
           </Typography>
@@ -1191,7 +1192,7 @@ export const HuaweiInvoice: React.FC = () => {
                     Invoice Number
                   </Typography>
                   <Typography variant="body1" fontWeight="bold">
-                    {selectedInvoiceDetails[0].invoice_no}
+                    {selectedInvoiceDetails[0].invoiceNo}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
@@ -1207,7 +1208,7 @@ export const HuaweiInvoice: React.FC = () => {
                     VAT Percentage
                   </Typography>
                   <Typography variant="body1" fontWeight="bold" color="#1e40af">
-                    {selectedInvoiceDetails[0].vat_percentage}%
+                    {selectedInvoiceDetails[0].vatPercentage}%
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
@@ -1247,8 +1248,8 @@ export const HuaweiInvoice: React.FC = () => {
                       <Typography variant="h6" fontWeight="600" color="text.primary">
                         {(() => {
                           const subtotal = selectedInvoiceDetails.reduce((sum, item) => {
-                            const subtotalAmount = typeof item.subtotal_amount === 'string' ? parseFloat(item.subtotal_amount) : 
-                                                 typeof item.subtotal_amount === 'number' ? item.subtotal_amount : 0;
+                            const subtotalAmount = typeof item.subtotalAmount === 'string' ? parseFloat(item.subtotalAmount) : 
+                                                 typeof item.subtotalAmount === 'number' ? item.subtotalAmount : 0;
                             return sum + subtotalAmount;
                           }, 0);
                           return formatCurrency(subtotal);
@@ -1265,13 +1266,13 @@ export const HuaweiInvoice: React.FC = () => {
                       textAlign: 'center'
                     }}>
                       <Typography variant="caption" color="text.secondary">
-                        VAT ({selectedInvoiceDetails[0].vat_percentage}%)
+                        VAT ({selectedInvoiceDetails[0].vatPercentage}%)
                       </Typography>
                       <Typography variant="h6" fontWeight="600" color="#1e40af">
                         {(() => {
                           const vatTotal = selectedInvoiceDetails.reduce((sum, item) => {
-                            const vatAmount = typeof item.vat_amount === 'string' ? parseFloat(item.vat_amount) : 
-                                            typeof item.vat_amount === 'number' ? item.vat_amount : 0;
+                            const vatAmount = typeof item.vatAmount === 'string' ? parseFloat(item.vatAmount) : 
+                                            typeof item.vatAmount === 'number' ? item.vatAmount : 0;
                             return sum + vatAmount;
                           }, 0);
                           return formatCurrency(vatTotal);
@@ -1293,8 +1294,8 @@ export const HuaweiInvoice: React.FC = () => {
                       <Typography variant="h6" fontWeight="600" color="#059669">
                         {(() => {
                           const total = selectedInvoiceDetails.reduce((sum, item) => {
-                            const totalAmount = typeof item.total_amount === 'string' ? parseFloat(item.total_amount) : 
-                                              typeof item.total_amount === 'number' ? item.total_amount : 0;
+                            const totalAmount = typeof item.totalAmount === 'string' ? parseFloat(item.totalAmount) : 
+                                              typeof item.totalAmount === 'number' ? item.totalAmount : 0;
                             return sum + totalAmount;
                           }, 0);
                           return formatCurrency(total);
@@ -1345,31 +1346,31 @@ export const HuaweiInvoice: React.FC = () => {
                   </TableHead>
                   <TableBody>
                     {selectedInvoiceDetails.map((item) => {
-                      // Convert unit_price from decimal string to number
-                      const unitPriceStr = item.huaweiPo?.unit_price;
+                      // Convert unitPrice from decimal string to number
+                      const unitPriceStr = item.huaweiPo?.unitPrice;
                       const unitPrice = typeof unitPriceStr === 'string' ? parseFloat(unitPriceStr) : 
                                        typeof unitPriceStr === 'number' ? unitPriceStr : 0;
                       
-                      // Convert requested_quantity from decimal string to number
-                      const qtyStr = item.huaweiPo?.requested_quantity;
+                      // Convert requestedQuantity from decimal string to number
+                      const qtyStr = item.huaweiPo?.requestedQuantity;
                       const requestedQty = typeof qtyStr === 'string' ? parseFloat(qtyStr) : 
                                          typeof qtyStr === 'number' ? qtyStr : 0;
                       
                       return (
                         <TableRow key={item.id}>
-                          <TableCell>{item.huaweiPo?.po_no}</TableCell>
-                          <TableCell>{item.huaweiPo?.line_no}</TableCell>
-                          <TableCell>{item.huaweiPo?.item_code}</TableCell>
+                          <TableCell>{item.huaweiPo?.poNo}</TableCell>
+                          <TableCell>{item.huaweiPo?.lineNo}</TableCell>
+                          <TableCell>{item.huaweiPo?.itemCode}</TableCell>
                           <TableCell>
                             <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
-                              {item.huaweiPo?.item_description}
+                              {item.huaweiPo?.itemDescription}
                             </Typography>
                           </TableCell>
                           <TableCell>{formatCurrency(unitPrice)}</TableCell>
                           <TableCell>{requestedQty.toFixed(0)}</TableCell>
                           <TableCell>
                             <Chip 
-                              label={`${item.invoiced_percentage}%`} 
+                              label={`${item.invoicedPercentage}%`} 
                               color="primary" 
                               size="small" 
                             />
@@ -1377,8 +1378,8 @@ export const HuaweiInvoice: React.FC = () => {
                           <TableCell>
                             <Typography variant="body2" fontWeight="500" color="text.primary">
                               {(() => {
-                                const subtotalAmount = typeof item.subtotal_amount === 'string' ? parseFloat(item.subtotal_amount) : 
-                                                     typeof item.subtotal_amount === 'number' ? item.subtotal_amount : 0;
+                                const subtotalAmount = typeof item.subtotalAmount === 'string' ? parseFloat(item.subtotalAmount) : 
+                                                     typeof item.subtotalAmount === 'number' ? item.subtotalAmount : 0;
                                 return formatCurrency(subtotalAmount);
                               })()}
                             </Typography>
@@ -1386,8 +1387,8 @@ export const HuaweiInvoice: React.FC = () => {
                           <TableCell>
                             <Typography variant="body2" fontWeight="500" color="#1e40af">
                               {(() => {
-                                const vatAmount = typeof item.vat_amount === 'string' ? parseFloat(item.vat_amount) : 
-                                                typeof item.vat_amount === 'number' ? item.vat_amount : 0;
+                                const vatAmount = typeof item.vatAmount === 'string' ? parseFloat(item.vatAmount) : 
+                                                typeof item.vatAmount === 'number' ? item.vatAmount : 0;
                                 return formatCurrency(vatAmount);
                               })()}
                             </Typography>
@@ -1395,8 +1396,8 @@ export const HuaweiInvoice: React.FC = () => {
                           <TableCell>
                             <Typography variant="body2" fontWeight="600" color="#059669">
                               {(() => {
-                                const totalAmount = typeof item.total_amount === 'string' ? parseFloat(item.total_amount) : 
-                                                  typeof item.total_amount === 'number' ? item.total_amount : 0;
+                                const totalAmount = typeof item.totalAmount === 'string' ? parseFloat(item.totalAmount) : 
+                                                  typeof item.totalAmount === 'number' ? item.totalAmount : 0;
                                 return formatCurrency(totalAmount);
                               })()}
                             </Typography>
@@ -1415,7 +1416,7 @@ export const HuaweiInvoice: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setViewDialogOpen(false)}>
+          <Button onClick={() => { setViewDialogOpen(false); }}>
             Close
           </Button>
           {selectedInvoiceDetails.length > 0 && (

@@ -27,7 +27,7 @@ export default function Page(): React.JSX.Element {
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography color="error">Error loading expense dashboard: {error}</Typography>
+        <Typography color="error">Error loading expense dashboard: {error.toString()}</Typography>
       </Box>
     );
   }

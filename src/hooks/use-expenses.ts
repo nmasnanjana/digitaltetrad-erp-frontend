@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAllExpenses, createExpense, updateExpense, deleteExpense } from '@/api/expenseApi';
+import { getAllExpenses, getExpenseById, createExpense, updateExpense, deleteExpense } from '@/api/expense-api';
 import { CACHE_KEYS, invalidateCache } from '@/lib/react-query/cache-manager';
 import type { Expense } from '@/types/expense';
 
@@ -24,7 +24,7 @@ export const useExpense = (id: string) => {
       const response = await getExpenseById(id);
       return response.data;
     },
-    enabled: !!id,
+    enabled: Boolean(id),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -50,7 +50,7 @@ export const useUpdateExpense = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: updateExpense,
+    mutationFn: ({ id, data }: { id: string; data: Partial<Expense> }) => updateExpense(id, data),
     onSuccess: (data, variables) => {
       // Invalidate expenses cache
       invalidateCache.expenses();
@@ -67,12 +67,12 @@ export const useDeleteExpense = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: deleteExpense,
+    mutationFn: (id: string) => deleteExpense(id),
     onSuccess: (data, variables) => {
       // Invalidate expenses cache
       invalidateCache.expenses();
       // Remove specific expense from cache
-      queryClient.removeQueries({ queryKey: [CACHE_KEYS.EXPENSE_DETAILS, variables.id] });
+      queryClient.removeQueries({ queryKey: [CACHE_KEYS.EXPENSE_DETAILS, variables] });
       // Invalidate dashboard data
       queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.EXPENSE_DASHBOARD] });
     },

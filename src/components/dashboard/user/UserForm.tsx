@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User } from '@/types/user';
-import { Role } from '@/types/role';
-import { Box, Button, Grid, TextField, MenuItem, Alert, Typography, Paper, FormControl, InputLabel, Select, SelectChangeEvent } from '@mui/material';
+import { type User } from '@/types/user';
+import { type Role } from '@/types/role';
+import { Box, Button, Grid, TextField, MenuItem, Alert, Typography, Paper, FormControl, InputLabel, Select, type SelectChangeEvent } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/auth/client';
 
@@ -84,7 +84,7 @@ const UserForm: React.FC<Props> = ({ onSubmit, initialData = {}, mode = 'create'
         {mode === 'create' ? 'Create New User' : 'Edit User'}
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
 
       <Box component="form" onSubmit={handleSubmit} noValidate>
         <Grid container spacing={3}>
@@ -179,7 +179,7 @@ const UserForm: React.FC<Props> = ({ onSubmit, initialData = {}, mode = 'create'
         </Grid>
 
         <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-          <Button variant="outlined" color="secondary" onClick={() => router.push('/dashboard/user')}>
+          <Button variant="outlined" color="secondary" onClick={() => { router.push('/dashboard/user'); }}>
             Cancel
           </Button>
           <Button type="submit" variant="contained" color="primary">

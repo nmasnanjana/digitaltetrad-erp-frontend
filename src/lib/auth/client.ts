@@ -1,9 +1,9 @@
 'use client';
 
 import { generateAvatar } from '@/lib/utils';
-import type { AuthClient, SignInWithPasswordParams, SignUpParams } from './types';
+import type { AuthClient, SignInWithPasswordParams, SignUpParams, ResetPasswordParams } from './types';
 import type { User } from '@/types/user';
-import type { Role } from '@/types/permission';
+import type { Role } from '@/types/role';
 
 interface ApiResponse<T> {
   data?: T;
@@ -24,7 +24,7 @@ class AuthClientImpl implements AuthClient {
     return localStorage.getItem('token') || sessionStorage.getItem('token');
   }
 
-  private setToken(token: string, rememberMe: boolean = false): void {
+  private setToken(token: string, rememberMe = false): void {
     const storage = rememberMe ? localStorage : sessionStorage;
     storage.setItem('token', token);
   }
@@ -247,6 +247,19 @@ class AuthClientImpl implements AuthClient {
       return { error: null, info: response.info };
     } catch (error) {
       return { error: error instanceof Error ? error.message : 'Failed to delete role' };
+    }
+  }
+
+  async resetPassword({ email }: ResetPasswordParams) {
+    try {
+      const response = await this.request<ApiResponse<null>>('/users/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+
+      return { error: null, info: response.info };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Failed to reset password' };
     }
   }
 }

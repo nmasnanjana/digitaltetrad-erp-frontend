@@ -12,8 +12,8 @@ import {
   FormControlLabel,
   Switch,
 } from '@mui/material';
-import { createExpenseType, updateExpenseType } from '@/api/expenseApi';
-import { ExpenseType } from '@/types/expense';
+import { createExpenseType, updateExpenseType } from '@/api/expense-api';
+import { type ExpenseType } from '@/types/expense';
 
 interface ExpenseTypeFormProps {
   open: boolean;
@@ -101,11 +101,9 @@ const ExpenseTypeForm: React.FC<ExpenseTypeFormProps> = ({
           {mode === 'create' ? 'Create Expense Type' : 'Edit Expense Type'}
         </DialogTitle>
         <DialogContent>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+          {error ? <Alert severity="error" sx={{ mb: 2 }}>
               {error}
-            </Alert>
-          )}
+            </Alert> : null}
           <TextField
             autoFocus
             margin="dense"
@@ -113,7 +111,7 @@ const ExpenseTypeForm: React.FC<ExpenseTypeFormProps> = ({
             type="text"
             fullWidth
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => { setName(e.target.value); }}
             required
             sx={{ mb: 2 }}
           />
@@ -123,7 +121,7 @@ const ExpenseTypeForm: React.FC<ExpenseTypeFormProps> = ({
             type="text"
             fullWidth
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => { setDescription(e.target.value); }}
             multiline
             rows={3}
             sx={{ mb: 2 }}
@@ -132,7 +130,7 @@ const ExpenseTypeForm: React.FC<ExpenseTypeFormProps> = ({
             control={
               <Switch
                 checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
+                onChange={(e) => { setIsActive(e.target.checked); }}
               />
             }
             label="Active"

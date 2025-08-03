@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Job } from '@/types/job';
+import type { Customer } from '@/types/customer';
 
 const API = axios.create({
     baseURL: 'http://localhost:4575/api',
@@ -35,27 +35,17 @@ API.interceptors.response.use(
     }
 );
 
-export interface JobFilters {
-    createdStartDate?: string;
-    createdEndDate?: string;
-    completedStartDate?: string;
-    completedEndDate?: string;
-    status?: string;
-    type?: string;
-    customerId?: number;
-}
+export const getAllCustomers = (): Promise<{ data: Customer[] }> =>
+    API.get<Customer[]>('/customers');
 
-export const getAllJobs = (filters?: JobFilters): Promise<{ data: Job[] }> =>
-    API.get<Job[]>('/jobs', { params: filters });
+export const getCustomerById = (id: string): Promise<{ data: Customer }> =>
+    API.get<Customer>(`/customers/${id}`);
 
-export const getJobById = (id: string): Promise<{ data: Job }> =>
-    API.get<Job>(`/jobs/${id}`);
+export const createCustomer = (customerData: Partial<Customer>): Promise<{ data: Customer }> =>
+    API.post('/customers', customerData);
 
-export const createJob = (jobData: Partial<Job>): Promise<{ data: Job }> =>
-    API.post('/jobs', jobData);
+export const updateCustomer = (id: string, data: Partial<Customer>): Promise<{ data: Customer }> =>
+    API.put(`/customers/${id}`, data);
 
-export const updateJob = (id: string, data: Partial<Job>): Promise<{ data: Job }> =>
-    API.put(`/jobs/${id}`, data);
-
-export const deleteJob = (id: string): Promise<{ data: unknown }> =>
-    API.delete(`/jobs/${id}`); 
+export const deleteCustomer = (id: string): Promise<{ data: unknown }> =>
+    API.delete(`/customers/${id}`).then(() => ({ data: null })); 

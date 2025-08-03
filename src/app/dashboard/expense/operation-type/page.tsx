@@ -25,7 +25,7 @@ import {
 } from '@mui/material';
 import { Plus, PencilSimple, Trash } from '@phosphor-icons/react/dist/ssr';
 import { getAllOperationTypes, createOperationType, updateOperationType, deleteOperationType } from '@/api/operationTypeApi';
-import { OperationType } from '@/types/operationType';
+import { type OperationType } from '@/types/operationType';
 
 export default function OperationTypePage() {
   const [operationTypes, setOperationTypes] = useState<OperationType[]>([]);
@@ -146,17 +146,15 @@ export default function OperationTypePage() {
             <Button
               variant="contained"
               startIcon={<Plus />}
-              onClick={() => handleOpenDialog()}
+              onClick={() => { handleOpenDialog(); }}
             >
               New Type
             </Button>
           </Stack>
 
-          {error && (
-            <Alert severity="error" onClose={() => setError(null)}>
+          {error ? <Alert severity="error" onClose={() => { setError(null); }}>
               {error}
-            </Alert>
-          )}
+            </Alert> : null}
 
           <Card>
             <Table>
@@ -207,7 +205,7 @@ export default function OperationTypePage() {
                       <TableCell>
                         <Stack direction="row" spacing={1}>
                           <IconButton
-                            onClick={() => handleOpenDialog(type)}
+                            onClick={() => { handleOpenDialog(type); }}
                             color="primary"
                             size="small"
                           >
@@ -241,14 +239,14 @@ export default function OperationTypePage() {
               fullWidth
               label="Name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => { setFormData({ ...formData, name: e.target.value }); }}
               required
             />
             <TextField
               fullWidth
               label="Description"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) => { setFormData({ ...formData, description: e.target.value }); }}
               multiline
               rows={3}
             />
@@ -256,7 +254,7 @@ export default function OperationTypePage() {
               control={
                 <Switch
                   checked={formData.isActive}
-                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  onChange={(e) => { setFormData({ ...formData, isActive: e.target.checked }); }}
                   color="primary"
                 />
               }

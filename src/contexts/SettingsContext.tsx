@@ -1,7 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getSettings, SettingsData } from '@/api/settingsApi';
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { getSettings, type SettingsData } from '@/api/settingsApi';
 import { getCurrencySymbol, formatCurrency, formatCurrencyWithSpace } from '@/utils/currencyUtils';
 
 interface SettingsContextType {

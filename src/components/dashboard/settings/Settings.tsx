@@ -26,7 +26,7 @@ import {
 import SaveIcon from '@mui/icons-material/Save';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import UploadIcon from '@mui/icons-material/Upload';
-import { getSettings, updateSettings, resetSettings, SettingsData } from '@/api/settingsApi';
+import { getSettings, updateSettings, resetSettings, type SettingsData } from '@/api/settingsApi';
 import { useSettings } from '@/contexts/SettingsContext';
 
 export const Settings: React.FC = () => {
@@ -63,7 +63,7 @@ export const Settings: React.FC = () => {
       const response = await getSettings();
       const data = response.data;
       console.log('Loaded settings:', data);
-      console.log('Company logo exists:', !!data.company_logo);
+      console.log('Company logo exists:', Boolean(data.company_logo));
       setSettings(data);
       
       setFormData({
@@ -213,7 +213,7 @@ export const Settings: React.FC = () => {
               <Button
                 variant="outlined"
                 startIcon={<RestartAltIcon />}
-                onClick={() => setResetDialogOpen(true)}
+                onClick={() => { setResetDialogOpen(true); }}
                 disabled={saving}
               >
                 Reset to Defaults
@@ -229,17 +229,13 @@ export const Settings: React.FC = () => {
             </Box>
           </Box>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+          {error ? <Alert severity="error" sx={{ mb: 2 }}>
               {error}
-            </Alert>
-          )}
+            </Alert> : null}
 
-          {success && (
-            <Alert severity="success" sx={{ mb: 2 }}>
+          {success ? <Alert severity="success" sx={{ mb: 2 }}>
               {success}
-            </Alert>
-          )}
+            </Alert> : null}
 
           <Grid container spacing={3}>
             {/* Company Information */}
@@ -255,7 +251,7 @@ export const Settings: React.FC = () => {
                 fullWidth
                 label="Company Name"
                 value={formData.company_name}
-                onChange={(e) => handleFormChange('company_name', e.target.value)}
+                onChange={(e) => { handleFormChange('company_name', e.target.value); }}
                 required
               />
             </Grid>
@@ -266,7 +262,7 @@ export const Settings: React.FC = () => {
                 <Select
                   value={formData.currency}
                   label="Currency"
-                  onChange={(e) => handleFormChange('currency', e.target.value)}
+                  onChange={(e) => { handleFormChange('currency', e.target.value); }}
                 >
                   <MenuItem value="USD">USD ($)</MenuItem>
                   <MenuItem value="EUR">EUR (€)</MenuItem>
@@ -305,8 +301,7 @@ export const Settings: React.FC = () => {
               </Box>
               
               {/* Logo Display Section */}
-              {(formData.company_logo || settings?.company_logo) && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
+              {(formData.company_logo || settings?.company_logo) ? <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#fafafa' }}>
                   <Avatar
                     src={formData.company_logo || settings?.company_logo}
                     alt="Company Logo"
@@ -334,8 +329,7 @@ export const Settings: React.FC = () => {
                   >
                     Clear
                   </Button>
-                </Box>
-              )}
+                </Box> : null}
               
               {/* No Logo Message */}
               {!formData.company_logo && !settings?.company_logo && (
@@ -370,7 +364,7 @@ export const Settings: React.FC = () => {
                 multiline
                 rows={3}
                 value={formData.company_address}
-                onChange={(e) => handleFormChange('company_address', e.target.value)}
+                onChange={(e) => { handleFormChange('company_address', e.target.value); }}
                 placeholder="Enter company address (multi-line)"
               />
             </Grid>
@@ -380,7 +374,7 @@ export const Settings: React.FC = () => {
                 fullWidth
                 label="Contact Number"
                 value={formData.contact_number}
-                onChange={(e) => handleFormChange('contact_number', e.target.value)}
+                onChange={(e) => { handleFormChange('contact_number', e.target.value); }}
                 placeholder="e.g., +94761219119"
                 helperText="Include country code (e.g., +94 for Sri Lanka, +1 for USA, +44 for UK)"
               />
@@ -391,7 +385,7 @@ export const Settings: React.FC = () => {
                 fullWidth
                 label="Business Registration Number"
                 value={formData.business_registration_number}
-                onChange={(e) => handleFormChange('business_registration_number', e.target.value)}
+                onChange={(e) => { handleFormChange('business_registration_number', e.target.value); }}
               />
             </Grid>
 
@@ -401,7 +395,7 @@ export const Settings: React.FC = () => {
                 label="Email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => handleFormChange('email', e.target.value)}
+                onChange={(e) => { handleFormChange('email', e.target.value); }}
               />
             </Grid>
 
@@ -411,7 +405,7 @@ export const Settings: React.FC = () => {
                 label="Finance Email"
                 type="email"
                 value={formData.finance_email}
-                onChange={(e) => handleFormChange('finance_email', e.target.value)}
+                onChange={(e) => { handleFormChange('finance_email', e.target.value); }}
               />
             </Grid>
 
@@ -422,7 +416,7 @@ export const Settings: React.FC = () => {
                 multiline
                 rows={4}
                 value={formData.bank_account}
-                onChange={(e) => handleFormChange('bank_account', e.target.value)}
+                onChange={(e) => { handleFormChange('bank_account', e.target.value); }}
                 placeholder="Enter bank account details including account number, bank name, IBAN, etc."
               />
             </Grid>
@@ -440,7 +434,7 @@ export const Settings: React.FC = () => {
                 fullWidth
                 label="VAT Number"
                 value={formData.vat_number}
-                onChange={(e) => handleFormChange('vat_number', e.target.value)}
+                onChange={(e) => { handleFormChange('vat_number', e.target.value); }}
               />
             </Grid>
 
@@ -450,7 +444,7 @@ export const Settings: React.FC = () => {
                 label="VAT Percentage"
                 type="number"
                 value={formData.vat_percentage}
-                onChange={(e) => handleFormChange('vat_percentage', parseFloat(e.target.value) || 0)}
+                onChange={(e) => { handleFormChange('vat_percentage', parseFloat(e.target.value) || 0); }}
                 InputProps={{
                   endAdornment: <InputAdornment position="end">%</InputAdornment>,
                 }}
@@ -466,7 +460,7 @@ export const Settings: React.FC = () => {
       </Card>
 
       {/* Reset Confirmation Dialog */}
-      <Dialog open={resetDialogOpen} onClose={() => setResetDialogOpen(false)}>
+      <Dialog open={resetDialogOpen} onClose={() => { setResetDialogOpen(false); }}>
         <DialogTitle>Reset Settings to Defaults</DialogTitle>
         <DialogContent>
           <Typography>
@@ -474,7 +468,7 @@ export const Settings: React.FC = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setResetDialogOpen(false)} disabled={saving}>
+          <Button onClick={() => { setResetDialogOpen(false); }} disabled={saving}>
             Cancel
           </Button>
           <Button onClick={handleReset} color="error" variant="contained" disabled={saving}>

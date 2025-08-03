@@ -17,13 +17,12 @@ import {
   Switch,
   Grid,
 } from '@mui/material';
-import { createExpense, updateExpense } from '@/api/expenseApi';
-import { getAllExpenseTypes } from '@/api/expenseApi';
+import { createExpense, updateExpense , getAllExpenseTypes } from '@/api/expense-api';
 import { getAllOperationTypes } from '@/api/operationTypeApi';
-import { getAllJobs } from '@/api/jobApi';
-import { Expense, ExpenseType } from '@/types/expense';
-import { OperationType } from '@/types/operationType';
-import { Job } from '@/types/job';
+import { getAllJobs } from '@/api/job-api';
+import { type Expense, type ExpenseType } from '@/types/expense';
+import { type OperationType } from '@/types/operationType';
+import { type Job } from '@/types/job';
 import { useUser } from '@/contexts/user-context';
 import { authClient } from '@/lib/auth/client';
 
@@ -178,7 +177,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
     try {
       const data = {
-        expenses_type_id: expenses_type_id,
+        expenses_type_id,
         operations,
         operation_type_id: operations ? operation_type_id : undefined,
         job_id: operations ? undefined : job_id,
@@ -212,11 +211,9 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
           {mode === 'create' ? 'Create Expense' : 'Edit Expense'}
         </DialogTitle>
         <DialogContent>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+          {error ? <Alert severity="error" sx={{ mb: 2 }}>
               {error}
-            </Alert>
-          )}
+            </Alert> : null}
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
               <FormControl fullWidth>
@@ -224,7 +221,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 <Select
                   value={expenses_type_id}
                   label="Expense Type"
-                  onChange={(e) => setExpensesTypeId(Number(e.target.value))}
+                  onChange={(e) => { setExpensesTypeId(Number(e.target.value)); }}
                   required
                 >
                   {expenseTypes.map((type) => (
@@ -240,20 +237,19 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 control={
                   <Switch
                     checked={operations}
-                    onChange={(e) => setOperations(e.target.checked)}
+                    onChange={(e) => { setOperations(e.target.checked); }}
                   />
                 }
                 label="Operation Expense"
               />
             </Grid>
-            {operations && (
-              <Grid item xs={12}>
+            {operations ? <Grid item xs={12}>
                 <FormControl fullWidth>
                   <InputLabel>Operation Type</InputLabel>
                   <Select
-                    value={operation_type_id || ''}
+                    value={operation_type_id?.toString() || ''}
                     label="Operation Type"
-                    onChange={(e) => setOperationTypeId(Number(e.target.value))}
+                    onChange={(e) => { setOperationTypeId(Number(e.target.value)); }}
                     required={operations}
                   >
                     {operationTypes.map((type) => (
@@ -263,8 +259,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
-            )}
+              </Grid> : null}
             {!operations && (
               <Grid item xs={12}>
                 <FormControl fullWidth>
@@ -272,7 +267,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                   <Select
                     value={job_id || ''}
                     label="Job"
-                    onChange={(e) => setJobId(e.target.value)}
+                    onChange={(e) => { setJobId(e.target.value); }}
                     required={!operations}
                   >
                     {jobs.map((job) => (
@@ -291,7 +286,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 type="text"
                 fullWidth
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => { setDescription(e.target.value); }}
                 required
                 multiline
                 rows={3}
@@ -304,7 +299,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 type="number"
                 fullWidth
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => { setAmount(e.target.value); }}
                 required
                 inputProps={{ min: 0, step: 0.01 }}
               />
@@ -317,7 +312,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                   type="text"
                   fullWidth
                   value={reason_to_edit}
-                  onChange={(e) => setReasonToEdit(e.target.value)}
+                  onChange={(e) => { setReasonToEdit(e.target.value); }}
                   required
                   multiline
                   rows={2}

@@ -4,9 +4,9 @@ import React from 'react';
 import { Stack, Paper, Typography, Divider, IconButton, Tooltip, Box, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers';
 import { Clear as ClearIcon } from '@mui/icons-material';
-import { ExpenseType } from '@/types/expense';
-import { Job } from '@/types/job';
-import { OperationType } from '@/types/operationType';
+import { type ExpenseType } from '@/types/expense';
+import { type Job } from '@/types/job';
+import { type OperationType } from '@/types/operationType';
 
 export interface ExpenseFilters {
     createdStartDate?: string;
@@ -136,13 +136,11 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                                 } 
                             }}
                         />
-                        {(filters.createdStartDate || filters.createdEndDate) && (
-                            <Tooltip title="Clear dates">
+                        {(filters.createdStartDate || filters.createdEndDate) ? <Tooltip title="Clear dates">
                                 <IconButton size="small" onClick={clearCreatedDates}>
                                     <ClearIcon />
                                 </IconButton>
-                            </Tooltip>
-                        )}
+                            </Tooltip> : null}
                     </Stack>
                 </Paper>
 
@@ -160,10 +158,10 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                     <Select
                         value={filters.expenseTypeId?.toString() || ''}
                         label="Expense Type"
-                        onChange={(e) => onFilterChange({
+                        onChange={(e) => { onFilterChange({
                             ...filters,
                             expenseTypeId: e.target.value ? Number(e.target.value) : undefined
-                        })}
+                        }); }}
                         MenuProps={{
                             PaperProps: {
                                 sx: { maxHeight: 300 }
@@ -202,8 +200,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                 </FormControl>
 
                 {/* Job/Operation Type - Only show when category is selected */}
-                {filters.category && (
-                    <Stack 
+                {filters.category ? <Stack 
                         direction="row" 
                         spacing={1} 
                         alignItems="center"
@@ -223,10 +220,10 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                                 <Select
                                     value={filters.operationTypeId?.toString() || ''}
                                     label="Operation Type"
-                                    onChange={(e) => onFilterChange({
+                                    onChange={(e) => { onFilterChange({
                                         ...filters,
                                         operationTypeId: e.target.value ? Number(e.target.value) : undefined
-                                    })}
+                                    }); }}
                                     MenuProps={{
                                         PaperProps: {
                                             sx: { maxHeight: 300 }
@@ -263,15 +260,12 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                                 </Select>
                             </FormControl>
                         )}
-                        {(filters.jobId || filters.operationTypeId) && (
-                            <Tooltip title="Clear selection">
+                        {(filters.jobId || filters.operationTypeId) ? <Tooltip title="Clear selection">
                                 <IconButton size="small" onClick={clearCategoryFilter}>
                                     <ClearIcon />
                                 </IconButton>
-                            </Tooltip>
-                        )}
-                    </Stack>
-                )}
+                            </Tooltip> : null}
+                    </Stack> : null}
 
                 {/* Status */}
                 <FormControl 

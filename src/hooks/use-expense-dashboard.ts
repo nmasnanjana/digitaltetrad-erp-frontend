@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getAllExpenses } from '@/api/expenseApi';
+import { getAllExpenses } from '@/api/expense-api';
 import { CACHE_KEYS } from '@/lib/react-query/cache-manager';
 
 interface ExpenseDashboardData {

@@ -29,12 +29,17 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error && typeof error === 'object' && 'response' in error && error.response?.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem('token');
-      sessionStorage.removeItem('token');
-      if (typeof window !== 'undefined') {
-        window.location.href = paths.auth.signIn;
+    // Type-safe check for axios error with response
+    if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as { response?: { status?: number } };
+      const response = axiosError.response;
+      if (response?.status === 401) {
+        // Handle unauthorized access
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
+        if (typeof window !== 'undefined') {
+          window.location.href = paths.auth.signIn;
+        }
       }
     }
     return Promise.reject(new Error(error instanceof Error ? error.message : 'Response failed'));

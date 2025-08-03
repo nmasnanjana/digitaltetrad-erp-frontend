@@ -17,7 +17,7 @@ export function GuestGuard({ children }: GuestGuardProps): React.JSX.Element | n
   const { user, error, isLoading } = useUser();
   const [isChecking, setIsChecking] = React.useState<boolean>(true);
 
-  console.log('[GuestGuard] State:', { user: !!user, error, isLoading, isChecking });
+  console.log('[GuestGuard] State:', { user: Boolean(user), error, isLoading, isChecking });
 
   const checkPermissions = async (): Promise<void> => {
     console.log('[GuestGuard] checkPermissions called');
