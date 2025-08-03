@@ -157,12 +157,12 @@ export default function ExpensePaymentPage() {
                       <TableCell>{expense.description}</TableCell>
                       <TableCell>{formatCurrency(expense.amount)}</TableCell>
                       <TableCell>
-                        {expense.approved_by 
-                          ? `${expense.approved_by}`
+                        {expense.reviewer 
+                          ? `${expense.reviewer.firstName} ${expense.reviewer.lastName || ''}`
                           : 'N/A'
                         }
                       </TableCell>
-                      <TableCell>{formatDate(expense.approved_at)}</TableCell>
+                      <TableCell>{formatDate(expense.reviewed_at)}</TableCell>
                       <TableCell>
                         <Chip
                           label={expense.paid ? 'Paid' : 'Pending'}
