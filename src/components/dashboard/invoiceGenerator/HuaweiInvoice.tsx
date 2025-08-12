@@ -136,12 +136,15 @@ export const HuaweiInvoice: React.FC = () => {
       
       const response = await getAllHuaweiPos({ customerId: huaweiCustomerId });
       console.log('Huawei PO API response:', response);
+      console.log('Number of PO records found:', response.length);
       
       // Debug: Check the structure of the first record
       if (response && response.length > 0) {
         console.log('First PO record structure:', response[0]);
         console.log('Unit price from first record:', response[0].unitPrice);
         console.log('Unit price type:', typeof response[0].unitPrice);
+        console.log('PO No from first record:', response[0].poNo);
+        console.log('Line No from first record:', response[0].lineNo);
       }
       
       setHuaweiPoData(response as HuaweiPoData[]);
@@ -292,7 +295,7 @@ export const HuaweiInvoice: React.FC = () => {
     try {
       const invoiceData = matchedRecords.map(item => ({
         invoiceNo: invoiceNumber,
-                  huaweiPoId: item.huaweiPoId!,
+        huaweiPoId: item.huaweiPoId!,
         invoicedPercentage: item.need_to_invoice_percentage
       }));
 
@@ -463,6 +466,7 @@ export const HuaweiInvoice: React.FC = () => {
     console.log('=== CORRELATION DEBUG ===');
     console.log('Extracted data:', data);
     console.log('Huawei PO data from DB:', huaweiPoData);
+    console.log('Number of PO records in DB:', huaweiPoData.length);
     
     const correlated: CorrelatedData[] = data.map(item => {
       console.log(`Looking for match: PO=${item.poNo}, Line=${item.lineNo}`);
@@ -497,7 +501,7 @@ export const HuaweiInvoice: React.FC = () => {
           invoicedPercentage: existingPo.invoicedPercentage || 0,
           need_to_invoice_percentage: 0,
           isCorrelated: true,
-          huawei_po_id: existingPo.id
+          huaweiPoId: existingPo.id
         };
       } 
         console.log(`❌ No match found for PO=${item.poNo}, Line=${item.lineNo}`);
@@ -511,7 +515,7 @@ export const HuaweiInvoice: React.FC = () => {
           invoicedPercentage: 0,
           need_to_invoice_percentage: 0,
           isCorrelated: false,
-          huawei_po_id: undefined
+          huaweiPoId: undefined
         };
       
     });

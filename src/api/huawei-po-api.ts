@@ -1,6 +1,8 @@
 import { apiClient } from './api-client';
 
 export interface HuaweiPoData {
+  id: number;
+  customerId: number;
   siteCode: string;
   siteId: string;
   siteName: string;
@@ -10,6 +12,7 @@ export interface HuaweiPoData {
   itemDescription: string;
   unitPrice: number;
   requestedQuantity: number;
+  invoicedPercentage: number;
 }
 
 export interface HuaweiPoUploadResponse {
@@ -46,8 +49,24 @@ export const uploadHuaweiPoExcel = async (
 
 // Get Huawei PO data by job ID
 export const getHuaweiPosByJobId = async (jobId: string): Promise<HuaweiPoData[]> => {
-  const response = await apiClient.get<HuaweiPoData[]>(`/huawei-pos/job/${jobId}`);
-  return response.data;
+  const response = await apiClient.get<any[]>(`/huawei-pos/job/${jobId}`);
+  
+  // Transform snake_case to camelCase and ensure all required properties exist
+  return response.data.map(item => ({
+    id: item.id,
+    customerId: item.customer_id,
+    siteCode: item.site_code,
+    siteId: item.site_id,
+    siteName: item.site_name,
+    poNo: item.po_no,
+    lineNo: item.line_no,
+    itemCode: item.item_code,
+    itemDescription: item.item_description,
+    unitPrice: parseFloat(item.unit_price) || 0,
+    requestedQuantity: parseInt(item.requested_quantity) || 0,
+    invoicedPercentage: parseFloat(item.invoiced_percentage) || 0,
+    uploadedAt: item.uploaded_at
+  }));
 };
 
 // Get file info for a job
@@ -87,8 +106,24 @@ export const getAllHuaweiPos = async (params?: {
   jobId?: string;
   customerId?: number;
 }): Promise<HuaweiPoData[]> => {
-  const response = await apiClient.get<HuaweiPoData[]>('/huawei-pos', { params });
-  return response.data;
+  const response = await apiClient.get<any[]>('/huawei-pos', { params });
+  
+  // Transform snake_case to camelCase and ensure all required properties exist
+  return response.data.map(item => ({
+    id: item.id,
+    customerId: item.customer_id,
+    siteCode: item.site_code,
+    siteId: item.site_id,
+    siteName: item.site_name,
+    poNo: item.po_no,
+    lineNo: item.line_no,
+    itemCode: item.item_code,
+    itemDescription: item.item_description,
+    unitPrice: parseFloat(item.unit_price) || 0,
+    requestedQuantity: parseInt(item.requested_quantity) || 0,
+    invoicedPercentage: parseFloat(item.invoiced_percentage) || 0,
+    uploadedAt: item.uploaded_at
+  }));
 };
 
 // Delete all Huawei PO data for a specific job
