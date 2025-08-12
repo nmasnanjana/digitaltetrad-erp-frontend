@@ -52,7 +52,7 @@ export default function ExpenseTypePage() {
         return;
       }
 
-      const hasPermission = user.role?.name === 'Developer' || user.role?.permissions?.some(
+                  const hasPermission = user.role?.name === 'developer' || user.role?.permissions?.some(
         p => p.module === 'expensetype' && (p.action === 'read' || p.action === 'create' || p.action === 'update' || p.action === 'delete') && p.isActive
       );
 

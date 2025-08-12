@@ -59,7 +59,7 @@ export default function PermissionPage() {
                 return;
             }
 
-            const hasPermission = user.role?.name === 'Developer' || user.role?.permissions?.some(
+            const hasPermission = user.role?.name === 'developer' || user.role?.permissions?.some(
                 p => p.module === 'permission' && (p.action === 'read' || p.action === 'assignpermissionstorole') && p.isActive
             );
 
