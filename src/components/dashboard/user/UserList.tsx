@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { getAllUsers, deleteUser } from '@/api/userApi';
-import { User } from '@/types/user';
+import { type User } from '@/types/user';
 import {
   Box,
   Button,
@@ -55,6 +55,9 @@ export const ListUser: React.FC = () => {
             name: user.role.name,
             description: user.role.description || '',
             isActive: user.role.isActive,
+            permissions: user.role.permissions || [],
+            createdAt: user.role.createdAt || new Date().toISOString(),
+            updatedAt: user.role.updatedAt || new Date().toISOString(),
           } : undefined,
         }));
         setUsers(formattedUsers);
@@ -85,11 +88,9 @@ export const ListUser: React.FC = () => {
 
   return (
     <Box>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+      {error ? <Alert severity="error" sx={{ mb: 2 }}>
           {error}
-        </Alert>
-      )}
+        </Alert> : null}
 
       <TableContainer component={Paper}>
       <Table>
@@ -136,13 +137,13 @@ export const ListUser: React.FC = () => {
                 <TableCell align="right">
                   <IconButton
                     color="primary"
-                    onClick={() => router.push(`/dashboard/user/${user.id}/view`)}
+                    onClick={() => { router.push(`/dashboard/user/${user.id}/view`); }}
                   >
                     <ViewIcon />
                   </IconButton>
                   <IconButton
                     color="primary"
-                    onClick={() => router.push(`/dashboard/user/${user.id}`)}
+                    onClick={() => { router.push(`/dashboard/user/${user.id}`); }}
                   >
                     <EditIcon />
                   </IconButton>
@@ -162,13 +163,13 @@ export const ListUser: React.FC = () => {
       </Table>
       </TableContainer>
 
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={() => { setDeleteDialogOpen(false); }}>
         <DialogTitle>Delete User</DialogTitle>
         <DialogContent>
           Are you sure you want to delete user {selectedUser?.firstName} {selectedUser?.lastName}?
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => { setDeleteDialogOpen(false); }}>Cancel</Button>
           <Button onClick={handleDelete} color="error">
             Delete
           </Button>

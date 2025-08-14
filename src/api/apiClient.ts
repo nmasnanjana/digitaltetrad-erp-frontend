@@ -1,9 +1,11 @@
 import axios from 'axios';
+import { paths } from '@/paths';
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4575/api';
 
 export const apiClient = axios.create({
   baseURL,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -12,14 +14,14 @@ export const apiClient = axios.create({
 // Add a request interceptor to include the auth token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
   (error) => {
-    return Promise.reject(error);
+    return Promise.reject(new Error(error instanceof Error ? error.message : 'Request failed'));
   }
 );
 
@@ -27,11 +29,14 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error && typeof error === 'object' && 'response' in error && error.response?.status === 401) {
       // Handle unauthorized access
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      sessionStorage.removeItem('token');
+      if (typeof window !== 'undefined') {
+        window.location.href = paths.auth.signIn;
+      }
     }
-    return Promise.reject(error);
+    return Promise.reject(new Error(error instanceof Error ? error.message : 'Response failed'));
   }
 ); 

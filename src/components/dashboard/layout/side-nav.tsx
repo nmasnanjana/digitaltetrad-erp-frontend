@@ -52,12 +52,12 @@ export function SideNav(): React.JSX.Element {
     >
       <Stack spacing={2} sx={{ p: 3 }}>
         <Box component={RouterLink} href={paths.home} sx={{ display: 'inline-flex' }}>
-          <Logo color="light" height={32} width={122} />
+          <Logo color="light" height={59} width={221} />
         </Box>
       </Stack>
       <Divider sx={{ borderColor: 'var(--mui-palette-neutral-700)' }} />
       <Box component="nav" sx={{ flex: '1 1 auto', p: '12px' }}>
-        {renderNavItems({ pathname, items: navItems })}
+        {renderNavItems({ pathname: pathname || '', items: navItems })}
       </Box>
       <Divider sx={{ borderColor: 'var(--mui-palette-neutral-700)' }} />
     </Box>
@@ -77,11 +77,9 @@ function renderNavItems({
     acc.push(
       <React.Fragment key={key}>
         <NavItem key={key} pathname={pathname} {...item} />
-        {subItems && subItems.length > 0 && (
-          <Box sx={{ pl: 4 }}>
+        {subItems && subItems.length > 0 ? <Box sx={{ pl: 4 }}>
             {renderNavItems({ items: subItems, pathname })}
-          </Box>
-        )}
+          </Box> : null}
       </React.Fragment>
     );
 

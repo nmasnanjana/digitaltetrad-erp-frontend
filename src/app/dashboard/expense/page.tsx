@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useState, useEffect } from 'react';
 import {
   Box,
@@ -16,45 +17,63 @@ import {
   Alert,
   Chip,
   Grid,
-} from '@mui/material';
-import { Plus, List, Gear } from '@phosphor-icons/react/dist/ssr';
-import { getAllExpenses } from '@/api/expenseApi';
-import { Expense } from '@/types/expense';
+  CardContent,
+ IconButton, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Plus, List, Gear, PencilSimple, Trash, Eye } from '@phosphor-icons/react/dist/ssr';
+import { type Expense } from '@/types/expense';
+import { useSettings } from '@/contexts/SettingsContext';
 import Link from 'next/link';
+import ExpenseForm from '@/components/dashboard/expense/ExpenseForm';
+import { useExpenses, useDeleteExpense } from '@/hooks/use-expenses';
 
-export default function ExpenseOverviewPage() {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function ExpensePage() {
+  const { formatCurrency } = useSettings();
+  const { data: expenses = [], isLoading } = useExpenses();
+  const deleteExpenseMutation = useDeleteExpense();
+  const [formOpen, setFormOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchExpenses();
+    // The fetchExpenses function is now handled by useExpenses hook
   }, []);
 
-  const fetchExpenses = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await getAllExpenses();
-      setExpenses(response.data);
-    } catch (error) {
-      console.error('Error fetching expenses:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load expenses. Please try again later.');
-    } finally {
-      setLoading(false);
+  const getStatusColor = (status: string, paid: boolean) => {
+    // If expense is paid, show success color
+    if (paid) {
+      return 'success';
     }
-  };
-
-  const getStatusColor = (status: string) => {
+    
     switch (status) {
       case 'approved':
         return 'success';
-      case 'rejected':
+      case 'denied':
         return 'error';
-      case 'paid':
-        return 'info';
+      case 'on_progress':
+        return 'warning';
       default:
         return 'warning';
+    }
+  };
+
+  const formatStatus = (status: string, paid: boolean) => {
+    // If expense is paid, show "Paid" regardless of status
+    if (paid) {
+      return 'Paid';
+    }
+    
+    switch (status) {
+      case 'approved':
+        return 'Approved';
+      case 'denied':
+        return 'Denied';
+      case 'on_progress':
+        return 'In Progress';
+      default:
+        return status;
     }
   };
 
@@ -63,11 +82,52 @@ export default function ExpenseOverviewPage() {
     return new Date(dateString).toLocaleDateString();
   };
 
+  const handleCreate = () => {
+    setSelectedExpense(null);
+    setFormMode('create');
+    setFormOpen(true);
+  };
+
+  const handleFormSuccess = () => {
+    setFormOpen(false);
+    // The fetchExpenses function is now handled by useExpenses hook
+  };
+
+  const handleEdit = (expense: Expense) => {
+    if (expense.paid) {
+      setLocalError('Cannot edit a paid expense');
+      return;
+    }
+    setSelectedExpense(expense);
+    setFormMode('edit');
+    setFormOpen(true);
+  };
+
+  const handleDelete = (expense: Expense) => {
+    if (expense.paid) {
+      setLocalError('Cannot delete a paid expense');
+      return;
+    }
+    setExpenseToDelete(expense);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!expenseToDelete) return;
+    
+    try {
+      await deleteExpenseMutation.mutateAsync(expenseToDelete.id.toString());
+      setDeleteDialogOpen(false);
+      setExpenseToDelete(null);
+    } catch (error) {
+      setLocalError('Failed to delete expense. Please try again.');
+    }
+  };
+
   // Calculate summary statistics
   const totalExpenses = expenses.length;
   const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const pendingCount = expenses.filter(e => e.status === 'pending').length;
-  const approvedCount = expenses.filter(e => e.status === 'approved').length;
+  const pendingCount = expenses.filter(e => e.status === 'on_progress').length;
   const paidCount = expenses.filter(e => e.paid).length;
 
   return (
@@ -111,21 +171,18 @@ export default function ExpenseOverviewPage() {
                 Operation Types
               </Button>
               <Button
-                component={Link}
-                href="/dashboard/expense/new"
                 variant="contained"
                 startIcon={<Plus />}
+                onClick={handleCreate}
               >
                 New Expense
               </Button>
             </Stack>
           </Stack>
 
-          {error && (
-            <Alert severity="error" onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          )}
+          {localError ? <Alert severity="error" onClose={() => { setLocalError(null); }}>
+              {localError}
+            </Alert> : null}
 
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6} md={3}>
@@ -144,7 +201,7 @@ export default function ExpenseOverviewPage() {
                   Total Amount
                 </Typography>
                 <Typography variant="h4">
-                  ${totalAmount.toFixed(2)}
+                  {formatCurrency(totalAmount)}
                 </Typography>
               </Card>
             </Grid>
@@ -171,70 +228,135 @@ export default function ExpenseOverviewPage() {
           </Grid>
 
           <Card>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Job</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell>Description</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Created Date</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
+            <CardContent>
+              <Table>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={7} align="center">
-                      <Typography color="text.secondary">
-                        Loading expenses...
-                      </Typography>
-                    </TableCell>
+                    <TableCell>Category</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Expense Type</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell>Amount</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Created Date</TableCell>
+                    <TableCell>Actions</TableCell>
                   </TableRow>
-                ) : expenses.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} align="center">
-                      <Typography color="text.secondary">
-                        No expenses found
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  expenses.map((expense) => (
-                    <TableRow key={expense.id}>
-                      <TableCell>{expense.job?.name || 'N/A'}</TableCell>
-                      <TableCell>{expense.expenseType?.name}</TableCell>
-                      <TableCell>{expense.description}</TableCell>
-                      <TableCell>${expense.amount.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={expense.status}
-                          color={getStatusColor(expense.status)}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>{formatDate(expense.created_at)}</TableCell>
-                      <TableCell>
-                        <Stack direction="row" spacing={1}>
-                          <Button
-                            component={Link}
-                            href={`/dashboard/expense/${expense.id}`}
-                            variant="outlined"
-                            size="small"
-                          >
-                            View
-                          </Button>
-                        </Stack>
+                </TableHead>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center">
+                        <Typography color="text.secondary">
+                          Loading expenses...
+                        </Typography>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : expenses.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} align="center">
+                        <Typography color="text.secondary">
+                          No expenses found
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    expenses.map((expense) => (
+                      <TableRow key={expense.id}>
+                        <TableCell>
+                          {expense.operations ? expense.operationType?.name || 'N/A' : expense.job?.name || 'N/A'}
+                        </TableCell>
+                        <TableCell>{expense.expenseType?.name}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={expense.operations ? 'Operation' : 'Job'}
+                            color={expense.operations ? 'primary' : 'secondary'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>{expense.description}</TableCell>
+                        <TableCell>{formatCurrency(expense.amount)}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={expense.status ? formatStatus(expense.status, expense.paid) : 'N/A'}
+                            color={expense.status ? getStatusColor(expense.status, expense.paid) : 'default'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>{formatDate(expense.createdAt || expense.created_at)}</TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={1}>
+                            <IconButton
+                              size="small"
+                              color="info"
+                              component={Link}
+                              href={`/dashboard/expense/${expense.id}/view`}
+                            >
+                              <Eye />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => { handleEdit(expense); }}
+                              disabled={expense.paid}
+                            >
+                              <PencilSimple />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => { handleDelete(expense); }}
+                              disabled={expense.paid}
+                            >
+                              <Trash />
+                            </IconButton>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
           </Card>
         </Stack>
       </Container>
+
+      {/* Expense Form Dialog */}
+      <Dialog open={formOpen} onClose={() => { setFormOpen(false); }} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {formMode === 'create' ? 'Create New Expense' : 'Edit Expense'}
+        </DialogTitle>
+        <DialogContent>
+          <ExpenseForm
+            expense={selectedExpense}
+            mode={formMode}
+            onSuccess={handleFormSuccess}
+            onClose={() => { setFormOpen(false); }}
+            open={formOpen}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => { setDeleteDialogOpen(false); }}>
+        <DialogTitle>Delete Expense</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this expense?
+          </Typography>
+          {expenseToDelete ? <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {expenseToDelete.description} - {formatCurrency(expenseToDelete.amount)}
+            </Typography> : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setDeleteDialogOpen(false); }}>
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 } 

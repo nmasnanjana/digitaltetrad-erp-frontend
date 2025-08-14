@@ -16,33 +16,44 @@ export function AuthGuard({ children }: AuthGuardProps): React.JSX.Element | nul
   const { user, error, isLoading } = useUser();
   const [isChecking, setIsChecking] = React.useState<boolean>(true);
 
+  console.log('[AuthGuard] State:', { user: Boolean(user), error, isLoading, isChecking });
+
   const checkPermissions = async (): Promise<void> => {
+    console.log('[AuthGuard] checkPermissions called');
     if (isLoading) {
+      console.log('[AuthGuard] Still loading, returning');
       return;
     }
 
     if (error) {
+      console.log('[AuthGuard] Error detected:', error);
       setIsChecking(false);
       return;
     }
 
     if (!user) {
+      console.log('[AuthGuard] No user, redirecting to sign in');
       logger.debug('[AuthGuard]: User is not logged in, redirecting to sign in');
       router.replace(paths.auth.signIn);
       return;
     }
 
+    console.log('[AuthGuard] User authenticated, showing dashboard');
     setIsChecking(false);
   };
 
   React.useEffect(() => {
-    checkPermissions().catch(() => {
-      // noop
-    });
+    // Only run checkPermissions when loading is complete
+    if (!isLoading) {
+      checkPermissions().catch(() => {
+        // noop
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Expected
   }, [user, error, isLoading]);
 
-  if (isChecking) {
+  // Show loading state while checking
+  if (isLoading || isChecking) {
     return null;
   }
 

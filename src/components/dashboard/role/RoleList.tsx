@@ -25,7 +25,7 @@ import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/auth/client';
 import type { Role } from '@/types/role';
 
-export const RoleList = () => {
+export function RoleList() {
   const router = useRouter();
   const [roles, setRoles] = useState<Role[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
@@ -125,18 +125,16 @@ export const RoleList = () => {
 
   return (
     <Box>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+      {error ? <Alert severity="error" sx={{ mb: 2 }}>
           {error}
-        </Alert>
-      )}
+        </Alert> : null}
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h4">Roles</Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
+          onClick={() => { handleOpenDialog(); }}
         >
           Add Role
         </Button>
@@ -192,7 +190,7 @@ export const RoleList = () => {
                   <TableCell align="right">
                     <IconButton
                       color="primary"
-                      onClick={() => handleOpenDialog(role)}
+                      onClick={() => { handleOpenDialog(role); }}
                     >
                       <EditIcon />
                     </IconButton>
@@ -219,7 +217,7 @@ export const RoleList = () => {
             label="Name"
             fullWidth
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={(e) => { setFormData({ ...formData, name: e.target.value }); }}
           />
           <TextField
             margin="dense"
@@ -228,7 +226,7 @@ export const RoleList = () => {
             multiline
             rows={4}
             value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            onChange={(e) => { setFormData({ ...formData, description: e.target.value }); }}
           />
         </DialogContent>
         <DialogActions>
@@ -240,4 +238,4 @@ export const RoleList = () => {
       </Dialog>
     </Box>
   );
-}; 
+} 

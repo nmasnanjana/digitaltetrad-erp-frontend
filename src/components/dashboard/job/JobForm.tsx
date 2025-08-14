@@ -14,12 +14,12 @@ import {
   InputLabel,
   Select,
 } from '@mui/material';
-import { createJob, updateJob } from '@/api/jobApi';
-import { Job } from '@/types/job';
+import { createJob, updateJob } from '@/api/job-api';
+import { type Job } from '@/types/job';
 import { getAllTeams } from '@/api/teamApi';
-import { getAllCustomers } from '@/api/customerApi';
-import { Team } from '@/types/team';
-import { Customer } from '@/types/customer';
+import { getAllCustomers } from '@/api/customer-api';
+import { type Team } from '@/types/team';
+import { type Customer } from '@/types/customer';
 
 interface JobFormProps {
   open: boolean;
@@ -165,11 +165,9 @@ const JobForm: React.FC<JobFormProps> = ({
           {mode === 'create' ? 'Create Job' : 'Edit Job'}
         </DialogTitle>
         <DialogContent>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+          {error ? <Alert severity="error" sx={{ mb: 2 }}>
               {error}
-            </Alert>
-          )}
+            </Alert> : null}
           {mode === 'create' && (
             <TextField
               autoFocus
@@ -178,7 +176,7 @@ const JobForm: React.FC<JobFormProps> = ({
               type="text"
               fullWidth
               value={jobId}
-              onChange={(e) => setJobId(e.target.value)}
+              onChange={(e) => { setJobId(e.target.value); }}
               required
               sx={{ mb: 2 }}
             />
@@ -189,7 +187,7 @@ const JobForm: React.FC<JobFormProps> = ({
             type="text"
             fullWidth
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => { setName(e.target.value); }}
             required
             sx={{ mb: 2 }}
           />
@@ -198,9 +196,9 @@ const JobForm: React.FC<JobFormProps> = ({
             <Select
               value={status}
               label="Status"
-              onChange={(e) => setStatus(e.target.value as Job['status'])}
+              onChange={(e) => { setStatus(e.target.value as Job['status']); }}
               required
-              disabled={true}
+              disabled
             >
               <MenuItem value="open">Open</MenuItem>
               <MenuItem value="in progress">In Progress</MenuItem>
@@ -215,7 +213,7 @@ const JobForm: React.FC<JobFormProps> = ({
             <Select
               value={type}
               label="Type"
-              onChange={(e) => setType(e.target.value as Job['type'])}
+              onChange={(e) => { setType(e.target.value as Job['type']); }}
               required
             >
               <MenuItem value="supply and installation">Supply and Installation</MenuItem>
@@ -228,7 +226,7 @@ const JobForm: React.FC<JobFormProps> = ({
             <Select
               value={teamId}
               label="Team"
-              onChange={(e) => setTeamId(Number(e.target.value))}
+              onChange={(e) => { setTeamId(Number(e.target.value)); }}
               required
             >
               {teams.map((team) => (
@@ -243,7 +241,7 @@ const JobForm: React.FC<JobFormProps> = ({
             <Select
               value={customerId}
               label="Customer"
-              onChange={(e) => setCustomerId(Number(e.target.value))}
+              onChange={(e) => { setCustomerId(Number(e.target.value)); }}
               required
             >
               {customers.map((customer) => (

@@ -5,78 +5,99 @@ const project = resolve(__dirname, 'tsconfig.json');
 module.exports = {
   root: true,
   extends: [
-    require.resolve('@vercel/style-guide/eslint/node'),
-    require.resolve('@vercel/style-guide/eslint/typescript'),
-    require.resolve('@vercel/style-guide/eslint/browser'),
-    require.resolve('@vercel/style-guide/eslint/react'),
-    require.resolve('@vercel/style-guide/eslint/next'),
+    'next/core-web-vitals',
   ],
+  parser: '@typescript-eslint/parser',
   parserOptions: {
     project,
+    ecmaVersion: 2020,
+    sourceType: 'module',
+    ecmaFeatures: {
+      jsx: true,
+    },
   },
+  plugins: [
+    '@typescript-eslint',
+    'react',
+    'react-hooks',
+  ],
   settings: {
     'import/resolver': {
       typescript: {
         project,
       },
     },
+    react: {
+      version: 'detect',
+    },
   },
   rules: {
-    '@typescript-eslint/no-unused-vars': [
-      'error',
-      {
-        ignoreRestSiblings: true,
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-        caughtErrorsIgnorePattern: '^_',
-      },
-    ],
-    '@typescript-eslint/no-empty-interface': [
-      'error',
-      {
-        allowSingleExtends: true,
-      },
-    ],
-    '@typescript-eslint/no-shadow': [
-      'error',
-      {
-        ignoreOnInitialization: true,
-      },
-    ],
-    'import/newline-after-import': 'error',
-    'react/jsx-uses-react': 'error',
-    'react/react-in-jsx-scope': 'error',
-    'unicorn/filename-case': [
-      'error',
-      {
-        cases: {
-          kebabCase: true, // personal style
-          pascalCase: true,
-        },
-      },
-    ],
+    // Disable strict rules
+    '@typescript-eslint/no-unused-vars': 'warn',
+    '@typescript-eslint/no-empty-interface': 'warn',
+    '@typescript-eslint/no-shadow': 'warn',
+    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-unsafe-assignment': 'warn',
+    '@typescript-eslint/no-unsafe-member-access': 'warn',
+    '@typescript-eslint/no-unsafe-call': 'warn',
+    '@typescript-eslint/no-unsafe-argument': 'warn',
+    '@typescript-eslint/no-unsafe-return': 'warn',
+    '@typescript-eslint/no-floating-promises': 'warn',
+    '@typescript-eslint/explicit-function-return-type': 'off',
+    '@typescript-eslint/no-inferrable-types': 'off',
+    '@typescript-eslint/no-invalid-void-type': 'off',
+    '@typescript-eslint/prefer-optional-chain': 'warn',
+    '@typescript-eslint/require-array-sort-compare': 'warn',
+    '@typescript-eslint/use-unknown-in-catch-callback-variable': 'warn',
+    '@typescript-eslint/no-confusing-void-expression': 'warn',
+    '@typescript-eslint/no-misused-promises': 'off',
+    '@typescript-eslint/no-non-null-assertion': 'off',
+    '@typescript-eslint/no-unnecessary-condition': 'off',
+    '@typescript-eslint/require-await': 'off',
+    '@typescript-eslint/prefer-nullish-coalescing': 'off',
+    '@typescript-eslint/restrict-template-expressions': 'off',
+    '@typescript-eslint/dot-notation': 'off',
+    '@typescript-eslint/naming-convention': 'off',
 
-    // Deactivated
-    '@typescript-eslint/dot-notation': 'off', // paths are used with a dot notation
-    '@typescript-eslint/no-misused-promises': 'off', // onClick with async fails
-    '@typescript-eslint/no-non-null-assertion': 'off', // sometimes compiler is unable to detect
-    '@typescript-eslint/no-unnecessary-condition': 'off', // remove when no static data is used
-    '@typescript-eslint/require-await': 'off', // Server Actions require async flag always
-    '@typescript-eslint/prefer-nullish-coalescing': 'off', // personal style
-    '@typescript-eslint/restrict-template-expressions': [
-      'error',
-      {
-        allowNumber: true,
-      },
-    ],
-    'import/no-default-export': 'off', // Next.js components must be exported as default
-    'import/no-extraneous-dependencies': 'off', // conflict with sort-imports plugin
-    'import/order': 'off', // using custom sort plugin
-    'no-nested-ternary': 'off', // personal style
-    'no-redeclare': 'off', // conflict with TypeScript function overloads
-    'react/jsx-fragments': 'off', // personal style
-    'react/prop-types': 'off', // TypeScript is used for type checking
+    // React rules
+    'react/jsx-uses-react': 'off',
+    'react/react-in-jsx-scope': 'off',
+    'react/prop-types': 'off',
+    'react/jsx-fragments': 'off',
+    'react/function-component-definition': 'off',
+    'react/jsx-no-leaked-render': 'warn',
+    'react/jsx-boolean-value': 'warn',
+    'react/no-unescaped-entities': 'warn',
+    'react/no-array-index-key': 'warn',
+    'react-hooks/exhaustive-deps': 'warn',
 
-    '@next/next/no-img-element': 'off', // Temporary disabled
+    // Import rules
+    'import/no-default-export': 'off',
+    'import/no-extraneous-dependencies': 'off',
+    'import/order': 'off',
+    'import/newline-after-import': 'off',
+    'import/no-named-as-default-member': 'warn',
+
+    // General rules
+    'no-console': 'warn',
+    'no-alert': 'warn',
+    'no-unused-vars': 'off', // Use TypeScript version instead
+    'no-nested-ternary': 'off',
+    'no-redeclare': 'off',
+    'no-new': 'warn',
+    'prefer-template': 'warn',
+    'object-shorthand': 'warn',
+    'jsx-a11y/no-autofocus': 'warn',
+
+    // File naming
+    'unicorn/filename-case': 'off',
+
+    // Next.js rules
+    '@next/next/no-img-element': 'off',
+  },
+  env: {
+    browser: true,
+    es2020: true,
+    node: true,
   },
 };

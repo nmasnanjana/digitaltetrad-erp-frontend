@@ -7,17 +7,18 @@ import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Unstable_Grid2';
 import { getTeamById } from '@/api/teamApi';
 import TeamForm from '@/components/dashboard/team/TeamForm';
-import { Team } from '@/types/team';
+import { type Team } from '@/types/team';
 import { Alert } from '@mui/material';
 
-export default function EditTeamPage(): React.JSX.Element {
+export default function TeamPage(): React.JSX.Element {
   const params = useParams();
   const router = useRouter();
-  const teamId = params.id as string;
   const [team, setTeam] = React.useState<Team | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [editDialogOpen, setEditDialogOpen] = React.useState(true);
+
+  const teamId = params?.id as string;
 
   React.useEffect(() => {
     const fetchTeam = async () => {
@@ -32,7 +33,9 @@ export default function EditTeamPage(): React.JSX.Element {
       }
     };
 
-    fetchTeam();
+    if (teamId) {
+      fetchTeam();
+    }
   }, [teamId]);
 
   const handleClose = () => {
@@ -44,6 +47,10 @@ export default function EditTeamPage(): React.JSX.Element {
     setEditDialogOpen(false);
     router.push('/dashboard/team');
   };
+
+  if (!teamId) {
+    return <Alert severity="error">Invalid team ID</Alert>;
+  }
 
   if (loading) {
     return <Typography>Loading...</Typography>;

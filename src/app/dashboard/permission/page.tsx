@@ -36,7 +36,8 @@ import { Edit as EditIcon, Save as SaveIcon, Search as SearchIcon } from '@mui/i
 import { paths } from '@/paths';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
-import { Permission, Role } from '@/types/permission';
+import { type Permission } from '@/types/permission';
+import { type Role } from '@/types/role';
 import { authClient } from '@/lib/auth/client';
 
 export default function PermissionPage() {
@@ -58,7 +59,7 @@ export default function PermissionPage() {
                 return;
             }
 
-            const hasPermission = user.role?.name === 'Developer' || user.role?.permissions?.some(
+            const hasPermission = user.role?.name === 'developer' || user.role?.permissions?.some(
                 p => p.module === 'permission' && (p.action === 'read' || p.action === 'assignpermissionstorole') && p.isActive
             );
 
@@ -192,11 +193,9 @@ export default function PermissionPage() {
                         </Stack>
                     </Stack>
 
-                    {error && (
-                        <Alert severity="error" sx={{ mb: 2 }}>
+                    {error ? <Alert severity="error" sx={{ mb: 2 }}>
                             {error}
-                        </Alert>
-                    )}
+                        </Alert> : null}
 
                     <Card sx={{ p: 2 }}>
                         <Stack spacing={2}>
@@ -204,7 +203,7 @@ export default function PermissionPage() {
                                 fullWidth
                                 placeholder="Search roles..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => { setSearchTerm(e.target.value); }}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
@@ -264,7 +263,7 @@ export default function PermissionPage() {
                                                     <TableCell align="right">
                                                         <Tooltip title="Edit Permissions">
                                                             <IconButton
-                                                                onClick={() => handleEditPermissions(role)}
+                                                                onClick={() => { handleEditPermissions(role); }}
                                                                 color="primary"
                                                                 size="small"
                                                             >
@@ -285,7 +284,7 @@ export default function PermissionPage() {
 
             <Dialog
                 open={openDialog}
-                onClose={() => setOpenDialog(false)}
+                onClose={() => { setOpenDialog(false); }}
                 maxWidth="md"
                 fullWidth
                 PaperProps={{
@@ -312,7 +311,7 @@ export default function PermissionPage() {
                                     control={
                                         <Checkbox
                                             checked={selectedPermissions.includes(permission.id)}
-                                            onChange={() => handlePermissionChange(permission.id)}
+                                            onChange={() => { handlePermissionChange(permission.id); }}
                                             color="primary"
                                         />
                                     }
@@ -321,11 +320,9 @@ export default function PermissionPage() {
                                             <Typography variant="body2">
                                                 {`${permission.module}.${permission.action}`}
                                             </Typography>
-                                            {permission.description && (
-                                                <Typography variant="caption" color="text.secondary">
+                                            {permission.description ? <Typography variant="caption" color="text.secondary">
                                                     {permission.description}
-                                                </Typography>
-                                            )}
+                                                </Typography> : null}
                                         </Stack>
                                     }
                                 />
@@ -336,7 +333,7 @@ export default function PermissionPage() {
                 <Divider />
                 <DialogActions sx={{ p: 2 }}>
                     <Button 
-                        onClick={() => setOpenDialog(false)}
+                        onClick={() => { setOpenDialog(false); }}
                         variant="outlined"
                     >
                         Cancel

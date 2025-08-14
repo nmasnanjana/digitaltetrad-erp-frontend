@@ -8,11 +8,11 @@ interface User {
     role?: {
         id: string;
         name: string;
-        permissions?: Array<{
+        permissions?: {
             id: string;
             module: string;
             action: string;
-        }>;
+        }[];
     };
 }
 

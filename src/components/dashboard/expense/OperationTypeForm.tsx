@@ -13,7 +13,7 @@ import {
   Switch,
 } from '@mui/material';
 import { createOperationType, updateOperationType } from '@/api/operationTypeApi';
-import { OperationType } from '@/types/operationType';
+import { type OperationType } from '@/types/operationType';
 
 interface OperationTypeFormProps {
   open: boolean;
@@ -80,7 +80,7 @@ const OperationTypeForm: React.FC<OperationTypeFormProps> = ({
       if (mode === 'create') {
         await createOperationType(data);
       } else if (operationType) {
-        await updateOperationType(operationType.id.toString(), data);
+        await updateOperationType(operationType.id, data);
       }
       onSuccess();
       handleClose();
@@ -98,18 +98,16 @@ const OperationTypeForm: React.FC<OperationTypeFormProps> = ({
           {mode === 'create' ? 'Create Operation Type' : 'Edit Operation Type'}
         </DialogTitle>
         <DialogContent>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+          {error ? <Alert severity="error" sx={{ mb: 2 }}>
               {error}
-            </Alert>
-          )}
+            </Alert> : null}
           <TextField
             margin="dense"
             label="Name"
             type="text"
             fullWidth
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => { setName(e.target.value); }}
             required
           />
           <TextField
@@ -118,7 +116,7 @@ const OperationTypeForm: React.FC<OperationTypeFormProps> = ({
             type="text"
             fullWidth
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => { setDescription(e.target.value); }}
             multiline
             rows={3}
           />
@@ -126,7 +124,7 @@ const OperationTypeForm: React.FC<OperationTypeFormProps> = ({
             control={
               <Switch
                 checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
+                onChange={(e) => { setIsActive(e.target.checked); }}
               />
             }
             label="Active"

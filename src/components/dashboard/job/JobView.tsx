@@ -1,6 +1,8 @@
+"use client";
+
 import React, { useEffect, useState } from 'react';
-import { Job } from '@/types/job';
-import { Expense } from '@/types/expense';
+import { type Job } from '@/types/job';
+import { type Expense } from '@/types/expense';
 import {
   Box,
   Card,
@@ -26,24 +28,28 @@ import {
   IconButton,
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
-import { getExpensesByJob } from '@/api/expenseApi';
-import { uploadHuaweiPoExcel, getHuaweiPosByJobId, deleteHuaweiPoByJobId, downloadHuaweiPoFile, createHuaweiPo, updateHuaweiPo, deleteHuaweiPo } from '@/api/huaweiPoApi';
+import { getExpensesByJob } from '@/api/expense-api';
+import { uploadHuaweiPoExcel, getHuaweiPosByJobId, deleteHuaweiPoByJobId, downloadHuaweiPoFile, createHuaweiPo, updateHuaweiPo, deleteHuaweiPo } from '@/api/huawei-po-api';
+import { useSettings } from '@/contexts/SettingsContext';
 import * as XLSX from 'xlsx';
 import LockIcon from '@mui/icons-material/Lock';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 interface HuaweiPoData {
-  site_code: string;
-  site_id: string;
-  site_name: string;
-  po_no: string;
-  line_no: string;
-  item_code: string;
-  item_description: string;
-  unit_price: number;
-  requested_quantity: number;
-  invoiced_percentage: number;
+  id: number;
+  customerId: number;
+  siteCode: string;
+  siteId: string;
+  siteName: string;
+  poNo: string;
+  lineNo: string;
+  itemCode: string;
+  itemDescription: string;
+  unitPrice: number;
+  requestedQuantity: number;
+  invoicedPercentage: number;
+  uploadedAt?: string;
 }
 
 interface AddPoFormProps {
@@ -66,15 +72,15 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
   isEdit = false
 }) => {
   const [formData, setFormData] = useState({
-    site_code: initialData?.site_code || '',
-    site_id: initialData?.site_id || '',
-    site_name: initialData?.site_name || '',
-    po_no: initialData?.po_no || '',
-    line_no: initialData?.line_no || '',
-    item_code: initialData?.item_code || '',
-    item_description: initialData?.item_description || '',
-    unit_price: initialData?.unit_price || 0,
-    requested_quantity: initialData?.requested_quantity || 0
+    siteCode: initialData?.siteCode || '',
+    siteId: initialData?.siteId || '',
+    siteName: initialData?.siteName || '',
+    poNo: initialData?.poNo || '',
+    lineNo: initialData?.lineNo || '',
+    itemCode: initialData?.itemCode || '',
+    itemDescription: initialData?.itemDescription || '',
+    unitPrice: initialData?.unitPrice || 0,
+    requestedQuantity: initialData?.requestedQuantity || 0
   });
 
   const handleInputChange = (field: string, value: string | number) => {
@@ -87,7 +93,15 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
-      ...formData,
+      site_code: formData.siteCode,
+      site_id: formData.siteId,
+      site_name: formData.siteName,
+      po_no: formData.poNo,
+      line_no: formData.lineNo,
+      item_code: formData.itemCode,
+      item_description: formData.itemDescription,
+      unit_price: formData.unitPrice,
+      requested_quantity: formData.requestedQuantity,
       job_id: jobId,
       customer_id: customerId
     });
@@ -100,8 +114,8 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
           <TextField
             fullWidth
             label="Site Code"
-            value={formData.site_code}
-            onChange={(e) => handleInputChange('site_code', e.target.value)}
+            value={formData.siteCode}
+            onChange={(e) => { handleInputChange('siteCode', e.target.value); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -111,8 +125,8 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
           <TextField
             fullWidth
             label="Site ID"
-            value={formData.site_id}
-            onChange={(e) => handleInputChange('site_id', e.target.value)}
+            value={formData.siteId}
+            onChange={(e) => { handleInputChange('siteId', e.target.value); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -122,8 +136,8 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
           <TextField
             fullWidth
             label="Site Name"
-            value={formData.site_name}
-            onChange={(e) => handleInputChange('site_name', e.target.value)}
+            value={formData.siteName}
+            onChange={(e) => { handleInputChange('siteName', e.target.value); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -133,8 +147,8 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
           <TextField
             fullWidth
             label="PO Number"
-            value={formData.po_no}
-            onChange={(e) => handleInputChange('po_no', e.target.value)}
+            value={formData.poNo}
+            onChange={(e) => { handleInputChange('poNo', e.target.value); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -144,8 +158,8 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
           <TextField
             fullWidth
             label="PO Line Number"
-            value={formData.line_no}
-            onChange={(e) => handleInputChange('line_no', e.target.value)}
+            value={formData.lineNo}
+            onChange={(e) => { handleInputChange('lineNo', e.target.value); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -155,8 +169,8 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
           <TextField
             fullWidth
             label="Item Code"
-            value={formData.item_code}
-            onChange={(e) => handleInputChange('item_code', e.target.value)}
+            value={formData.itemCode}
+            onChange={(e) => { handleInputChange('itemCode', e.target.value); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -167,8 +181,8 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
             fullWidth
             label="Unit Price"
             type="number"
-            value={formData.unit_price}
-            onChange={(e) => handleInputChange('unit_price', parseFloat(e.target.value) || 0)}
+            value={formData.unitPrice}
+            onChange={(e) => { handleInputChange('unitPrice', parseFloat(e.target.value) || 0); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -180,8 +194,8 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
             fullWidth
             label="Requested Quantity"
             type="number"
-            value={formData.requested_quantity}
-            onChange={(e) => handleInputChange('requested_quantity', parseInt(e.target.value) || 0)}
+            value={formData.requestedQuantity}
+            onChange={(e) => { handleInputChange('requestedQuantity', parseInt(e.target.value) || 0); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -192,8 +206,8 @@ const AddPoForm: React.FC<AddPoFormProps> = ({
           <TextField
             fullWidth
             label="Item Description"
-            value={formData.item_description}
-            onChange={(e) => handleInputChange('item_description', e.target.value)}
+            value={formData.itemDescription}
+            onChange={(e) => { handleInputChange('itemDescription', e.target.value); }}
             required
             disabled={isSubmitting}
             size="small"
@@ -232,6 +246,9 @@ export const JobView: React.FC<JobViewProps> = ({
   onDelete,
   onUpdateStatus,
 }) => {
+  const { formatCurrency } = useSettings();
+  
+  const router = useRouter();
   const [statusDialogOpen, setStatusDialogOpen] = React.useState(false);
   const [nextStatus, setNextStatus] = React.useState<Job['status'] | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -406,16 +423,19 @@ export const JobView: React.FC<JobViewProps> = ({
         const row = jsonData[i] as any[];
         if (row && row.some(cell => cell !== undefined && cell !== null && cell !== '')) {
           processedData.push({
-            site_code: row[columnMap.site_code]?.toString() || '',
-            site_id: row[columnMap.site_id]?.toString() || '',
-            site_name: row[columnMap.site_name]?.toString() || '',
-            po_no: row[columnMap.po_no]?.toString() || '',
-            line_no: row[columnMap.line_no]?.toString() || '',
-            item_code: row[columnMap.item_code]?.toString() || '',
-            item_description: row[columnMap.item_description]?.toString() || '',
-            unit_price: parseFloat(row[columnMap.unit_price]) || 0,
-            requested_quantity: parseInt(row[columnMap.requested_quantity]) || 0,
-            invoiced_percentage: 0, // Default value for new PO data
+            id: 0, // Temporary ID for new data
+            customerId: job.customer_id,
+            siteCode: row[columnMap.site_code]?.toString() || '',
+            siteId: row[columnMap.site_id]?.toString() || '',
+            siteName: row[columnMap.site_name]?.toString() || '',
+            poNo: row[columnMap.po_no]?.toString() || '',
+            lineNo: row[columnMap.line_no]?.toString() || '',
+            itemCode: row[columnMap.item_code]?.toString() || '',
+            itemDescription: row[columnMap.item_description]?.toString() || '',
+            unitPrice: parseFloat(row[columnMap.unit_price]) || 0,
+            requestedQuantity: parseInt(row[columnMap.requested_quantity]) || 0,
+            invoicedPercentage: 0, // Default value for new PO data
+            uploadedAt: undefined
           });
         }
       }
@@ -457,7 +477,7 @@ export const JobView: React.FC<JobViewProps> = ({
       
       // Show success message (you can add a toast notification here)
       const actionText = huaweiPoData.length === 0 ? 'uploaded' : 'updated';
-      alert(`Successfully ${actionText} ${response.data.records_imported} records for job ${job.id}`);
+      alert(`Successfully ${actionText} ${response.data.recordsImported} records for job ${job.id}`);
       
       // Close dialog and reset state
       setUploadDialogOpen(false);
@@ -500,7 +520,7 @@ export const JobView: React.FC<JobViewProps> = ({
       console.log('Delete successful:', response);
       
       // Show success message
-      alert(`Successfully deleted ${response.data.records_deleted} Huawei PO records for job ${job.id}`);
+      alert(`Successfully deleted Huawei PO records for job ${job.id}`);
       
       // Close dialog
       setDeleteDialogOpen(false);
@@ -747,21 +767,17 @@ export const JobView: React.FC<JobViewProps> = ({
           </Grid>
         </Grid>
 
-        {loading && (
-          <Box sx={{ mt: 4 }}>
+        {loading ? <Box sx={{ mt: 4 }}>
             <Typography variant="h6" gutterBottom>
               Loading expenses...
             </Typography>
-          </Box>
-        )}
+          </Box> : null}
 
-        {error && (
-          <Box sx={{ mt: 4 }}>
+        {error ? <Box sx={{ mt: 4 }}>
             <Typography variant="h6" color="error" gutterBottom>
               Error loading expenses: {error}
             </Typography>
-          </Box>
-        )}
+          </Box> : null}
 
         {!loading && !error && expenses.length > 0 && (
           <Box sx={{ mt: 4 }}>
@@ -783,9 +799,9 @@ export const JobView: React.FC<JobViewProps> = ({
                     <TableRow key={expense.id}>
                       <TableCell>{expense.expenseType?.name || '-'}</TableCell>
                       <TableCell>{expense.description}</TableCell>
-                      <TableCell>${expense.amount.toFixed(2)}</TableCell>
+                      <TableCell>{formatCurrency(expense.amount)}</TableCell>
                       <TableCell>
-                        {expense.created_at ? new Date(expense.created_at).toLocaleDateString() : '-'}
+                        {expense.createdAt ? new Date(expense.createdAt).toLocaleDateString() : '-'}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -829,7 +845,7 @@ export const JobView: React.FC<JobViewProps> = ({
                     variant="outlined"
                     color="primary"
                     size="small"
-                    onClick={() => setAddPoDialogOpen(true)}
+                    onClick={() => { setAddPoDialogOpen(true); }}
                     disabled={areAllPosFrozen()}
                     title={areAllPosFrozen() ? "Cannot add - all PO records have been invoiced and are frozen" : ""}
                   >
@@ -848,7 +864,7 @@ export const JobView: React.FC<JobViewProps> = ({
                     variant="outlined"
                     color="error"
                     size="small"
-                    onClick={() => setDeleteDialogOpen(true)}
+                    onClick={() => { setDeleteDialogOpen(true); }}
                     disabled={isDeleting || hasInvoicedPos()}
                     title={hasInvoicedPos() ? "Cannot delete - some PO records have been invoiced" : ""}
                   >
@@ -858,22 +874,18 @@ export const JobView: React.FC<JobViewProps> = ({
               )}
             </Box>
             
-            {huaweiPoLoading && (
-              <Box sx={{ mt: 2 }}>
+            {huaweiPoLoading ? <Box sx={{ mt: 2 }}>
                 <Typography variant="body2" gutterBottom>
                   Loading Huawei PO data...
                 </Typography>
                 <LinearProgress />
-              </Box>
-            )}
+              </Box> : null}
 
-            {huaweiPoError && (
-              <Box sx={{ mt: 2 }}>
+            {huaweiPoError ? <Box sx={{ mt: 2 }}>
                 <Typography variant="body2" color="error" gutterBottom>
                   Error loading Huawei PO data: {huaweiPoError}
                 </Typography>
-              </Box>
-            )}
+              </Box> : null}
 
             {!huaweiPoLoading && !huaweiPoError && huaweiPoData.length > 0 && (
               <TableContainer component={Paper} sx={{ maxHeight: 400, overflowX: 'auto' }}>
@@ -897,9 +909,9 @@ export const JobView: React.FC<JobViewProps> = ({
                   </TableHead>
                   <TableBody>
                     {huaweiPoData.map((po, index) => {
-                      const invoicedPercentage = typeof po.invoiced_percentage === 'string' ? 
-                        parseFloat(po.invoiced_percentage) : 
-                        typeof po.invoiced_percentage === 'number' ? po.invoiced_percentage : 0;
+                      const invoicedPercentage = typeof po.invoicedPercentage === 'string' ? 
+                        parseFloat(po.invoicedPercentage) : 
+                        typeof po.invoicedPercentage === 'number' ? po.invoicedPercentage : 0;
                       const isFrozen = invoicedPercentage > 0;
                       
                       return (
@@ -912,22 +924,21 @@ export const JobView: React.FC<JobViewProps> = ({
                             }
                           }}
                         >
-                          <TableCell sx={{ minWidth: 100 }}>{po.site_code}</TableCell>
-                          <TableCell sx={{ minWidth: 100 }}>{po.site_id}</TableCell>
-                          <TableCell sx={{ minWidth: 150 }}>{po.site_name}</TableCell>
-                          <TableCell sx={{ minWidth: 120 }}>{po.po_no}</TableCell>
-                          <TableCell sx={{ minWidth: 120 }}>{po.line_no}</TableCell>
-                          <TableCell sx={{ minWidth: 120 }}>{po.item_code}</TableCell>
+                          <TableCell sx={{ minWidth: 100 }}>{po.siteCode}</TableCell>
+                          <TableCell sx={{ minWidth: 100 }}>{po.siteId}</TableCell>
+                          <TableCell sx={{ minWidth: 150 }}>{po.siteName}</TableCell>
+                          <TableCell sx={{ minWidth: 120 }}>{po.poNo}</TableCell>
+                          <TableCell sx={{ minWidth: 120 }}>{po.lineNo}</TableCell>
+                          <TableCell sx={{ minWidth: 120 }}>{po.itemCode}</TableCell>
                           <TableCell sx={{ minWidth: 200 }}>
                             <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
-                              {po.item_description}
+                              {po.itemDescription}
                             </Typography>
                           </TableCell>
                           <TableCell sx={{ minWidth: 100 }}>
-                            ${typeof po.unit_price === 'number' ? po.unit_price.toFixed(2) : 
-                              po.unit_price ? parseFloat(po.unit_price).toFixed(2) : '0.00'}
+                            {formatCurrency(po.unitPrice)}
                           </TableCell>
-                          <TableCell sx={{ minWidth: 120 }}>{po.requested_quantity}</TableCell>
+                          <TableCell sx={{ minWidth: 120 }}>{po.requestedQuantity}</TableCell>
                           <TableCell sx={{ minWidth: 120 }}>
                             {invoicedPercentage > 0 ? `${invoicedPercentage}%` : '-'}
                           </TableCell>
@@ -957,12 +968,12 @@ export const JobView: React.FC<JobViewProps> = ({
                             )}
                           </TableCell>
                           <TableCell sx={{ minWidth: 120 }}>
-                            {po.uploaded_at ? new Date(po.uploaded_at).toLocaleDateString() : '-'}
+                            {po.uploadedAt ? new Date(po.uploadedAt).toLocaleDateString() : '-'}
                           </TableCell>
                           <TableCell sx={{ minWidth: 100 }}>
                             <IconButton
                               size="small"
-                              onClick={() => openEditPoDialog(po)}
+                              onClick={() => { openEditPoDialog(po); }}
                               disabled={isFrozen}
                               title="Edit PO"
                             >
@@ -1056,13 +1067,13 @@ export const JobView: React.FC<JobViewProps> = ({
         </Box>
       </CardContent>
 
-      <Dialog open={statusDialogOpen} onClose={() => setStatusDialogOpen(false)}>
+      <Dialog open={statusDialogOpen} onClose={() => { setStatusDialogOpen(false); }}>
         <DialogTitle>Update Job Status</DialogTitle>
         <DialogContent>
           Are you sure you want to update the job status to {nextStatus}?
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => { setStatusDialogOpen(false); }}>Cancel</Button>
           <Button onClick={handleStatusUpdate} color="primary">
             Update
           </Button>
@@ -1072,7 +1083,7 @@ export const JobView: React.FC<JobViewProps> = ({
       {/* Upload Dialog */}
       <Dialog 
         open={uploadDialogOpen} 
-        onClose={() => setUploadDialogOpen(false)}
+        onClose={() => { setUploadDialogOpen(false); }}
         maxWidth="lg"
         fullWidth
       >
@@ -1080,8 +1091,7 @@ export const JobView: React.FC<JobViewProps> = ({
           {huaweiPoData.length === 0 ? 'Upload PO Excel File' : 'PO Variations - Update Existing PO Data'}
         </DialogTitle>
         <DialogContent>
-          {isProcessing && (
-            <Box sx={{ mb: 2 }}>
+          {isProcessing ? <Box sx={{ mb: 2 }}>
               <Typography variant="body2" gutterBottom>
                 Processing Excel file...
               </Typography>
@@ -1089,8 +1099,7 @@ export const JobView: React.FC<JobViewProps> = ({
               <Typography variant="caption" color="text.secondary">
                 {processingProgress}% Complete
               </Typography>
-            </Box>
-          )}
+            </Box> : null}
 
           {!isProcessing && excelData.length > 0 && (
             <Box>
@@ -1125,8 +1134,8 @@ export const JobView: React.FC<JobViewProps> = ({
                         <TableCell>
                           <TextField
                             size="small"
-                            value={row.site_code}
-                            onChange={(e) => handleDataEdit(index, 'site_code', e.target.value)}
+                            value={row.siteCode}
+                            onChange={(e) => { handleDataEdit(index, 'siteCode', e.target.value); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1134,8 +1143,8 @@ export const JobView: React.FC<JobViewProps> = ({
                         <TableCell>
                           <TextField
                             size="small"
-                            value={row.site_id}
-                            onChange={(e) => handleDataEdit(index, 'site_id', e.target.value)}
+                            value={row.siteId}
+                            onChange={(e) => { handleDataEdit(index, 'siteId', e.target.value); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1143,8 +1152,8 @@ export const JobView: React.FC<JobViewProps> = ({
                         <TableCell>
                           <TextField
                             size="small"
-                            value={row.site_name}
-                            onChange={(e) => handleDataEdit(index, 'site_name', e.target.value)}
+                            value={row.siteName}
+                            onChange={(e) => { handleDataEdit(index, 'siteName', e.target.value); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1152,8 +1161,8 @@ export const JobView: React.FC<JobViewProps> = ({
                         <TableCell>
                           <TextField
                             size="small"
-                            value={row.po_no}
-                            onChange={(e) => handleDataEdit(index, 'po_no', e.target.value)}
+                            value={row.poNo}
+                            onChange={(e) => { handleDataEdit(index, 'poNo', e.target.value); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1161,8 +1170,8 @@ export const JobView: React.FC<JobViewProps> = ({
                         <TableCell>
                           <TextField
                             size="small"
-                            value={row.line_no}
-                            onChange={(e) => handleDataEdit(index, 'line_no', e.target.value)}
+                            value={row.lineNo}
+                            onChange={(e) => { handleDataEdit(index, 'lineNo', e.target.value); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1170,8 +1179,8 @@ export const JobView: React.FC<JobViewProps> = ({
                         <TableCell>
                           <TextField
                             size="small"
-                            value={row.item_code}
-                            onChange={(e) => handleDataEdit(index, 'item_code', e.target.value)}
+                            value={row.itemCode}
+                            onChange={(e) => { handleDataEdit(index, 'itemCode', e.target.value); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1179,8 +1188,8 @@ export const JobView: React.FC<JobViewProps> = ({
                         <TableCell>
                           <TextField
                             size="small"
-                            value={row.item_description}
-                            onChange={(e) => handleDataEdit(index, 'item_description', e.target.value)}
+                            value={row.itemDescription}
+                            onChange={(e) => { handleDataEdit(index, 'itemDescription', e.target.value); }}
                             variant="standard"
                             multiline
                             maxRows={2}
@@ -1191,8 +1200,8 @@ export const JobView: React.FC<JobViewProps> = ({
                           <TextField
                             size="small"
                             type="number"
-                            value={row.unit_price}
-                            onChange={(e) => handleDataEdit(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                            value={row.unitPrice}
+                            onChange={(e) => { handleDataEdit(index, 'unitPrice', parseFloat(e.target.value) || 0); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1201,8 +1210,8 @@ export const JobView: React.FC<JobViewProps> = ({
                           <TextField
                             size="small"
                             type="number"
-                            value={row.requested_quantity}
-                            onChange={(e) => handleDataEdit(index, 'requested_quantity', parseInt(e.target.value) || 0)}
+                            value={row.requestedQuantity}
+                            onChange={(e) => { handleDataEdit(index, 'requestedQuantity', parseInt(e.target.value) || 0); }}
                             variant="standard"
                             disabled={isProcessing}
                           />
@@ -1215,14 +1224,12 @@ export const JobView: React.FC<JobViewProps> = ({
             </Box>
           )}
 
-          {isProcessing && (
-            <Box sx={{ mt: 2 }}>
+          {isProcessing ? <Box sx={{ mt: 2 }}>
               <Typography variant="body2" gutterBottom>
                 Uploading data to server...
               </Typography>
               <LinearProgress />
-            </Box>
-          )}
+            </Box> : null}
 
           {!isProcessing && excelData.length === 0 && !error && (
             <Typography variant="body2" color="text.secondary">
@@ -1230,14 +1237,12 @@ export const JobView: React.FC<JobViewProps> = ({
             </Typography>
           )}
 
-          {error && (
-            <Typography variant="body2" color="error">
+          {error ? <Typography variant="body2" color="error">
               {error}
-            </Typography>
-          )}
+            </Typography> : null}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUploadDialogOpen(false)} disabled={isProcessing}>
+          <Button onClick={() => { setUploadDialogOpen(false); }} disabled={isProcessing}>
             Cancel
           </Button>
           {excelData.length > 0 && (
@@ -1257,7 +1262,7 @@ export const JobView: React.FC<JobViewProps> = ({
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={() => { setDeleteDialogOpen(false); }}>
         <DialogTitle>Delete Huawei PO Data</DialogTitle>
         <DialogContent>
           {hasInvoicedPos() ? (
@@ -1312,7 +1317,7 @@ export const JobView: React.FC<JobViewProps> = ({
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
+          <Button onClick={() => { setDeleteDialogOpen(false); }} disabled={isDeleting}>
             {hasInvoicedPos() ? 'Close' : 'Cancel'}
           </Button>
           {!hasInvoicedPos() && (
@@ -1331,7 +1336,7 @@ export const JobView: React.FC<JobViewProps> = ({
       {/* Add PO Dialog */}
       <Dialog 
         open={addPoDialogOpen} 
-        onClose={() => setAddPoDialogOpen(false)}
+        onClose={() => { setAddPoDialogOpen(false); }}
         maxWidth="md"
         fullWidth
       >
@@ -1339,7 +1344,7 @@ export const JobView: React.FC<JobViewProps> = ({
         <DialogContent>
           <AddPoForm 
             onSubmit={handleAddPo}
-            onCancel={() => setAddPoDialogOpen(false)}
+            onCancel={() => { setAddPoDialogOpen(false); }}
             isSubmitting={isEditingPo}
             jobId={job.id}
             customerId={job.customer_id}
@@ -1359,8 +1364,7 @@ export const JobView: React.FC<JobViewProps> = ({
       >
         <DialogTitle>Edit PO</DialogTitle>
         <DialogContent>
-          {selectedPoForEdit && (
-            <AddPoForm 
+          {selectedPoForEdit ? <AddPoForm 
               onSubmit={handleEditPo}
               onCancel={() => {
                 setEditPoDialogOpen(false);
@@ -1370,9 +1374,8 @@ export const JobView: React.FC<JobViewProps> = ({
               jobId={job.id}
               customerId={job.customer_id}
               initialData={selectedPoForEdit}
-              isEdit={true}
-            />
-          )}
+              isEdit
+            /> : null}
         </DialogContent>
       </Dialog>
     </Card>

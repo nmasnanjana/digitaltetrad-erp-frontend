@@ -1,14 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getAllExpenses, deleteExpense } from '@/api/expenseApi';
-import { getAllExpenseTypes } from '@/api/expenseApi';
-import { getAllJobs } from '@/api/jobApi';
+import { getAllExpenses, deleteExpense , getAllExpenseTypes } from '@/api/expense-api';
+import { getAllJobs } from '@/api/job-api';
 import { getAllOperationTypes } from '@/api/operationTypeApi';
-import { Expense } from '@/types/expense';
-import { ExpenseType } from '@/types/expense';
-import { Job } from '@/types/job';
-import { OperationType } from '@/types/operationType';
+import { type Expense , type ExpenseType } from '@/types/expense';
+import { type Job } from '@/types/job';
+import { type OperationType } from '@/types/operationType';
+import { useSettings } from '@/contexts/SettingsContext';
 import {
   Box,
   Button,
@@ -30,10 +29,12 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
 import ExpenseForm from './ExpenseForm';
-import { ExpenseFilters, ExpenseFilters as ExpenseFiltersType } from './ExpenseFilters';
+import { ExpenseFilters, type ExpenseFilters as ExpenseFiltersType } from './ExpenseFilters';
 import { useRouter } from 'next/navigation';
 
 export const ExpenseList: React.FC = () => {
+  const { formatCurrency } = useSettings();
+  
   const router = useRouter();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +52,7 @@ export const ExpenseList: React.FC = () => {
     try {
       setLoading(true);
       const [expensesResponse, expenseTypesResponse, jobsResponse, operationTypesResponse] = await Promise.all([
-        getAllExpenses(filters),
+        getAllExpenses(),
         getAllExpenseTypes(),
         getAllJobs(),
         getAllOperationTypes()
@@ -144,11 +145,9 @@ export const ExpenseList: React.FC = () => {
         </Button>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+      {error ? <Alert severity="error" sx={{ mb: 2 }}>
           {error}
-        </Alert>
-      )}
+        </Alert> : null}
 
       <ExpenseFilters
         filters={filters}
@@ -182,11 +181,11 @@ export const ExpenseList: React.FC = () => {
                     size="small"
                   />
                 </TableCell>
-                <TableCell>LKR {expense.amount.toFixed(2)}</TableCell>
+                <TableCell>{formatCurrency(expense.amount)}</TableCell>
                 <TableCell>
                   <Chip
                     label={expense.status}
-                    color={getStatusColor(expense.status)}
+                    color={getStatusColor(expense.status || 'on_progress')}
                     size="small"
                   />
                 </TableCell>
@@ -198,18 +197,18 @@ export const ExpenseList: React.FC = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  {new Date(expense.createdAt).toLocaleDateString()}
+                  {expense.created_at ? new Date(expense.created_at).toLocaleDateString() : '-'}
                 </TableCell>
                 <TableCell align="right">
                   <IconButton
                     color="primary"
-                    onClick={() => router.push(`/dashboard/expense/${expense.id}/view`)}
+                    onClick={() => { router.push(`/dashboard/expense/${expense.id}/view`); }}
                   >
                     <VisibilityIcon />
                   </IconButton>
                   <IconButton
                     color="primary"
-                    onClick={() => handleEdit(expense)}
+                    onClick={() => { handleEdit(expense); }}
                     disabled={expense.status === 'approved'}
                   >
                     <EditIcon />
@@ -228,13 +227,13 @@ export const ExpenseList: React.FC = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={() => { setDeleteDialogOpen(false); }}>
         <DialogTitle>Delete Expense</DialogTitle>
         <DialogContent>
           Are you sure you want to delete this expense?
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => { setDeleteDialogOpen(false); }}>Cancel</Button>
           <Button onClick={handleDeleteConfirm} color="error">
             Delete
           </Button>
@@ -243,7 +242,7 @@ export const ExpenseList: React.FC = () => {
 
       <ExpenseForm
         open={formOpen}
-        onClose={() => setFormOpen(false)}
+        onClose={() => { setFormOpen(false); }}
         onSuccess={handleFormSuccess}
         expense={selectedExpense}
         mode={formMode}

@@ -24,7 +24,7 @@ export default function Page(): React.JSX.Element {
           <Typography variant="h4">Teams</Typography>
         </Grid>
         <Grid xs="auto">
-          <Button variant="contained" onClick={() => setCreateDialogOpen(true)}>
+          <Button variant="contained" onClick={() => { setCreateDialogOpen(true); }}>
             Create Team
           </Button>
         </Grid>
@@ -37,7 +37,7 @@ export default function Page(): React.JSX.Element {
 
       <TeamForm
         open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
+        onClose={() => { setCreateDialogOpen(false); }}
         onSuccess={handleCreateSuccess}
         mode="create"
       />

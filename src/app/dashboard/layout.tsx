@@ -1,50 +1,41 @@
 import * as React from 'react';
-import Box from '@mui/material/Box';
-import Container from '@mui/material/Container';
-import GlobalStyles from '@mui/material/GlobalStyles';
+import type { Viewport } from 'next';
 
-import { AuthGuard } from '@/components/auth/auth-guard';
-import { MainNav } from '@/components/dashboard/layout/main-nav';
-import { SideNav } from '@/components/dashboard/layout/side-nav';
+import '@/styles/global.css';
 
-interface LayoutProps {
+import { UserProvider } from '@/contexts/user-context';
+import { LocalizationProvider } from '@/components/core/localization-provider';
+import { ThemeProvider } from '@/components/core/theme-provider/theme-provider';
+import { SettingsProvider } from '@/contexts/SettingsContext';
+import { ReactQueryProvider } from '@/lib/react-query/provider';
+import { FaviconUpdater } from '@/components/core/favicon-updater';
+import { DashboardLayout } from '@/components/dashboard/layout/dashboard-layout';
+
+export const viewport = { width: 'device-width', initialScale: 1 } satisfies Viewport;
+
+interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
-export default function Layout({ children }: LayoutProps): React.JSX.Element {
+export default function DashboardLayoutWrapper({ children }: DashboardLayoutProps): React.JSX.Element {
   return (
-    <AuthGuard>
-      <GlobalStyles
-        styles={{
-          body: {
-            '--MainNav-height': '56px',
-            '--MainNav-zIndex': 1000,
-            '--SideNav-width': '280px',
-            '--SideNav-zIndex': 1100,
-            '--MobileNav-width': '320px',
-            '--MobileNav-zIndex': 1100,
-          },
-        }}
-      />
-      <Box
-        sx={{
-          bgcolor: 'var(--mui-palette-background-default)',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-          minHeight: '100%',
-        }}
-      >
-        <SideNav />
-        <Box sx={{ display: 'flex', flex: '1 1 auto', flexDirection: 'column', pl: { lg: 'var(--SideNav-width)' } }}>
-          <MainNav />
-          <main>
-            <Container maxWidth="xl" sx={{ py: '64px' }}>
-              {children}
-            </Container>
-          </main>
-        </Box>
-      </Box>
-    </AuthGuard>
+    <html lang="en">
+      <body>
+        <LocalizationProvider>
+          <ReactQueryProvider>
+            <SettingsProvider>
+              <UserProvider>
+                <ThemeProvider>
+                  <DashboardLayout>
+                    {children}
+                  </DashboardLayout>
+                  <FaviconUpdater />
+                </ThemeProvider>
+              </UserProvider>
+            </SettingsProvider>
+          </ReactQueryProvider>
+        </LocalizationProvider>
+      </body>
+    </html>
   );
 }

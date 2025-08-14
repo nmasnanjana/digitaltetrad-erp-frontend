@@ -23,37 +23,73 @@ import {
   Select,
   MenuItem,
   Alert,
+  Chip,
 } from '@mui/material';
 import { CheckCircle } from '@phosphor-icons/react/dist/ssr/CheckCircle';
-import { getAllExpenses, approveExpense, rejectExpense } from '@/api/expenseApi';
-import { Expense } from '@/types/expense';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getAllExpenses, reviewExpense } from '@/api/expense-api';
+import { CACHE_KEYS, invalidateCache } from '@/lib/react-query/cache-manager';
+import { type Expense } from '@/types/expense';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useUser } from '@/contexts/user-context';
 
 export default function ExpenseApprovalPage() {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const { formatCurrency } = useSettings();
+  const { user } = useUser();
+  const queryClient = useQueryClient();
+  
+  // Get pending expenses with React Query
+  const { data: expenses = [], isLoading, error: queryError } = useQuery({
+    queryKey: [CACHE_KEYS.EXPENSES, 'pending'],
+    queryFn: async () => {
+      const response = await getAllExpenses();
+      return response.data.filter(expense => expense.status === 'on_progress');
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes for approval data
+    gcTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Review expense mutation
+  const reviewMutation = useMutation({
+    mutationFn: async ({ expenseId, status }: { expenseId: string; status: 'approved' | 'denied' }) => {
+      return reviewExpense(expenseId, {
+        status,
+        reviewed_by: user?.id?.toString() || '0',
+        reviewer_comment: reviewComment
+      });
+    },
+    onSuccess: () => {
+      // Invalidate expenses cache to refresh the list
+      invalidateCache.expenses();
+      // Also invalidate dashboard data
+      queryClient.invalidateQueries({ queryKey: [CACHE_KEYS.EXPENSE_DASHBOARD] });
+    },
+  });
+
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
-  const [reviewStatus, setReviewStatus] = useState<'approved' | 'rejected'>('approved');
+  const [reviewStatus, setReviewStatus] = useState<'approved' | 'denied'>('approved');
   const [reviewComment, setReviewComment] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [localError, setLocalError] = useState<string | null>(null);
+  // const [loading, setLoading] = useState(true); // This state is now managed by React Query
 
-  useEffect(() => {
-    fetchExpenses();
-  }, []);
+  // useEffect(() => {
+  //   fetchExpenses();
+  // }, []);
 
-  const fetchExpenses = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await getAllExpenses();
-      setExpenses(response.data);
-    } catch (error) {
-      console.error('Error fetching expenses:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load expenses. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const fetchExpenses = async () => {
+  //   try {
+  //     setLoading(true);
+  //     setError(null);
+  //     const response = await getAllExpenses();
+  //     setExpenses(response.data);
+  //   } catch (error) {
+  //     console.error('Error fetching expenses:', error);
+  //     setError(error instanceof Error ? error.message : 'Failed to load expenses. Please try again later.');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const handleReview = (expense: Expense) => {
     setSelectedExpense(expense);
@@ -62,28 +98,30 @@ export default function ExpenseApprovalPage() {
 
   const handleReviewSubmit = async () => {
     if (!selectedExpense) return;
+    
+    if (!user?.id) {
+      setLocalError('User not loaded. Please refresh the page and try again.');
+      return;
+    }
+    
+    console.log('Current user:', user);
+    console.log('User ID:', user.id);
+    console.log('User ID type:', typeof user.id);
 
     try {
-      setError(null);
+      setLocalError(null);
       
-      if (reviewStatus === 'approved') {
-        await approveExpense(selectedExpense.id, {
-          approved: true,
-          comment: reviewComment
-        });
-      } else {
-        await rejectExpense(selectedExpense.id, {
-          comment: reviewComment
-        });
-      }
+      console.log('Reviewing expense with user ID:', user.id);
+      
+      reviewMutation.mutate({ expenseId: selectedExpense.id.toString(), status: reviewStatus });
 
-      await fetchExpenses();
+      // await fetchExpenses(); // This is now handled by onSuccess of reviewMutation
       setReviewDialogOpen(false);
       setReviewComment('');
       setSelectedExpense(null);
     } catch (error) {
       console.error('Error reviewing expense:', error);
-      setError(error instanceof Error ? error.message : 'Failed to submit review. Please try again.');
+      setLocalError(error instanceof Error ? error.message : 'Failed to submit review. Please try again.');
     }
   };
 
@@ -91,17 +129,15 @@ export default function ExpenseApprovalPage() {
     switch (status) {
       case 'approved':
         return 'success.main';
-      case 'rejected':
+      case 'denied':
         return 'error.main';
       default:
         return 'warning.main';
     }
   };
 
-  // Filter job-related expenses
-  const jobRelatedExpenses = expenses.filter(expense => 
-    !expense.operations && expense.job_id && expense.status === 'pending'
-  );
+  // Filter expenses that need approval (both job and operation expenses with on_progress status)
+  const pendingExpenses = expenses;
 
   return (
     <Box
@@ -128,18 +164,17 @@ export default function ExpenseApprovalPage() {
             </Stack>
           </Stack>
 
-          {error && (
-            <Alert severity="error" onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          )}
+          {localError ? <Alert severity="error" onClose={() => { setLocalError(null); }}>
+              {localError}
+            </Alert> : null}
 
           <Card>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Job</TableCell>
+                  <TableCell>Category</TableCell>
                   <TableCell>Type</TableCell>
+                  <TableCell>Expense Type</TableCell>
                   <TableCell>Description</TableCell>
                   <TableCell>Amount</TableCell>
                   <TableCell>Status</TableCell>
@@ -147,7 +182,7 @@ export default function ExpenseApprovalPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {loading ? (
+                {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center">
                       <Typography color="text.secondary">
@@ -155,29 +190,38 @@ export default function ExpenseApprovalPage() {
                       </Typography>
                     </TableCell>
                   </TableRow>
-                ) : jobRelatedExpenses.length === 0 ? (
+                ) : pendingExpenses.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center">
+                    <TableCell colSpan={7} align="center">
                       <Typography color="text.secondary">
                         No expenses pending review
                       </Typography>
                     </TableCell>
                   </TableRow>
                 ) :
-                  jobRelatedExpenses.map((expense) => (
+                  pendingExpenses.map((expense) => (
                     <TableRow key={expense.id}>
-                      <TableCell>{expense.job?.name || 'N/A'}</TableCell>
+                      <TableCell>
+                        {expense.operations ? expense.operationType?.name || 'N/A' : expense.job?.name || 'N/A'}
+                      </TableCell>
                       <TableCell>{expense.expenseType?.name}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={expense.operations ? 'Operation' : 'Job'}
+                          color={expense.operations ? 'primary' : 'secondary'}
+                          size="small"
+                        />
+                      </TableCell>
                       <TableCell>{expense.description}</TableCell>
-                      <TableCell>${expense.amount.toFixed(2)}</TableCell>
+                      <TableCell>{formatCurrency(expense.amount)}</TableCell>
                       <TableCell>
                         <Typography
                           sx={{
-                            color: getStatusColor(expense.status),
+                            color: getStatusColor(expense.status || 'on_progress'),
                             fontWeight: 'bold',
                           }}
                         >
-                          {expense.status}
+                          {expense.status || 'on_progress'}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -186,7 +230,7 @@ export default function ExpenseApprovalPage() {
                             variant="contained"
                             color="success"
                             startIcon={<CheckCircle />}
-                            onClick={() => handleReview(expense)}
+                            onClick={() => { handleReview(expense); }}
                           >
                             Review
                           </Button>
@@ -201,7 +245,7 @@ export default function ExpenseApprovalPage() {
         </Stack>
       </Container>
 
-      <Dialog open={reviewDialogOpen} onClose={() => setReviewDialogOpen(false)}>
+      <Dialog open={reviewDialogOpen} onClose={() => { setReviewDialogOpen(false); }}>
         <DialogTitle>Review Expense</DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 2 }}>
@@ -210,10 +254,10 @@ export default function ExpenseApprovalPage() {
               <Select
                 value={reviewStatus}
                 label="Status"
-                onChange={(e) => setReviewStatus(e.target.value as 'approved' | 'rejected')}
+                onChange={(e) => { setReviewStatus(e.target.value as 'approved' | 'denied'); }}
               >
                 <MenuItem value="approved">Approve</MenuItem>
-                <MenuItem value="rejected">Reject</MenuItem>
+                <MenuItem value="denied">Deny</MenuItem>
               </Select>
             </FormControl>
             <TextField
@@ -222,12 +266,12 @@ export default function ExpenseApprovalPage() {
               multiline
               rows={4}
               value={reviewComment}
-              onChange={(e) => setReviewComment(e.target.value)}
+              onChange={(e) => { setReviewComment(e.target.value); }}
             />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setReviewDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => { setReviewDialogOpen(false); }}>Cancel</Button>
           <Button onClick={handleReviewSubmit} variant="contained">
             Submit Review
           </Button>

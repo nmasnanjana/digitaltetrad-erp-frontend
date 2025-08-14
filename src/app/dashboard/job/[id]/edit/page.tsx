@@ -5,18 +5,19 @@ import { useParams, useRouter } from 'next/navigation';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Unstable_Grid2';
-import { getJobById, updateJob } from '@/api/jobApi';
+import { getJobById, updateJob } from '@/api/job-api';
 import JobForm from '@/components/dashboard/job/JobForm';
-import { Job } from '@/types/job';
+import { type Job } from '@/types/job';
 import { Alert } from '@mui/material';
 
 export default function EditJobPage(): React.JSX.Element {
   const params = useParams();
   const router = useRouter();
-  const jobId = params.id as string;
   const [job, setJob] = React.useState<Job | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
+
+  const jobId = params?.id as string;
 
   const fetchJob = async () => {
     try {
@@ -31,7 +32,9 @@ export default function EditJobPage(): React.JSX.Element {
   };
 
   React.useEffect(() => {
-    fetchJob();
+    if (jobId) {
+      fetchJob();
+    }
   }, [jobId]);
 
   const handleSubmit = async (data: Partial<Job>) => {
@@ -42,6 +45,10 @@ export default function EditJobPage(): React.JSX.Element {
       setError(err instanceof Error ? err.message : 'Failed to update job');
     }
   };
+
+  if (!jobId) {
+    return <Alert severity="error">Invalid job ID</Alert>;
+  }
 
   if (loading) {
     return <Typography>Loading...</Typography>;
@@ -65,9 +72,9 @@ export default function EditJobPage(): React.JSX.Element {
       <Grid container spacing={3}>
         <Grid xs={12}>
           <JobForm
-            open={true}
-            onClose={() => router.push(`/dashboard/job/${jobId}/view`)}
-            onSuccess={() => router.push(`/dashboard/job/${jobId}/view`)}
+            open
+            onClose={() => { router.push(`/dashboard/job/${jobId}/view`); }}
+            onSuccess={() => { router.push(`/dashboard/job/${jobId}/view`); }}
             job={job}
             mode="edit"
           />

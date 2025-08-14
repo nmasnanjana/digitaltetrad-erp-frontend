@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { getAllTeams, deleteTeam } from '@/api/teamApi';
-import { Team } from '@/types/team';
+import { type Team } from '@/types/team';
 import {
   Box,
   Button,
@@ -64,11 +64,9 @@ export const ListTeam: React.FC = () => {
 
   return (
     <Box>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+      {error ? <Alert severity="error" sx={{ mb: 2 }}>
           {error}
-        </Alert>
-      )}
+        </Alert> : null}
 
       <TableContainer component={Paper}>
         <Table>
@@ -101,7 +99,7 @@ export const ListTeam: React.FC = () => {
                 <TableCell align="right">
                   <IconButton
                     color="primary"
-                    onClick={() => router.push(`/dashboard/team/${team.id}`)}
+                    onClick={() => { router.push(`/dashboard/team/${team.id}`); }}
                   >
                     <EditIcon />
                   </IconButton>
@@ -121,13 +119,13 @@ export const ListTeam: React.FC = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={() => { setDeleteDialogOpen(false); }}>
         <DialogTitle>Delete Team</DialogTitle>
         <DialogContent>
           Are you sure you want to delete team {selectedTeam?.name}?
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => { setDeleteDialogOpen(false); }}>Cancel</Button>
           <Button onClick={handleDelete} color="error">
             Delete
           </Button>

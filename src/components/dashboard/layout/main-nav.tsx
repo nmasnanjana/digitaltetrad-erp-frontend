@@ -12,6 +12,7 @@ import { List as ListIcon } from '@phosphor-icons/react/dist/ssr/List';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
+import { CacheClearButton } from './cache-clear-button';
 
 import { usePopover } from '@/hooks/use-popover';
 
@@ -74,6 +75,7 @@ export function MainNav(): React.JSX.Element {
                 </IconButton>
               </Badge>
             </Tooltip>
+            <CacheClearButton />
             <Avatar
               onClick={userPopover.handleOpen}
               ref={userPopover.anchorRef}

@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { getExpenseById, deleteExpense } from '@/api/expenseApi';
-import { Expense } from '@/types/expense';
+import { getExpenseById, deleteExpense } from '@/api/expense-api';
+import type { Expense } from '@/types/expense';
 import {
   Box,
   Button,
-  Paper,
   Typography,
   Grid,
   Chip,
@@ -16,9 +15,33 @@ import {
   DialogContent,
   DialogActions,
   Alert,
+  Card,
+  CardContent,
+  Divider,
+  Stack,
+  Container,
+  Skeleton,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  ArrowBack as ArrowBackIcon,
+  Receipt as ReceiptIcon,
+  AccountBalance as AccountBalanceIcon,
+  Person as PersonIcon,
+  Schedule as ScheduleIcon,
+  Comment as CommentIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  Pending as PendingIcon,
+  CreditCard as CreditCardIcon,
+  Work as WorkIcon,
+  Business as BusinessIcon,
+} from '@mui/icons-material';
 import ExpenseForm from '@/components/dashboard/expense/ExpenseForm';
+import { useSettings } from '@/contexts/SettingsContext';
 
 interface ExpenseViewPageProps {
   params: {
@@ -27,14 +50,63 @@ interface ExpenseViewPageProps {
 }
 
 const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
-  const router = useRouter();
-  const [expense, setExpense] = useState<Expense | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [formOpen, setFormOpen] = useState(false);
+  const { formatCurrency } = useSettings();
 
-  const loadExpense = async () => {
+  const formatDate = (dateString?: string): string => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString();
+  };
+
+  const getStatusIcon = (status: string, paid: boolean) => {
+    if (paid) return <CreditCardIcon color="success" />;
+    switch (status) {
+      case 'approved':
+        return <CheckCircleIcon color="success" />;
+      case 'denied':
+        return <CancelIcon color="error" />;
+      case 'on_progress':
+        return <PendingIcon color="warning" />;
+      default:
+        return <PendingIcon color="warning" />;
+    }
+  };
+
+  const getStatusColor = (status: string, paid: boolean): 'success' | 'error' | 'warning' | 'default' => {
+    if (paid) return 'success';
+    switch (status) {
+      case 'approved':
+        return 'success';
+      case 'denied':
+        return 'error';
+      case 'on_progress':
+        return 'warning';
+      default:
+        return 'default';
+    }
+  };
+
+  const formatStatus = (status: string, paid: boolean): string => {
+    if (paid) return 'Paid';
+    switch (status) {
+      case 'approved':
+        return 'Approved';
+      case 'denied':
+        return 'Denied';
+      case 'on_progress':
+        return 'In Progress';
+      default:
+        return status || 'Unknown';
+    }
+  };
+
+  const router = useRouter();
+  const [expense, setExpense] = React.useState<Expense | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [formOpen, setFormOpen] = React.useState(false);
+
+  const loadExpense = async (): Promise<void> => {
     try {
       setLoading(true);
       const response = await getExpenseById(params.id);
@@ -47,7 +119,7 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (): Promise<void> => {
     try {
       await deleteExpense(params.id);
       setDeleteDialogOpen(false);
@@ -57,216 +129,372 @@ const ExpenseViewPage: React.FC<ExpenseViewPageProps> = ({ params }) => {
     }
   };
 
-  useEffect(() => {
-    loadExpense();
+  React.useEffect(() => {
+    void loadExpense();
   }, [params.id]);
 
   if (loading) {
-    return <Typography>Loading...</Typography>;
+    return (
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Stack spacing={3}>
+          <Skeleton variant="rectangular" height={60} />
+          <Skeleton variant="rectangular" height={400} />
+        </Stack>
+      </Container>
+    );
   }
 
   if (error) {
-    return <Alert severity="error">{error}</Alert>;
+    return (
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Alert severity="error">{error}</Alert>
+      </Container>
+    );
   }
 
   if (!expense) {
-    return <Alert severity="error">Expense not found</Alert>;
+    return (
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Alert severity="error">Expense not found</Alert>
+      </Container>
+    );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => router.push('/dashboard/expense')}
-        >
-          Back to Expenses
-        </Button>
-        <Box>
-          {expense.status !== 'approved' && (
-            <>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<EditIcon />}
-            onClick={() => setFormOpen(true)}
-            sx={{ mr: 1 }}
-          >
-            Edit
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            startIcon={<DeleteIcon />}
-            onClick={() => setDeleteDialogOpen(true)}
-          >
-            Delete
-          </Button>
-            </>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Stack spacing={4}>
+        {/* Header */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <IconButton
+              onClick={() => {
+                router.push('/dashboard/expense');
+              }}
+              sx={{ color: 'primary.main' }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
+            <Box>
+              <Typography variant="h4" fontWeight="bold">
+                Expense Details
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                ID: {expense.id}
+              </Typography>
+            </Box>
+          </Stack>
+          
+          {!expense.paid && (
+            <Stack direction="row" spacing={1}>
+              <Tooltip title="Edit Expense">
+                <IconButton color="primary" onClick={() => {
+                  setFormOpen(true);
+                }}>
+                  <EditIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Delete Expense">
+                <IconButton color="error" onClick={() => {
+                  setDeleteDialogOpen(true);
+                }}>
+                  <DeleteIcon />
+                </IconButton>
+              </Tooltip>
+            </Stack>
           )}
         </Box>
-      </Box>
 
-      <Paper sx={{ p: 3 }}>
+        {/* Main Content */}
         <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Typography variant="h5" gutterBottom>
-              Expense Details
-            </Typography>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Expense Type
-            </Typography>
-            <Typography variant="body1">{expense.expenseType?.name}</Typography>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Category
-            </Typography>
-            <Chip
-              label={expense.operations ? 'Operation' : 'Job'}
-              color={expense.operations ? 'primary' : 'secondary'}
-            />
-          </Grid>
-          {expense.operations && expense.operationType && (
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Operation Type
-              </Typography>
-              <Typography variant="body1">{expense.operationType.name}</Typography>
-            </Grid>
-          )}
-          {!expense.operations && expense.job && (
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Job
-              </Typography>
-              <Typography variant="body1">{expense.job.name}</Typography>
-            </Grid>
-          )}
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Amount
-            </Typography>
-            <Typography variant="body1">LKR {expense.amount.toFixed(2)}</Typography>
-          </Grid>
-          <Grid item xs={12}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Description
-            </Typography>
-            <Typography variant="body1">{expense.description}</Typography>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Status
-            </Typography>
-            <Chip
-              label={expense.status.charAt(0).toUpperCase() + expense.status.slice(1).replace('_', ' ')}
-              color={
-                expense.status === 'approved' ? 'success' :
-                expense.status === 'rejected' ? 'error' :
-                'warning'
-              }
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Payment Status
-            </Typography>
-            <Chip
-              label={expense.paid ? 'Paid' : 'Unpaid'}
-              color={expense.paid ? 'success' : 'warning'}
-            />
-          </Grid>
-          {expense.editor && (
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Updated By
-              </Typography>
-              <Typography variant="body1">
-                {`${expense.editor.firstName} ${expense.editor.lastName || ''}`}
-              </Typography>
-            </Grid>
-          )}
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Created At
-            </Typography>
-            <Typography variant="body1">
-              {expense.createdAt ? new Date(expense.createdAt).toLocaleString() : '-'}
-            </Typography>
-          </Grid>
-          {expense.updatedAt && expense.updatedAt !== expense.createdAt && (
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Updated At
-              </Typography>
-              <Typography variant="body1">
-                {new Date(expense.updatedAt).toLocaleString()}
-              </Typography>
-            </Grid>
-          )}
-          {expense.reason_to_edit && (
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Reason for Update
-              </Typography>
-              <Typography variant="body1">{expense.reason_to_edit}</Typography>
-            </Grid>
-          )}
-          {expense.reviewer && (
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Reviewed By
-              </Typography>
-              <Typography variant="body1">
-                {`${expense.reviewer.firstName} ${expense.reviewer.lastName || ''}`}
-              </Typography>
-            </Grid>
-          )}
-          {expense.reviewed_at && (
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Reviewed At
-              </Typography>
-              <Typography variant="body1">
-                {new Date(expense.reviewed_at).toLocaleString()}
-              </Typography>
-            </Grid>
-          )}
-          {expense.reviewer_comment && (
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Reviewer Comment
-              </Typography>
-              <Typography variant="body1">{expense.reviewer_comment}</Typography>
-            </Grid>
-          )}
-        </Grid>
-      </Paper>
+          {/* Basic Information Card */}
+          <Grid item xs={12} lg={8}>
+            <Card elevation={2}>
+              <CardContent sx={{ p: 4 }}>
+                <Stack direction="row" spacing={3} alignItems="center" sx={{ mb: 4 }}>
+                  <ReceiptIcon color="primary" sx={{ fontSize: 40 }} />
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography variant="h5" fontWeight="bold" gutterBottom>
+                      {expense.description}
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary">
+                      {expense.expenseType?.name}
+                    </Typography>
+                  </Box>
+                </Stack>
 
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+                <Grid container spacing={4}>
+                  <Grid item xs={12} sm={6}>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <AccountBalanceIcon color="action" sx={{ fontSize: 28 }} />
+                      <Box>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          Total Amount
+                        </Typography>
+                        <Typography variant="h4" fontWeight="bold" color="primary">
+                          {formatCurrency(expense.amount)}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      {expense.operations ? <BusinessIcon color="action" sx={{ fontSize: 28 }} /> : <WorkIcon color="action" sx={{ fontSize: 28 }} />}
+                      <Box>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          Category
+                        </Typography>
+                        <Chip
+                          label={expense.operations ? 'Operation' : 'Job'}
+                          color={expense.operations ? 'primary' : 'secondary'}
+                          size="medium"
+                        />
+                      </Box>
+                    </Stack>
+                  </Grid>
+
+                  {expense.operations && expense.operationType ? <Grid item xs={12} sm={6}>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <BusinessIcon color="action" sx={{ fontSize: 28 }} />
+                        <Box>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            Operation Type
+                          </Typography>
+                          <Typography variant="h6" fontWeight="medium">
+                            {expense.operationType.name}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Grid> : null}
+
+                  {!expense.operations && expense.job ? <Grid item xs={12} sm={6}>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <WorkIcon color="action" sx={{ fontSize: 28 }} />
+                        <Box>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            Job
+                          </Typography>
+                          <Typography variant="h6" fontWeight="medium">
+                            {expense.job.name}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Grid> : null}
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Status Information Card */}
+          <Grid item xs={12} lg={4}>
+            <Card elevation={2}>
+              <CardContent sx={{ p: 4 }}>
+                <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+                  Status Information
+                </Typography>
+                
+                <Stack spacing={3}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Current Status
+                    </Typography>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      {getStatusIcon(expense.status || '', expense.paid)}
+                      <Chip
+                        label={formatStatus(expense.status || '', expense.paid)}
+                        color={getStatusColor(expense.status || '', expense.paid)}
+                        size="medium"
+                      />
+                    </Stack>
+                  </Box>
+
+                  <Divider />
+
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Payment Status
+                    </Typography>
+                    <Chip
+                      label={expense.paid ? 'Paid' : 'Unpaid'}
+                      color={expense.paid ? 'success' : 'default'}
+                      size="medium"
+                    />
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Timeline & Details Card */}
+          <Grid item xs={12}>
+            <Card elevation={2}>
+              <CardContent sx={{ p: 4 }}>
+                <Typography variant="h6" gutterBottom sx={{ mb: 4 }}>
+                  Timeline & Details
+                </Typography>
+                
+                <Grid container spacing={4}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" gutterBottom sx={{ mb: 3 }}>
+                      Timeline
+                    </Typography>
+                    <Stack spacing={3}>
+                      <Box>
+                        <Stack direction="row" spacing={2} alignItems="center">
+                          <ScheduleIcon color="action" />
+                          <Box>
+                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                              Created At
+                            </Typography>
+                            <Typography variant="body1" fontWeight="medium">
+                              {formatDate(expense.createdAt || expense.created_at)}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </Box>
+
+                      {expense.updated_at && expense.updated_at !== expense.created_at ? <Box>
+                          <Stack direction="row" spacing={2} alignItems="center">
+                            <ScheduleIcon color="action" />
+                            <Box>
+                              <Typography variant="body2" color="text.secondary" gutterBottom>
+                                Last Updated
+                              </Typography>
+                              <Typography variant="body1" fontWeight="medium">
+                                {formatDate(expense.updated_at)}
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </Box> : null}
+
+                      {expense.reviewed_at ? <Box>
+                          <Stack direction="row" spacing={2} alignItems="center">
+                            <ScheduleIcon color="action" />
+                            <Box>
+                              <Typography variant="body2" color="text.secondary" gutterBottom>
+                                Reviewed At
+                              </Typography>
+                              <Typography variant="body1" fontWeight="medium">
+                                {formatDate(expense.reviewed_at?.toString())}
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </Box> : null}
+                    </Stack>
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" gutterBottom sx={{ mb: 3 }}>
+                      Users & Actions
+                    </Typography>
+                    <Stack spacing={3}>
+                      {expense.editor ? <Box>
+                          <Stack direction="row" spacing={2} alignItems="center">
+                            <PersonIcon color="action" />
+                            <Box>
+                              <Typography variant="body2" color="text.secondary" gutterBottom>
+                                Updated By
+                              </Typography>
+                              <Typography variant="body1" fontWeight="medium">
+                                {`${expense.editor.firstName} ${expense.editor.lastName || ''}`}
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </Box> : null}
+
+                      {expense.reviewer ? <Box>
+                          <Stack direction="row" spacing={2} alignItems="center">
+                            <PersonIcon color="action" />
+                            <Box>
+                              <Typography variant="body2" color="text.secondary" gutterBottom>
+                                Approved By
+                              </Typography>
+                              <Typography variant="body1" fontWeight="medium">
+                                {`${expense.reviewer.firstName} ${expense.reviewer.lastName || ''}`}
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </Box> : null}
+                    </Stack>
+                  </Grid>
+
+                  {expense.reason_to_edit ? <Grid item xs={12}>
+                      <Box>
+                        <Stack direction="row" spacing={2} alignItems="flex-start">
+                          <CommentIcon color="action" sx={{ mt: 0.5 }} />
+                          <Box sx={{ flexGrow: 1 }}>
+                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                              Reason for Update
+                            </Typography>
+                            <Typography variant="body1" sx={{ p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
+                              {expense.reason_to_edit}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </Box>
+                    </Grid> : null}
+
+                  {expense.reviewer_comment ? <Grid item xs={12}>
+                      <Box>
+                        <Stack direction="row" spacing={2} alignItems="flex-start">
+                          <CommentIcon color="action" sx={{ mt: 0.5 }} />
+                          <Box sx={{ flexGrow: 1 }}>
+                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                              Review Comment
+                            </Typography>
+                            <Typography variant="body1" sx={{ p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
+                              {expense.reviewer_comment}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </Box>
+                    </Grid> : null}
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Stack>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => {
+        setDeleteDialogOpen(false);
+      }}>
         <DialogTitle>Delete Expense</DialogTitle>
         <DialogContent>
-          Are you sure you want to delete this expense?
+          <Typography>
+            Are you sure you want to delete this expense? This action cannot be undone.
+          </Typography>
+          {expense ? <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Expense Details:
+              </Typography>
+              <Typography variant="body2">
+                {expense.description} - {formatCurrency(expense.amount)}
+              </Typography>
+            </Box> : null}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDelete} color="error">
+          <Button onClick={() => {
+            setDeleteDialogOpen(false);
+          }}>Cancel</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">
             Delete
           </Button>
         </DialogActions>
       </Dialog>
 
+      {/* Edit Form Dialog */}
       <ExpenseForm
         open={formOpen}
-        onClose={() => setFormOpen(false)}
+        onClose={() => {
+          setFormOpen(false);
+        }}
         onSuccess={loadExpense}
         expense={expense}
         mode="edit"
       />
-    </Box>
+    </Container>
   );
 };
 

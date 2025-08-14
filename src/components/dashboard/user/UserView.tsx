@@ -1,5 +1,5 @@
 import React from 'react';
-import { User } from '@/types/user';
+import { type User } from '@/types/user';
 import {
   Box,
   Card,
@@ -148,7 +148,7 @@ export const UserView: React.FC<UserViewProps> = ({
           </Button>
         </Box>
 
-        <Dialog open={statusDialogOpen} onClose={() => setStatusDialogOpen(false)}>
+        <Dialog open={statusDialogOpen} onClose={() => { setStatusDialogOpen(false); }}>
           <DialogTitle>
             {user.isActive ? 'Deactivate User' : 'Activate User'}
           </DialogTitle>
@@ -156,7 +156,7 @@ export const UserView: React.FC<UserViewProps> = ({
             Are you sure you want to {user.isActive ? 'deactivate' : 'activate'} user {user.firstName} {user.lastName || ''}?
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => { setStatusDialogOpen(false); }}>Cancel</Button>
             <Button
               onClick={handleConfirmStatusToggle}
               color={user.isActive ? 'error' : 'success'}

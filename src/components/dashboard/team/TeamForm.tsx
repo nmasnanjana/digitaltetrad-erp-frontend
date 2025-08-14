@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Team } from '@/types/team';
+import { type Team } from '@/types/team';
 import { Box, Button, Grid, TextField, MenuItem, Alert, Typography, Paper, Dialog, DialogTitle, DialogContent, DialogActions, FormControl, InputLabel, Select } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { getAllUsers } from '@/api/userApi';
-import { User } from '@/types/user';
+import { type User } from '@/types/user';
 import { createTeam, updateTeam } from '@/api/teamApi';
 
 interface TeamFormProps {
@@ -132,18 +132,16 @@ const TeamForm: React.FC<TeamFormProps> = ({
           {mode === 'create' ? 'Create Team' : 'Edit Team'}
         </DialogTitle>
         <DialogContent>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+          {error ? <Alert severity="error" sx={{ mb: 2 }}>
               {error}
-            </Alert>
-          )}
+            </Alert> : null}
           <TextField
             margin="dense"
             label="Name"
             type="text"
             fullWidth
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => { setName(e.target.value); }}
             required
             sx={{ mb: 2 }}
           />
@@ -152,7 +150,7 @@ const TeamForm: React.FC<TeamFormProps> = ({
             <Select
               value={type}
               label="Type"
-              onChange={(e) => setType(e.target.value as Team['type'])}
+              onChange={(e) => { setType(e.target.value as Team['type']); }}
               required
             >
               <MenuItem value="internal">Internal</MenuItem>
@@ -166,7 +164,7 @@ const TeamForm: React.FC<TeamFormProps> = ({
               type="text"
               fullWidth
               value={company}
-              onChange={(e) => setCompany(e.target.value)}
+              onChange={(e) => { setCompany(e.target.value); }}
               required
               sx={{ mb: 2 }}
             />
@@ -177,7 +175,7 @@ const TeamForm: React.FC<TeamFormProps> = ({
               <Select
                 value={leaderId}
                 label="Team Leader"
-                onChange={(e) => setLeaderId(e.target.value)}
+                onChange={(e) => { setLeaderId(e.target.value); }}
                 required
               >
                 {users.map((user) => (

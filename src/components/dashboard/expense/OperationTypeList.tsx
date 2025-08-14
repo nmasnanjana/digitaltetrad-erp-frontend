@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { getAllOperationTypes, deleteOperationType } from '@/api/operationTypeApi';
-import { OperationType } from '@/types/operationType';
+import { type OperationType } from '@/types/operationType';
 import {
   Box,
   Button,
@@ -51,7 +51,7 @@ export const OperationTypeList: React.FC = () => {
     if (!selectedOperationType) return;
     
     try {
-      await deleteOperationType(selectedOperationType.id.toString());
+      await deleteOperationType(selectedOperationType.id);
       setDeleteDialogOpen(false);
       loadOperationTypes();
     } catch (err) {
@@ -89,11 +89,9 @@ export const OperationTypeList: React.FC = () => {
         </Button>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+      {error ? <Alert severity="error" sx={{ mb: 2 }}>
           {error}
-        </Alert>
-      )}
+        </Alert> : null}
 
       <TableContainer component={Paper}>
         <Table>
@@ -120,7 +118,7 @@ export const OperationTypeList: React.FC = () => {
                 <TableCell align="right">
                   <IconButton
                     color="primary"
-                    onClick={() => handleEdit(operationType)}
+                    onClick={() => { handleEdit(operationType); }}
                   >
                     <EditIcon />
                   </IconButton>
@@ -140,13 +138,13 @@ export const OperationTypeList: React.FC = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={() => { setDeleteDialogOpen(false); }}>
         <DialogTitle>Delete Operation Type</DialogTitle>
         <DialogContent>
           Are you sure you want to delete operation type {selectedOperationType?.name}?
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => { setDeleteDialogOpen(false); }}>Cancel</Button>
           <Button onClick={handleDelete} color="error">
             Delete
           </Button>
@@ -155,7 +153,7 @@ export const OperationTypeList: React.FC = () => {
 
       <OperationTypeForm
         open={formOpen}
-        onClose={() => setFormOpen(false)}
+        onClose={() => { setFormOpen(false); }}
         onSuccess={loadOperationTypes}
         operationType={selectedOperationType}
         mode={formMode}

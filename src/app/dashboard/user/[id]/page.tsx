@@ -7,15 +7,16 @@ import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Unstable_Grid2';
 import { getUserById, updateUser } from '@/api/userApi';
 import UserForm from '@/components/dashboard/user/UserForm';
-import { User } from '@/types/user';
+import { type User } from '@/types/user';
 import { Alert } from '@mui/material';
 
 export default function EditUserPage(): React.JSX.Element {
   const params = useParams();
-  const userId = params.id as string;
   const [user, setUser] = React.useState<User | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
+
+  const userId = params?.id as string;
 
   React.useEffect(() => {
     const fetchUser = async () => {
@@ -30,7 +31,9 @@ export default function EditUserPage(): React.JSX.Element {
       }
     };
 
-    fetchUser();
+    if (userId) {
+      fetchUser();
+    }
   }, [userId]);
 
   const handleUpdate = async (data: any) => {
@@ -41,6 +44,10 @@ export default function EditUserPage(): React.JSX.Element {
       throw err;
     }
   };
+
+  if (!userId) {
+    return <Alert severity="error">Invalid user ID</Alert>;
+  }
 
   if (loading) {
     return <Typography>Loading...</Typography>;

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getAllExpenseTypes, deleteExpenseType } from '@/api/expenseApi';
-import { ExpenseType } from '@/types/expense';
+import { getAllExpenseTypes, deleteExpenseType } from '@/api/expense-api';
+import { type ExpenseType } from '@/types/expense';
 import {
   Box,
   Button,
@@ -89,11 +89,9 @@ export const ExpenseTypeList: React.FC = () => {
         </Button>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+      {error ? <Alert severity="error" sx={{ mb: 2 }}>
           {error}
-        </Alert>
-      )}
+        </Alert> : null}
 
       <TableContainer component={Paper}>
         <Table>
@@ -120,7 +118,7 @@ export const ExpenseTypeList: React.FC = () => {
                 <TableCell align="right">
                   <IconButton
                     color="primary"
-                    onClick={() => handleEdit(expenseType)}
+                    onClick={() => { handleEdit(expenseType); }}
                   >
                     <EditIcon />
                   </IconButton>
@@ -140,13 +138,13 @@ export const ExpenseTypeList: React.FC = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteDialogOpen} onClose={() => { setDeleteDialogOpen(false); }}>
         <DialogTitle>Delete Expense Type</DialogTitle>
         <DialogContent>
           Are you sure you want to delete expense type {selectedExpenseType?.name}?
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => { setDeleteDialogOpen(false); }}>Cancel</Button>
           <Button onClick={handleDelete} color="error">
             Delete
           </Button>
@@ -155,7 +153,7 @@ export const ExpenseTypeList: React.FC = () => {
 
       <ExpenseTypeForm
         open={formOpen}
-        onClose={() => setFormOpen(false)}
+        onClose={() => { setFormOpen(false); }}
         onSuccess={loadExpenseTypes}
         expenseType={selectedExpenseType}
         mode={formMode}

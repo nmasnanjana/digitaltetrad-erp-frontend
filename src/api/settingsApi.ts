@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from './api-client';
 
 export interface SettingsData {
   id: number;
@@ -10,6 +10,8 @@ export interface SettingsData {
   email: string;
   finance_email: string;
   company_name: string;
+  company_address: string;
+  company_logo: string;
   bank_account: string;
   updated_by?: string;
   createdAt: string;
@@ -25,6 +27,8 @@ export interface UpdateSettingsData {
   email?: string;
   finance_email?: string;
   company_name?: string;
+  company_address?: string;
+  company_logo?: string;
   bank_account?: string;
 }
 

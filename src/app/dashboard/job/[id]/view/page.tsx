@@ -5,18 +5,19 @@ import { useParams, useRouter } from 'next/navigation';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Unstable_Grid2';
-import { getJobById, deleteJob, updateJob } from '@/api/jobApi';
+import { getJobById, deleteJob, updateJob } from '@/api/job-api';
 import { JobView } from '@/components/dashboard/job/JobView';
-import { Job } from '@/types/job';
+import { type Job } from '@/types/job';
 import { Alert } from '@mui/material';
 
 export default function ViewJobPage(): React.JSX.Element {
   const params = useParams();
   const router = useRouter();
-  const jobId = params.id as string;
   const [job, setJob] = React.useState<Job | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
+
+  const jobId = params?.id as string;
 
   const fetchJob = async () => {
     try {
@@ -31,7 +32,9 @@ export default function ViewJobPage(): React.JSX.Element {
   };
 
   React.useEffect(() => {
-    fetchJob();
+    if (jobId) {
+      fetchJob();
+    }
   }, [jobId]);
 
   const handleDelete = async () => {
@@ -59,6 +62,10 @@ export default function ViewJobPage(): React.JSX.Element {
       setError(err instanceof Error ? err.message : 'Failed to update job status');
     }
   };
+
+  if (!jobId) {
+    return <Alert severity="error">Invalid job ID</Alert>;
+  }
 
   if (loading) {
     return <Typography>Loading...</Typography>;
