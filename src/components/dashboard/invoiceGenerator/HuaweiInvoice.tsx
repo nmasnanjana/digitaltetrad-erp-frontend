@@ -47,6 +47,7 @@ interface ExtractedData {
 
 interface HuaweiPoData {
   id: number;
+  customerId: number;
   siteCode: string;
   siteId: string;
   siteName: string;
@@ -57,6 +58,7 @@ interface HuaweiPoData {
   unitPrice: number;
   requestedQuantity: number;
   invoicedPercentage: number;
+  uploadedAt?: string;
 }
 
 interface CorrelatedData {
@@ -183,7 +185,10 @@ export const HuaweiInvoice: React.FC = () => {
       console.log('Invoice details received:', details);
       console.log('Number of items in invoice:', details.length);
       console.log('First item structure:', details[0]);
+      console.log('First item createdAt:', details[0]?.createdAt);
+      console.log('First item createdAt type:', typeof details[0]?.createdAt);
       console.log('First item huaweiPo:', details[0]?.huaweiPo);
+      console.log('First item huaweiPo type:', typeof details[0]?.huaweiPo);
       console.log('Unit price type:', typeof details[0]?.huaweiPo?.unitPrice);
       console.log('Unit price value:', details[0]?.huaweiPo?.unitPrice);
       console.log('Requested Qty type:', typeof details[0]?.huaweiPo?.requestedQuantity);
@@ -198,7 +203,8 @@ export const HuaweiInvoice: React.FC = () => {
           lineNo: item.huaweiPo?.lineNo,
           unitPrice: item.huaweiPo?.unitPrice,
           requestedQuantity: item.huaweiPo?.requestedQuantity,
-                      invoicedPercentage: item.invoicedPercentage
+          invoicedPercentage: item.invoicedPercentage,
+          createdAt: item.createdAt
         });
       });
       
@@ -1220,7 +1226,7 @@ export const HuaweiInvoice: React.FC = () => {
                     Created Date
                   </Typography>
                   <Typography variant="body1">
-                    {new Date(selectedInvoiceDetails[0].createdAt).toLocaleString()}
+                    {selectedInvoiceDetails[0].createdAt ? new Date(selectedInvoiceDetails[0].createdAt).toLocaleString() : 'N/A'}
                   </Typography>
                 </Grid>
               </Grid>
@@ -1319,7 +1325,7 @@ export const HuaweiInvoice: React.FC = () => {
                         Invoice Date
                       </Typography>
                       <Typography variant="h6" fontWeight="600" color="text.primary">
-                        {new Date(selectedInvoiceDetails[0].createdAt).toLocaleDateString()}
+                        {selectedInvoiceDetails[0].createdAt ? new Date(selectedInvoiceDetails[0].createdAt).toLocaleDateString() : 'N/A'}
                       </Typography>
                     </Box>
                   </Grid>
@@ -1362,12 +1368,12 @@ export const HuaweiInvoice: React.FC = () => {
                       
                       return (
                         <TableRow key={item.id}>
-                          <TableCell>{item.huaweiPo?.poNo}</TableCell>
-                          <TableCell>{item.huaweiPo?.lineNo}</TableCell>
-                          <TableCell>{item.huaweiPo?.itemCode}</TableCell>
+                          <TableCell>{item.huaweiPo?.poNo || 'N/A'}</TableCell>
+                          <TableCell>{item.huaweiPo?.lineNo || 'N/A'}</TableCell>
+                          <TableCell>{item.huaweiPo?.itemCode || 'N/A'}</TableCell>
                           <TableCell>
                             <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
-                              {item.huaweiPo?.itemDescription}
+                              {item.huaweiPo?.itemDescription || 'N/A'}
                             </Typography>
                           </TableCell>
                           <TableCell>{formatCurrency(unitPrice)}</TableCell>

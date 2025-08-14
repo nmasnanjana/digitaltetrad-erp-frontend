@@ -578,7 +578,7 @@ export const ViewInvoices: React.FC = () => {
                     Created Date
                   </Typography>
                   <Typography variant="body1">
-                    {new Date(selectedInvoiceDetails[0].createdAt).toLocaleString()}
+                    {selectedInvoiceDetails[0].createdAt ? new Date(selectedInvoiceDetails[0].createdAt).toLocaleString() : 'N/A'}
                   </Typography>
                 </Grid>
               </Grid>
@@ -677,7 +677,7 @@ export const ViewInvoices: React.FC = () => {
                         Invoice Date
                       </Typography>
                       <Typography variant="h6" fontWeight="600" color="text.primary">
-                        {new Date(selectedInvoiceDetails[0].createdAt).toLocaleDateString()}
+                        {selectedInvoiceDetails[0].createdAt ? new Date(selectedInvoiceDetails[0].createdAt).toLocaleDateString() : 'N/A'}
                       </Typography>
                     </Box>
                   </Grid>
@@ -718,12 +718,12 @@ export const ViewInvoices: React.FC = () => {
                       
                       return (
                         <TableRow key={item.id}>
-                          <TableCell>{item.huaweiPo?.poNo}</TableCell>
-                          <TableCell>{item.huaweiPo?.lineNo}</TableCell>
-                          <TableCell>{item.huaweiPo?.itemCode}</TableCell>
+                          <TableCell>{item.huaweiPo?.poNo || 'N/A'}</TableCell>
+                          <TableCell>{item.huaweiPo?.lineNo || 'N/A'}</TableCell>
+                          <TableCell>{item.huaweiPo?.itemCode || 'N/A'}</TableCell>
                           <TableCell>
                             <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
-                              {item.huaweiPo?.itemDescription}
+                              {item.huaweiPo?.itemDescription || 'N/A'}
                             </Typography>
                           </TableCell>
                           <TableCell>{formatCurrency(unitPrice)}</TableCell>
