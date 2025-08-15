@@ -3,7 +3,7 @@ import type { Expense, ExpenseType } from '@/types/expense';
 import type { OperationType } from '@/types/operationType';
 
 const API = axios.create({
-    baseURL: 'http://localhost:4575/api',
+    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4575/api',
     withCredentials: true,
 });
 

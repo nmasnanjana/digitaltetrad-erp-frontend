@@ -2,7 +2,7 @@ import axios from 'axios';
 import { type User } from '@/types/user';
 
 const API = axios.create({
-    baseURL: 'http://localhost:4575/api',
+    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4575/api',
     withCredentials: true,
 });
 
