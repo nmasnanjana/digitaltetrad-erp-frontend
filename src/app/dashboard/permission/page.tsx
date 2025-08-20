@@ -94,7 +94,8 @@ export default function PermissionPage() {
 
     const fetchPermissions = async () => {
         try {
-            const response = await fetch('http://localhost:4575/api/permissions', {
+            const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4575/api';
+            const response = await fetch(`${baseURL}/permissions`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}`,
                 },
@@ -126,7 +127,8 @@ export default function PermissionPage() {
         if (!selectedRole) return;
 
         try {
-            const response = await fetch(`http://localhost:4575/api/permissions/roles/${selectedRole.id}`, {
+            const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4575/api';
+            const response = await fetch(`${baseURL}/permissions/roles/${selectedRole.id}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
