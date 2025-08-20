@@ -48,10 +48,8 @@ export function MobileNav({ open, onClose }: MobileNavProps): React.JSX.Element 
           display: 'flex',
           flexDirection: 'column',
           maxWidth: '100%',
-          scrollbarWidth: 'none',
           width: 'var(--MobileNav-width)',
           zIndex: 'var(--MobileNav-zIndex)',
-          '&::-webkit-scrollbar': { display: 'none' },
         },
       }}
       onClose={onClose}
@@ -63,7 +61,28 @@ export function MobileNav({ open, onClose }: MobileNavProps): React.JSX.Element 
         </Box>
       </Stack>
       <Divider sx={{ borderColor: 'var(--mui-palette-neutral-700)' }} />
-      <Box component="nav" sx={{ flex: '1 1 auto', p: '12px' }}>
+      <Box 
+        component="nav" 
+        sx={{ 
+          flex: '1 1 auto', 
+          p: '12px',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          '&::-webkit-scrollbar': {
+            width: '6px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: 'var(--mui-palette-neutral-600)',
+            borderRadius: '3px',
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            background: 'var(--mui-palette-neutral-500)',
+          },
+        }}
+      >
         {renderNavItems({ pathname: pathname || '', items: navItems })}
       </Box>
       <Divider sx={{ borderColor: 'var(--mui-palette-neutral-700)' }} />
@@ -94,7 +113,7 @@ function renderNavItems({
   }, []);
 
   return (
-    <Stack component="ul" spacing={1} sx={{ listStyle: 'none', m: 0, p: 0 }}>
+    <Stack component="ul" spacing={1} sx={{ listStyle: 'none', m: 0, p: 0, pb: 2 }}>
       {children}
     </Stack>
   );
