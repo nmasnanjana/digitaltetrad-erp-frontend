@@ -272,7 +272,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                   >
                     {jobs.map((job) => (
                       <MenuItem key={job.id} value={job.id}>
-                        {job.name}
+                        {job.id}
                       </MenuItem>
                     ))}
                   </Select>

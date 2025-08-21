@@ -207,44 +207,88 @@ export default function ExpensePage() {
             </Alert>
           ) : null}
 
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ p: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Total Expenses
-                </Typography>
-                <Typography variant="h4">
-                  {totalExpenses}
-                </Typography>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ p: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Total Amount
-                </Typography>
-                <Typography variant="h4">
-                  {formatCurrency(totalAmount)}
-                </Typography>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ p: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Pending Approval
-                </Typography>
-                <Typography variant="h4">
-                  {pendingCount}
+          <Grid container spacing={2}>
+            <Grid item xs={6} sm={6} md={3}>
+              <Card sx={{ 
+                p: 1.5,
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  transition: 'all 0.2s ease'
+                }
+              }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    fontWeight: 600,
+                    color: 'text.primary'
+                  }}
+                >
+                  Total Expenses: {totalExpenses}
                 </Typography>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card sx={{ p: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Paid Expenses
+            <Grid item xs={6} sm={6} md={3}>
+              <Card sx={{ 
+                p: 1.5,
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  transition: 'all 0.2s ease'
+                }
+              }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    fontWeight: 600,
+                    color: 'text.primary'
+                  }}
+                >
+                  Total Amount: {formatCurrency(totalAmount)}
                 </Typography>
-                <Typography variant="h4">
-                  {paidCount}
+              </Card>
+            </Grid>
+            <Grid item xs={6} sm={6} md={3}>
+              <Card sx={{ 
+                p: 1.5,
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  transition: 'all 0.2s ease'
+                }
+              }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    fontWeight: 600,
+                    color: 'text.primary'
+                  }}
+                >
+                  Pending Approval: {pendingCount}
+                </Typography>
+              </Card>
+            </Grid>
+            <Grid item xs={6} sm={6} md={3}>
+              <Card sx={{ 
+                p: 1.5,
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  transition: 'all 0.2s ease'
+                }
+              }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    fontWeight: 600,
+                    color: 'text.primary'
+                  }}
+                >
+                  Paid Expenses: {paidCount}
                 </Typography>
               </Card>
             </Grid>
@@ -261,7 +305,7 @@ export default function ExpensePage() {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ minWidth: { xs: 100, sm: 120 } }}>Category</TableCell>
+                      <TableCell sx={{ minWidth: { xs: 100, sm: 120 } }}>Job ID/Operation</TableCell>
                       <TableCell sx={{ minWidth: { xs: 80, sm: 100 } }}>Type</TableCell>
                       <TableCell sx={{ minWidth: { xs: 100, sm: 120 } }}>Expense Type</TableCell>
                       <TableCell sx={{ minWidth: { xs: 120, sm: 150 }, display: { xs: 'none', md: 'table-cell' } }}>Description</TableCell>
@@ -292,7 +336,7 @@ export default function ExpensePage() {
                       expenses.map((expense) => (
                         <TableRow key={expense.id}>
                           <TableCell>
-                            {expense.operations ? expense.operationType?.name || 'N/A' : expense.job?.name || 'N/A'}
+                            {expense.operations ? expense.operationType?.name || '-' : expense.job?.id || '-'}
                           </TableCell>
                           <TableCell>{expense.expenseType?.name}</TableCell>
                           <TableCell>
