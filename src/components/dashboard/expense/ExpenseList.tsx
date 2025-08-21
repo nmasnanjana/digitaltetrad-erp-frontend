@@ -43,7 +43,17 @@ export const ExpenseList: React.FC = () => {
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
-  const [filters, setFilters] = useState<ExpenseFiltersType>({});
+  const [filters, setFilters] = useState<ExpenseFiltersType>({
+    expenseType: 'all',
+    selectedJobIds: [],
+    selectedOperationIds: [],
+    selectedExpenseTypeIds: [],
+    fromDate: '',
+    toDate: '',
+    minAmount: '',
+    maxAmount: '',
+    status: '',
+  });
   const [expenseTypes, setExpenseTypes] = useState<ExpenseType[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [operationTypes, setOperationTypes] = useState<OperationType[]>([]);
@@ -152,9 +162,6 @@ export const ExpenseList: React.FC = () => {
       <ExpenseFilters
         filters={filters}
         onFilterChange={handleFilterChange}
-        expenseTypes={expenseTypes}
-        jobs={jobs}
-        operationTypes={operationTypes}
       />
 
       <TableContainer component={Paper}>

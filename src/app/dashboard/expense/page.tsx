@@ -31,6 +31,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import Link from 'next/link';
 import ExpenseForm from '@/components/dashboard/expense/ExpenseForm';
 import { useExpenses, useDeleteExpense } from '@/hooks/use-expenses';
+import { ExpenseFilters, type ExpenseFilters as ExpenseFiltersType } from '@/components/dashboard/expense/ExpenseFilters';
 
 export default function ExpensePage() {
   const { formatCurrency } = useSettings();
@@ -42,10 +43,84 @@ export default function ExpensePage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<ExpenseFiltersType>({
+    expenseType: 'all',
+    selectedJobIds: [],
+    selectedOperationIds: [],
+    selectedExpenseTypeIds: [],
+    fromDate: '',
+    toDate: '',
+    minAmount: '',
+    maxAmount: '',
+    status: '',
+  });
+  const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
 
   useEffect(() => {
     // The fetchExpenses function is now handled by useExpenses hook
   }, []);
+
+  // Apply filters to expenses
+  useEffect(() => {
+    let filtered = expenses;
+
+    // Filter by expense type (jobs vs operations)
+    if (filters.expenseType === 'jobs') {
+      filtered = filtered.filter(expense => !expense.operations);
+    } else if (filters.expenseType === 'operations') {
+      filtered = filtered.filter(expense => expense.operations);
+    }
+
+    // Filter by selected job IDs
+    if (filters.selectedJobIds.length > 0) {
+      filtered = filtered.filter(expense => 
+        expense.job_id && filters.selectedJobIds.includes(expense.job_id.toString())
+      );
+    }
+
+    // Filter by selected operation IDs
+    if (filters.selectedOperationIds.length > 0) {
+      filtered = filtered.filter(expense => 
+        expense.operation_type_id && filters.selectedOperationIds.includes(expense.operation_type_id.toString())
+      );
+    }
+
+    // Filter by selected expense type IDs
+    if (filters.selectedExpenseTypeIds.length > 0) {
+      filtered = filtered.filter(expense => 
+        expense.expenses_type_id && filters.selectedExpenseTypeIds.includes(expense.expenses_type_id.toString())
+      );
+    }
+
+    // Filter by date range
+    if (filters.fromDate || filters.toDate) {
+      filtered = filtered.filter(expense => {
+        const expenseDate = new Date(expense.createdAt || expense.created_at || '');
+        const fromDate = filters.fromDate ? new Date(filters.fromDate) : new Date(0);
+        const toDate = filters.toDate ? new Date(filters.toDate) : new Date();
+        
+        return expenseDate >= fromDate && expenseDate <= toDate;
+      });
+    }
+
+    // Filter by amount range
+    if (filters.minAmount || filters.maxAmount) {
+      filtered = filtered.filter(expense => {
+        const amount = expense.amount;
+        const minAmount = filters.minAmount ? parseFloat(filters.minAmount) : 0;
+        const maxAmount = filters.maxAmount ? parseFloat(filters.maxAmount) : Infinity;
+        
+        return amount >= minAmount && amount <= maxAmount;
+      });
+    }
+
+    // Filter by status
+    if (filters.status) {
+      filtered = filtered.filter(expense => expense.status === filters.status);
+    }
+
+    setFilteredExpenses(filtered);
+  }, [expenses, filters]);
 
   const getStatusColor = (status: string, paid: boolean) => {
     // If expense is paid, show success color
@@ -131,10 +206,10 @@ export default function ExpensePage() {
   };
 
   // Calculate summary statistics
-  const totalExpenses = expenses.length;
-  const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const pendingCount = expenses.filter(e => e.status === 'on_progress').length;
-  const paidCount = expenses.filter(e => e.paid).length;
+  const totalExpenses = filteredExpenses.length;
+  const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const pendingCount = filteredExpenses.filter(e => e.status === 'on_progress').length;
+  const paidCount = filteredExpenses.filter(e => e.paid).length;
 
   return (
     <Box
@@ -206,6 +281,12 @@ export default function ExpensePage() {
               {localError}
             </Alert>
           ) : null}
+
+          {/* Expense Filters */}
+          <ExpenseFilters
+            filters={filters}
+            onFilterChange={setFilters}
+          />
 
           <Grid container spacing={2}>
             <Grid item xs={6} sm={6} md={3}>
@@ -324,7 +405,7 @@ export default function ExpensePage() {
                           </Typography>
                         </TableCell>
                       </TableRow>
-                    ) : expenses.length === 0 ? (
+                    ) : filteredExpenses.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={8} align="center">
                           <Typography color="text.secondary">
@@ -333,7 +414,7 @@ export default function ExpensePage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      expenses.map((expense) => (
+                      filteredExpenses.map((expense) => (
                         <TableRow key={expense.id}>
                           <TableCell>
                             {expense.operations ? expense.operationType?.name || '-' : expense.job?.id || '-'}
