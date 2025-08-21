@@ -39,7 +39,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps): React.JSX.E
         <Box sx={{ display: 'flex', flex: '1 1 auto', flexDirection: 'column', pl: { lg: 'var(--SideNav-width)' } }}>
           <MainNav />
           <main>
-            <Container maxWidth="xl" sx={{ py: '64px' }}>
+            <Container 
+              maxWidth="xl" 
+              sx={{ 
+                py: { xs: 2, sm: 3, md: 4, lg: '64px' },
+                px: { xs: 1, sm: 2, md: 3 }
+              }}
+            >
               {children}
             </Container>
           </main>

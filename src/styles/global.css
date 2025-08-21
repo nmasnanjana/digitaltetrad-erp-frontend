@@ -31,3 +31,35 @@ html {
 body {
   height: 100%;
 }
+
+/* Responsive utilities */
+@media (max-width: 600px) {
+  .MuiContainer-root {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+}
+
+/* Ensure tables are responsive */
+.MuiTableContainer-root {
+  overflow-x: auto;
+}
+
+/* Improve touch targets on mobile */
+@media (max-width: 600px) {
+  .MuiButton-root {
+    min-height: 44px;
+  }
+  
+  .MuiIconButton-root {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Better spacing for mobile */
+@media (max-width: 600px) {
+  .MuiStack-root {
+    gap: 8px !important;
+  }
+}

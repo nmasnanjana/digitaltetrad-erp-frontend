@@ -10,6 +10,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   Button,
@@ -144,15 +145,19 @@ export default function ExpenseApprovalPage() {
       component="main"
       sx={{
         flexGrow: 1,
-        py: 8,
+        py: { xs: 2, sm: 4, md: 6, lg: 8 },
       }}
     >
       <Container maxWidth="xl">
         <Stack spacing={3}>
           <Stack
-            direction="row"
+            direction="column"
             justifyContent="space-between"
-            spacing={4}
+            spacing={{ xs: 2, sm: 4 }}
+            sx={{
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: { xs: 'stretch', sm: 'center' }
+            }}
           >
             <Stack spacing={1}>
               <Typography variant="h4">
@@ -169,18 +174,24 @@ export default function ExpenseApprovalPage() {
             </Alert> : null}
 
           <Card>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Category</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell>Expense Type</TableCell>
-                  <TableCell>Description</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
+            <TableContainer sx={{ 
+              overflowX: 'auto',
+              '& .MuiTable-root': {
+                minWidth: { xs: 600, sm: 800, md: 1000 }
+              }
+            }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ minWidth: { xs: 100, sm: 120 } }}>Category</TableCell>
+                    <TableCell sx={{ minWidth: { xs: 80, sm: 100 } }}>Type</TableCell>
+                    <TableCell sx={{ minWidth: { xs: 100, sm: 120 } }}>Expense Type</TableCell>
+                    <TableCell sx={{ minWidth: { xs: 120, sm: 150 }, display: { xs: 'none', md: 'table-cell' } }}>Description</TableCell>
+                    <TableCell sx={{ minWidth: { xs: 80, sm: 100 } }}>Amount</TableCell>
+                    <TableCell sx={{ minWidth: { xs: 80, sm: 100 } }}>Status</TableCell>
+                    <TableCell sx={{ minWidth: { xs: 100, sm: 120 } }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
@@ -212,7 +223,9 @@ export default function ExpenseApprovalPage() {
                           size="small"
                         />
                       </TableCell>
-                      <TableCell>{expense.description}</TableCell>
+                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                        {expense.description}
+                      </TableCell>
                       <TableCell>{formatCurrency(expense.amount)}</TableCell>
                       <TableCell>
                         <Typography
@@ -231,6 +244,11 @@ export default function ExpenseApprovalPage() {
                             color="success"
                             startIcon={<CheckCircle />}
                             onClick={() => { handleReview(expense); }}
+                            size="small"
+                            sx={{ 
+                              minWidth: { xs: 'auto', sm: 'auto' },
+                              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                            }}
                           >
                             Review
                           </Button>
@@ -241,6 +259,7 @@ export default function ExpenseApprovalPage() {
                 }
               </TableBody>
             </Table>
+            </TableContainer>
           </Card>
         </Stack>
       </Container>

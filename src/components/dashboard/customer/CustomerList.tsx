@@ -78,13 +78,26 @@ export const ListCustomer: React.FC = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h5">Customers</Typography>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', sm: 'row' },
+        justifyContent: 'space-between', 
+        alignItems: { xs: 'stretch', sm: 'center' },
+        gap: { xs: 2, sm: 0 },
+        mb: 2 
+      }}>
+        <Typography variant="h5" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+          Customers
+        </Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
           onClick={handleCreate}
+          sx={{ 
+            minWidth: { xs: '100%', sm: 'auto' },
+            order: { xs: -1, sm: 0 }
+          }}
         >
           Add Customer
         </Button>
@@ -94,13 +107,18 @@ export const ListCustomer: React.FC = () => {
           {error}
         </Alert> : null}
 
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} sx={{ 
+        overflowX: 'auto',
+        '& .MuiTable-root': {
+          minWidth: { xs: 400, sm: 600 }
+        }
+      }}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Address</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell sx={{ minWidth: { xs: 120, sm: 150 } }}>Name</TableCell>
+              <TableCell sx={{ minWidth: { xs: 150, sm: 200 } }}>Address</TableCell>
+              <TableCell align="right" sx={{ minWidth: { xs: 100, sm: 120 } }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -119,21 +137,30 @@ export const ListCustomer: React.FC = () => {
                   )}
                 </TableCell>
                 <TableCell align="right">
-                  <IconButton
-                    color="primary"
-                    onClick={() => { handleEdit(customer); }}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    color="error"
-                    onClick={() => {
-                      setSelectedCustomer(customer);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: { xs: 0.5, sm: 1 },
+                    justifyContent: 'flex-end',
+                    flexWrap: 'nowrap'
+                  }}>
+                    <IconButton
+                      color="primary"
+                      onClick={() => { handleEdit(customer); }}
+                      size="small"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      color="error"
+                      onClick={() => {
+                        setSelectedCustomer(customer);
+                        setDeleteDialogOpen(true);
+                      }}
+                      size="small"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
                 </TableCell>
               </TableRow>
             ))}

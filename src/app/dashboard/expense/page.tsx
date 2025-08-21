@@ -11,6 +11,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   Button,
@@ -18,7 +19,12 @@ import {
   Chip,
   Grid,
   CardContent,
- IconButton, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
+} from '@mui/material';
 import { Plus, List, Gear, PencilSimple, Trash, Eye } from '@phosphor-icons/react/dist/ssr';
 import { type Expense } from '@/types/expense';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -135,15 +141,19 @@ export default function ExpensePage() {
       component="main"
       sx={{
         flexGrow: 1,
-        py: 8,
+        py: { xs: 2, sm: 4, md: 6, lg: 8 },
       }}
     >
       <Container maxWidth="xl">
         <Stack spacing={3}>
           <Stack
-            direction="row"
+            direction="column"
             justifyContent="space-between"
-            spacing={4}
+            spacing={{ xs: 2, sm: 4 }}
+            sx={{
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: { xs: 'stretch', sm: 'center' }
+            }}
           >
             <Stack spacing={1}>
               <Typography variant="h4">
@@ -153,12 +163,21 @@ export default function ExpensePage() {
                 View and manage all expenses
               </Typography>
             </Stack>
-            <Stack direction="row" spacing={2}>
+            <Stack 
+              direction="row" 
+              spacing={2} 
+              sx={{ 
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: { xs: 1, sm: 2 },
+                order: { xs: -1, sm: 0 }
+              }}
+            >
               <Button
                 component={Link}
                 href="/dashboard/expense/type"
                 variant="outlined"
                 startIcon={<List />}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
               >
                 Expense Types
               </Button>
@@ -167,6 +186,7 @@ export default function ExpensePage() {
                 href="/dashboard/expense/operation-type"
                 variant="outlined"
                 startIcon={<Gear />}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
               >
                 Operation Types
               </Button>
@@ -174,15 +194,18 @@ export default function ExpensePage() {
                 variant="contained"
                 startIcon={<Plus />}
                 onClick={handleCreate}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
               >
                 New Expense
               </Button>
             </Stack>
           </Stack>
 
-          {localError ? <Alert severity="error" onClose={() => { setLocalError(null); }}>
+          {localError ? (
+            <Alert severity="error" onClose={() => { setLocalError(null); }}>
               {localError}
-            </Alert> : null}
+            </Alert>
+          ) : null}
 
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6} md={3}>
@@ -228,94 +251,105 @@ export default function ExpensePage() {
           </Grid>
 
           <Card>
-            <CardContent>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Category</TableCell>
-                    <TableCell>Type</TableCell>
-                    <TableCell>Expense Type</TableCell>
-                    <TableCell>Description</TableCell>
-                    <TableCell>Amount</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Created Date</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {isLoading ? (
+            <CardContent sx={{ p: { xs: 1, sm: 2 } }}>
+              <TableContainer sx={{ 
+                overflowX: 'auto',
+                '& .MuiTable-root': {
+                  minWidth: { xs: 600, sm: 800, md: 1000 }
+                }
+              }}>
+                <Table>
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={8} align="center">
-                        <Typography color="text.secondary">
-                          Loading expenses...
-                        </Typography>
-                      </TableCell>
+                      <TableCell sx={{ minWidth: { xs: 100, sm: 120 } }}>Category</TableCell>
+                      <TableCell sx={{ minWidth: { xs: 80, sm: 100 } }}>Type</TableCell>
+                      <TableCell sx={{ minWidth: { xs: 100, sm: 120 } }}>Expense Type</TableCell>
+                      <TableCell sx={{ minWidth: { xs: 120, sm: 150 }, display: { xs: 'none', md: 'table-cell' } }}>Description</TableCell>
+                      <TableCell sx={{ minWidth: { xs: 80, sm: 100 } }}>Amount</TableCell>
+                      <TableCell sx={{ minWidth: { xs: 80, sm: 100 } }}>Status</TableCell>
+                      <TableCell sx={{ minWidth: { xs: 100, sm: 120 }, display: { xs: 'none', lg: 'table-cell' } }}>Created Date</TableCell>
+                      <TableCell sx={{ minWidth: { xs: 100, sm: 120 } }}>Actions</TableCell>
                     </TableRow>
-                  ) : expenses.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} align="center">
-                        <Typography color="text.secondary">
-                          No expenses found
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    expenses.map((expense) => (
-                      <TableRow key={expense.id}>
-                        <TableCell>
-                          {expense.operations ? expense.operationType?.name || 'N/A' : expense.job?.name || 'N/A'}
-                        </TableCell>
-                        <TableCell>{expense.expenseType?.name}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={expense.operations ? 'Operation' : 'Job'}
-                            color={expense.operations ? 'primary' : 'secondary'}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>{expense.description}</TableCell>
-                        <TableCell>{formatCurrency(expense.amount)}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={expense.status ? formatStatus(expense.status, expense.paid) : 'N/A'}
-                            color={expense.status ? getStatusColor(expense.status, expense.paid) : 'default'}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>{formatDate(expense.createdAt || expense.created_at)}</TableCell>
-                        <TableCell>
-                          <Stack direction="row" spacing={1}>
-                            <IconButton
-                              size="small"
-                              color="info"
-                              component={Link}
-                              href={`/dashboard/expense/${expense.id}/view`}
-                            >
-                              <Eye />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() => { handleEdit(expense); }}
-                              disabled={expense.paid}
-                            >
-                              <PencilSimple />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => { handleDelete(expense); }}
-                              disabled={expense.paid}
-                            >
-                              <Trash />
-                            </IconButton>
-                          </Stack>
+                  </TableHead>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} align="center">
+                          <Typography color="text.secondary">
+                            Loading expenses...
+                          </Typography>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : expenses.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} align="center">
+                          <Typography color="text.secondary">
+                            No expenses found
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      expenses.map((expense) => (
+                        <TableRow key={expense.id}>
+                          <TableCell>
+                            {expense.operations ? expense.operationType?.name || 'N/A' : expense.job?.name || 'N/A'}
+                          </TableCell>
+                          <TableCell>{expense.expenseType?.name}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={expense.operations ? 'Operation' : 'Job'}
+                              color={expense.operations ? 'primary' : 'secondary'}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                            {expense.description}
+                          </TableCell>
+                          <TableCell>{formatCurrency(expense.amount)}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={expense.status ? formatStatus(expense.status, expense.paid) : 'N/A'}
+                              color={expense.status ? getStatusColor(expense.status, expense.paid) : 'default'}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
+                            {formatDate(expense.createdAt || expense.created_at)}
+                          </TableCell>
+                          <TableCell>
+                            <Stack direction="row" spacing={1}>
+                              <IconButton
+                                size="small"
+                                color="info"
+                                component={Link}
+                                href={`/dashboard/expense/${expense.id}/view`}
+                              >
+                                <Eye />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => { handleEdit(expense); }}
+                                disabled={expense.paid}
+                              >
+                                <PencilSimple />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => { handleDelete(expense); }}
+                                disabled={expense.paid}
+                              >
+                                <Trash />
+                              </IconButton>
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </CardContent>
           </Card>
         </Stack>
@@ -344,9 +378,11 @@ export default function ExpensePage() {
           <Typography>
             Are you sure you want to delete this expense?
           </Typography>
-          {expenseToDelete ? <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          {expenseToDelete ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
               {expenseToDelete.description} - {formatCurrency(expenseToDelete.amount)}
-            </Typography> : null}
+            </Typography>
+          ) : null}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => { setDeleteDialogOpen(false); }}>

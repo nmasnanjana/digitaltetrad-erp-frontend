@@ -173,17 +173,21 @@ export default function PermissionPage() {
             component="main"
             sx={{
                 flexGrow: 1,
-                py: 8,
+                py: { xs: 2, sm: 4, md: 6, lg: 8 },
                 backgroundColor: 'background.default'
             }}
         >
             <Container maxWidth="xl">
                 <Stack spacing={3}>
                     <Stack
-                        direction="row"
+                        direction="column"
                         justifyContent="space-between"
-                        alignItems="center"
-                        spacing={4}
+                        alignItems="stretch"
+                        spacing={{ xs: 2, sm: 4 }}
+                        sx={{
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            alignItems: { xs: 'stretch', sm: 'center' }
+                        }}
                     >
                         <Stack spacing={1}>
                             <Typography variant="h4" color="text.primary">
@@ -199,7 +203,7 @@ export default function PermissionPage() {
                             {error}
                         </Alert> : null}
 
-                    <Card sx={{ p: 2 }}>
+                    <Card sx={{ p: { xs: 1, sm: 2 } }}>
                         <Stack spacing={2}>
                             <TextField
                                 fullWidth
@@ -221,14 +225,19 @@ export default function PermissionPage() {
                                     <CircularProgress />
                                 </Box>
                             ) : (
-                                <TableContainer component={Paper} elevation={0}>
+                                <TableContainer component={Paper} elevation={0} sx={{ 
+                                    overflowX: 'auto',
+                                    '& .MuiTable-root': {
+                                        minWidth: { xs: 400, sm: 600, md: 800 }
+                                    }
+                                }}>
                                     <Table>
                                         <TableHead>
                                             <TableRow>
-                                                <TableCell sx={{ fontWeight: 'bold' }}>Role</TableCell>
-                                                <TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell>
-                                                <TableCell sx={{ fontWeight: 'bold' }}>Permissions</TableCell>
-                                                <TableCell align="right" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
+                                                <TableCell sx={{ fontWeight: 'bold', minWidth: { xs: 100, sm: 120 } }}>Role</TableCell>
+                                                <TableCell sx={{ fontWeight: 'bold', minWidth: { xs: 120, sm: 150 }, display: { xs: 'none', md: 'table-cell' } }}>Description</TableCell>
+                                                <TableCell sx={{ fontWeight: 'bold', minWidth: { xs: 150, sm: 200 } }}>Permissions</TableCell>
+                                                <TableCell align="right" sx={{ fontWeight: 'bold', minWidth: { xs: 80, sm: 100 } }}>Actions</TableCell>
                                             </TableRow>
                                         </TableHead>
                                         <TableBody>
@@ -243,7 +252,7 @@ export default function PermissionPage() {
                                                             {role.name}
                                                         </Typography>
                                                     </TableCell>
-                                                    <TableCell>
+                                                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                                                         <Typography variant="body2" color="text.secondary">
                                                             {role.description || 'No description'}
                                                         </Typography>

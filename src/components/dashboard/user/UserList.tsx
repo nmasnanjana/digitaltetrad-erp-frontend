@@ -92,16 +92,21 @@ export const ListUser: React.FC = () => {
           {error}
         </Alert> : null}
 
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} sx={{ 
+        overflowX: 'auto',
+        '& .MuiTable-root': {
+          minWidth: { xs: 500, sm: 700, md: 800 }
+        }
+      }}>
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Name</TableCell>
-            <TableCell>Username</TableCell>
-              <TableCell>Email</TableCell>
-            <TableCell>Role</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="right">Actions</TableCell>
+            <TableCell sx={{ minWidth: { xs: 100, sm: 120 } }}>Name</TableCell>
+            <TableCell sx={{ minWidth: { xs: 80, sm: 100 } }}>Username</TableCell>
+            <TableCell sx={{ minWidth: { xs: 120, sm: 150 }, display: { xs: 'none', md: 'table-cell' } }}>Email</TableCell>
+            <TableCell sx={{ minWidth: { xs: 80, sm: 100 } }}>Role</TableCell>
+            <TableCell sx={{ minWidth: { xs: 80, sm: 100 } }}>Status</TableCell>
+            <TableCell align="right" sx={{ minWidth: { xs: 120, sm: 140 } }}>Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -111,7 +116,9 @@ export const ListUser: React.FC = () => {
                   {user.firstName} {user.lastName}
                 </TableCell>
                 <TableCell>{user.username}</TableCell>
-                <TableCell>{user.email || '-'}</TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                  {user.email || '-'}
+                </TableCell>
               <TableCell>
                   {user.role ? (
                   <Typography
@@ -135,27 +142,37 @@ export const ListUser: React.FC = () => {
                   />
                 </TableCell>
                 <TableCell align="right">
-                  <IconButton
-                    color="primary"
-                    onClick={() => { router.push(`/dashboard/user/${user.id}/view`); }}
-                  >
-                    <ViewIcon />
-                  </IconButton>
-                  <IconButton
-                    color="primary"
-                    onClick={() => { router.push(`/dashboard/user/${user.id}`); }}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    color="error"
-                    onClick={() => {
-                      setSelectedUser(user);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: { xs: 0.5, sm: 1 },
+                    justifyContent: 'flex-end',
+                    flexWrap: 'nowrap'
+                  }}>
+                    <IconButton
+                      color="primary"
+                      onClick={() => { router.push(`/dashboard/user/${user.id}/view`); }}
+                      size="small"
+                    >
+                      <ViewIcon />
+                    </IconButton>
+                    <IconButton
+                      color="primary"
+                      onClick={() => { router.push(`/dashboard/user/${user.id}`); }}
+                      size="small"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      color="error"
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setDeleteDialogOpen(true);
+                      }}
+                      size="small"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
               </TableCell>
             </TableRow>
           ))}
