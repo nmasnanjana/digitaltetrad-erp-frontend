@@ -51,6 +51,7 @@ export default function PermissionPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [permissionSearchTerm, setPermissionSearchTerm] = useState('');
 
     useEffect(() => {
         if (!authLoading) {
@@ -112,6 +113,7 @@ export default function PermissionPage() {
     const handleEditPermissions = (role: Role) => {
         setSelectedRole(role);
         setSelectedPermissions(role.permissions?.map(p => p.id) || []);
+        setPermissionSearchTerm(''); // Reset search when opening dialog
         setOpenDialog(true);
     };
 
@@ -150,6 +152,12 @@ export default function PermissionPage() {
     const filteredRoles = roles.filter(role => 
         role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         role.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const filteredPermissions = permissions.filter(permission => 
+        permission.module.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
+        permission.action.toLowerCase().includes(permissionSearchTerm.toLowerCase()) ||
+        permission.description?.toLowerCase().includes(permissionSearchTerm.toLowerCase())
     );
 
     if (authLoading) {
@@ -315,31 +323,48 @@ export default function PermissionPage() {
                 </DialogTitle>
                 <Divider />
                 <DialogContent>
-                    <Grid container spacing={2} sx={{ mt: 1 }}>
-                        {permissions.map((permission) => (
-                            <Grid item xs={12} sm={6} md={4} key={permission.id}>
-                                <FormControlLabel
-                                    control={
-                                        <Checkbox
-                                            checked={selectedPermissions.includes(permission.id)}
-                                            onChange={() => { handlePermissionChange(permission.id); }}
-                                            color="primary"
-                                        />
-                                    }
-                                    label={
-                                        <Stack spacing={0.5}>
-                                            <Typography variant="body2">
-                                                {`${permission.module}.${permission.action}`}
-                                            </Typography>
-                                            {permission.description ? <Typography variant="caption" color="text.secondary">
-                                                    {permission.description}
-                                                </Typography> : null}
-                                        </Stack>
-                                    }
-                                />
-                            </Grid>
-                        ))}
-                    </Grid>
+                    <Stack spacing={2}>
+                        <TextField
+                            fullWidth
+                            placeholder="Search permissions by module, action, or description..."
+                            value={permissionSearchTerm}
+                            onChange={(e) => { setPermissionSearchTerm(e.target.value); }}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon />
+                                    </InputAdornment>
+                                ),
+                            }}
+                            size="small"
+                        />
+                        
+                                                <Grid container spacing={2}>
+                            {filteredPermissions.map((permission) => (
+                                <Grid item xs={12} sm={6} md={4} key={permission.id}>
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={selectedPermissions.includes(permission.id)}
+                                                onChange={() => { handlePermissionChange(permission.id); }}
+                                                color="primary"
+                                            />
+                                        }
+                                        label={
+                                            <Stack spacing={0.5}>
+                                                <Typography variant="body2">
+                                                    {`${permission.module}.${permission.action}`}
+                                                </Typography>
+                                                {permission.description ? <Typography variant="caption" color="text.secondary">
+                                                        {permission.description}
+                                                    </Typography> : null}
+                                            </Stack>
+                                        }
+                                    />
+                                </Grid>
+                            ))}
+                        </Grid>
+                    </Stack>
                 </DialogContent>
                 <Divider />
                 <DialogActions sx={{ p: 2 }}>
