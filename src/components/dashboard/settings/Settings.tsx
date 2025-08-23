@@ -42,6 +42,7 @@ export const Settings: React.FC = () => {
   const [formData, setFormData] = useState({
     currency: 'USD',
     vat_percentage: 0,
+    ssl_percentage: 0,
     vat_number: '',
     business_registration_number: '',
     contact_number: '',
@@ -69,6 +70,7 @@ export const Settings: React.FC = () => {
       setFormData({
         currency: data.currency,
         vat_percentage: data.vat_percentage,
+        ssl_percentage: data.ssl_percentage,
         vat_number: data.vat_number || '',
         business_registration_number: data.business_registration_number || '',
         contact_number: data.contact_number || '',
@@ -123,6 +125,7 @@ export const Settings: React.FC = () => {
       setFormData({
         currency: resetData.currency,
         vat_percentage: resetData.vat_percentage,
+        ssl_percentage: resetData.ssl_percentage,
         vat_number: resetData.vat_number || '',
         business_registration_number: resetData.business_registration_number || '',
         contact_number: resetData.contact_number || '',
@@ -445,6 +448,24 @@ export const Settings: React.FC = () => {
                 type="number"
                 value={formData.vat_percentage}
                 onChange={(e) => { handleFormChange('vat_percentage', parseFloat(e.target.value) || 0); }}
+                InputProps={{
+                  endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                }}
+                inputProps={{
+                  min: 0,
+                  max: 100,
+                  step: 0.01,
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="SSL Percentage"
+                type="number"
+                value={formData.ssl_percentage}
+                onChange={(e) => { handleFormChange('ssl_percentage', parseFloat(e.target.value) || 0); }}
                 InputProps={{
                   endAdornment: <InputAdornment position="end">%</InputAdornment>,
                 }}

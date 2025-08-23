@@ -48,6 +48,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
         id: 1,
         currency: 'USD',
         vat_percentage: 0,
+        ssl_percentage: 0,
         vat_number: '',
         business_registration_number: '',
         contact_number: '',

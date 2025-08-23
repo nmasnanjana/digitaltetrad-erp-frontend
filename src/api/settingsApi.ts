@@ -4,6 +4,7 @@ export interface SettingsData {
   id: number;
   currency: string;
   vat_percentage: number;
+  ssl_percentage: number;
   vat_number: string;
   business_registration_number: string;
   contact_number: string;
@@ -13,7 +14,7 @@ export interface SettingsData {
   company_address: string;
   company_logo: string;
   bank_account: string;
-  updated_by?: string;
+  updated_by?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -21,6 +22,7 @@ export interface SettingsData {
 export interface UpdateSettingsData {
   currency?: string;
   vat_percentage?: number;
+  ssl_percentage?: number;
   vat_number?: string;
   business_registration_number?: string;
   contact_number?: string;

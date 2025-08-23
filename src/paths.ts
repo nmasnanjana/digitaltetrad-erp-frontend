@@ -38,6 +38,7 @@ export interface PathConfig {
     expenseEdit: (id: string) => string;
     invoiceGenerator: string;
     viewInvoices: string;
+    ericssonRateCard: string;
   };
   errors: {
     notFound: string;
@@ -84,6 +85,7 @@ export const paths: PathConfig = {
     expenseEdit: (id: string) => `/dashboard/expense/${id}/edit`,
     invoiceGenerator: '/dashboard/invoice-generator',
     viewInvoices: '/dashboard/view-invoices',
+    ericssonRateCard: '/dashboard/ericsson-rate-card',
   },
   errors: { notFound: '/errors/404' },
 } as const;

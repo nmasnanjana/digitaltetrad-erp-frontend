@@ -48,13 +48,13 @@ export interface ExpenseFilters {
 }
 
 interface ExpenseFiltersProps {
-  filters: ExpenseFilters;
-  onFilterChange: (filters: ExpenseFilters) => void;
+    filters: ExpenseFilters;
+    onFilterChange: (filters: ExpenseFilters) => void;
 }
 
 export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
-  filters,
-  onFilterChange,
+    filters,
+    onFilterChange,
 }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [operationTypes, setOperationTypes] = useState<OperationType[]>([]);
@@ -83,11 +83,11 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
   }, []);
 
   const handleFilterChange = (field: keyof ExpenseFilters, value: any) => {
-    onFilterChange({
-      ...filters,
+        onFilterChange({
+            ...filters,
       [field]: value,
-    });
-  };
+        });
+    };
 
   const handleJobToggle = (jobId: string) => {
     const newSelectedJobIds = filters.selectedJobIds.includes(jobId)
@@ -111,7 +111,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
   };
 
   const clearFilters = () => {
-    onFilterChange({
+        onFilterChange({
       expenseType: 'all',
       selectedJobIds: [],
       selectedOperationIds: [],
@@ -121,8 +121,8 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
       minAmount: '',
       maxAmount: '',
       status: '',
-    });
-  };
+        });
+    };
 
   const clearDateRange = () => {
     handleFilterChange('fromDate', '');
@@ -342,14 +342,14 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
               {/* Date Range */}
               <Grid item xs={12} sm={6} md={3}>
                 <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <DatePicker
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <DatePicker
                       label="From Date"
                       value={getDateValue(filters.fromDate)}
                       onChange={(date) => handleFilterChange('fromDate', date ? date.toISOString().split('T')[0] : '')}
                       slotProps={{ textField: { size: 'small', sx: { flex: 1 } } }}
-                    />
-                    <DatePicker
+                        />
+                        <DatePicker
                       label="To Date"
                       value={getDateValue(filters.toDate)}
                       onChange={(date) => handleFilterChange('toDate', date ? date.toISOString().split('T')[0] : '')}
@@ -359,10 +359,10 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                       <Tooltip title="Clear date range">
                         <IconButton size="small" onClick={clearDateRange}>
                           <ClearIcon fontSize="small" />
-                        </IconButton>
+                                </IconButton>
                       </Tooltip>
                     )}
-                  </Stack>
+                    </Stack>
                 </LocalizationProvider>
               </Grid>
             </Grid>
@@ -386,8 +386,8 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                           ))}
                         </Box>
                       )}
-                      MenuProps={{
-                        PaperProps: {
+                        MenuProps={{
+                            PaperProps: {
                           style: {
                             maxHeight: 300,
                           },
@@ -418,10 +418,10 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                         <MenuItem key={job.id} value={job.id.toString()}>
                           <Checkbox checked={filters.selectedJobIds.includes(job.id.toString())} />
                           <ListItemText primary={`Job ${job.id}`} />
-                        </MenuItem>
-                      ))}
+                            </MenuItem>
+                        ))}
                     </Select>
-                  </FormControl>
+                </FormControl>
                 </Grid>
               )}
 
@@ -475,10 +475,10 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                         <MenuItem key={operation.id} value={operation.id.toString()}>
                           <Checkbox checked={filters.selectedOperationIds.includes(operation.id.toString())} />
                           <ListItemText primary={operation.name} />
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
                 </Grid>
               )}
 
@@ -486,7 +486,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
               <Grid item xs={12} sm={6} md={4}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Select Expense Types</InputLabel>
-                  <Select
+                                <Select
                     multiple
                     value={filters.selectedExpenseTypeIds}
                     onChange={(e) => handleFilterChange('selectedExpenseTypeIds', e.target.value)}
@@ -499,8 +499,8 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                         })}
                       </Box>
                     )}
-                    MenuProps={{
-                      PaperProps: {
+                                    MenuProps={{
+                                        PaperProps: {
                         style: {
                           maxHeight: 300,
                         },
@@ -531,15 +531,15 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                       <MenuItem key={expenseType.id} value={expenseType.id.toString()}>
                         <Checkbox checked={filters.selectedExpenseTypeIds.includes(expenseType.id.toString())} />
                         <ListItemText primary={expenseType.name} />
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
               </Grid>
             </Grid>
           </CardContent>
         </Card>
       )}
-    </Box>
-  );
+        </Box>
+    );
 }; 
