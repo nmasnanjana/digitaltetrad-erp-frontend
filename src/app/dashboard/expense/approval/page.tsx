@@ -105,6 +105,12 @@ export default function ExpenseApprovalPage() {
       return;
     }
     
+    // Validate comment is required for denied expenses
+    if (reviewStatus === 'denied' && !reviewComment.trim()) {
+      setLocalError('Comment is required when denying an expense.');
+      return;
+    }
+    
     console.log('Current user:', user);
     console.log('User ID:', user.id);
     console.log('User ID type:', typeof user.id);
@@ -279,14 +285,21 @@ export default function ExpenseApprovalPage() {
                 <MenuItem value="denied">Deny</MenuItem>
               </Select>
             </FormControl>
-            <TextField
-              fullWidth
-              label="Comment"
-              multiline
-              rows={4}
-              value={reviewComment}
-              onChange={(e) => { setReviewComment(e.target.value); }}
-            />
+            
+            {/* Only show comment field for denied expenses */}
+            {reviewStatus === 'denied' && (
+              <TextField
+                fullWidth
+                label="Comment (Required)"
+                multiline
+                rows={4}
+                value={reviewComment}
+                onChange={(e) => { setReviewComment(e.target.value); }}
+                required
+                error={reviewStatus === 'denied' && !reviewComment.trim()}
+                helperText={reviewStatus === 'denied' && !reviewComment.trim() ? 'Comment is required when denying an expense' : ''}
+              />
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
