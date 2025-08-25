@@ -427,7 +427,7 @@ export const EricssonBoqUploadDialog: React.FC<EricssonBoqUploadDialogProps> = (
       console.log('Upload successful:', response);
       
       // Show success message
-      alert(`Successfully uploaded BOQ with ${response.data.items?.length || 0} items and ${response.data.materials?.length || 0} materials`);
+      alert(`Successfully uploaded BOQ with ${response.data.items?.length || 0} items`);
       
       // Close dialog and reset state
       onSuccess();

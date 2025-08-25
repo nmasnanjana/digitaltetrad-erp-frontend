@@ -671,6 +671,28 @@ export const JobView: React.FC<JobViewProps> = ({
     return huaweiPoData.length > 0 && getFrozenPoCount() === huaweiPoData.length;
   };
 
+  // Helper function to check if any BOQ items have been invoiced
+  const hasInvoicedBoqItems = () => {
+    return ericssonBoqData?.items?.some((item: any) => {
+      const invoicedPercentage = item.invoiced_percentage || 0;
+      return invoicedPercentage > 0;
+    }) || false;
+  };
+
+  // Helper function to count frozen BOQ items
+  const getFrozenBoqItemCount = () => {
+    return ericssonBoqData?.items?.filter((item: any) => {
+      const invoicedPercentage = item.invoiced_percentage || 0;
+      return invoicedPercentage > 0;
+    }).length || 0;
+  };
+
+  // Helper function to check if all BOQ items are frozen
+  const areAllBoqItemsFrozen = () => {
+    return ericssonBoqData?.items && ericssonBoqData.items.length > 0 && 
+           getFrozenBoqItemCount() === ericssonBoqData.items.length;
+  };
+
   // Individual PO management functions
   const handleAddPo = async (poData: any) => {
     try {
@@ -1108,12 +1130,18 @@ export const JobView: React.FC<JobViewProps> = ({
                           await deleteEricssonBoqByJobId(job.id);
                           setEricssonBoqData(null);
                           alert('BOQ data deleted successfully');
-                        } catch (error) {
+                        } catch (error: any) {
                           console.error('Error deleting BOQ data:', error);
-                          alert('Failed to delete BOQ data');
+                          if (error.response?.data?.error) {
+                            alert(`Failed to delete BOQ data: ${error.response.data.error}`);
+                          } else {
+                            alert('Failed to delete BOQ data');
+                          }
                         }
                       }
                     }}
+                    disabled={hasInvoicedBoqItems()}
+                    title={hasInvoicedBoqItems() ? "Cannot delete - some BOQ items have been invoiced" : ""}
                   >
                     Delete BOQ
                   </Button>
@@ -1167,8 +1195,79 @@ export const JobView: React.FC<JobViewProps> = ({
                 console.log('Rendering Ericsson BOQ data:', ericssonBoqData);
                 return (
                   <Box>
+                    {/* Warning message for invoiced BOQ items */}
+                    {hasInvoicedBoqItems() && (
+                      <Box sx={{ mb: 2, p: 1.5, bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200', borderRadius: 1 }}>
+                        <Typography variant="body2" color="info.dark" sx={{ fontSize: '0.875rem' }}>
+                          <strong>Note:</strong> {areAllBoqItemsFrozen() 
+                            ? `All ${getFrozenBoqItemCount()} BOQ item(s) are frozen due to invoicing. No modifications are allowed.`
+                            : `${getFrozenBoqItemCount()} BOQ item(s) are frozen due to invoicing. These cannot be modified or deleted.`
+                          }
+                        </Typography>
+                      </Box>
+                    )}
                     {/* Summary Cards */}
                     <Grid container spacing={2} sx={{ mb: 3 }}>
+                      {/* BOQ Summary */}
+                      {ericssonBoqData.items && ericssonBoqData.items.length > 0 && (
+                        <Grid item xs={12}>
+                          <Card sx={{ mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
+                            <CardContent>
+                              <Typography variant="h6" gutterBottom>
+                                BOQ Summary
+                              </Typography>
+                              <Grid container spacing={2}>
+                                <Grid item xs={12} sm={6} md={3}>
+                                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Total Items
+                                    </Typography>
+                                    <Typography variant="h6" fontWeight="bold">
+                                      {ericssonBoqData.items.length}
+                                    </Typography>
+                                  </Box>
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={3}>
+                                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'blue.50', borderRadius: 1 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Total BOQ Value
+                                    </Typography>
+                                    <Typography variant="h6" fontWeight="bold" color="primary">
+                                      {formatCurrency(ericssonBoqData.items.reduce((sum: number, item: any) => sum + (item.total_amount || 0), 0))}
+                                    </Typography>
+                                  </Box>
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={3}>
+                                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'green.50', borderRadius: 1 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Previously Invoiced
+                                    </Typography>
+                                    <Typography variant="h6" fontWeight="bold" color="success.main">
+                                      {formatCurrency(ericssonBoqData.items.reduce((sum: number, item: any) => {
+                                        const invoicedPercentage = item.invoiced_percentage || 0;
+                                        return sum + ((item.total_amount || 0) * invoicedPercentage / 100);
+                                      }, 0))}
+                                    </Typography>
+                                  </Box>
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={3}>
+                                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'orange.50', borderRadius: 1 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Available for Invoice
+                                    </Typography>
+                                    <Typography variant="h6" fontWeight="bold" color="warning.main">
+                                      {formatCurrency(ericssonBoqData.items.reduce((sum: number, item: any) => {
+                                        const invoicedPercentage = item.invoiced_percentage || 0;
+                                        return sum + ((item.total_amount || 0) * (100 - invoicedPercentage) / 100);
+                                      }, 0))}
+                                    </Typography>
+                                  </Box>
+                                </Grid>
+                              </Grid>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      )}
                       <Grid item xs={12} sm={6} md={3}>
                         <Card sx={{ border: '1px solid', borderColor: 'grey.200' }}>
                           <CardContent>
@@ -1331,6 +1430,7 @@ export const JobView: React.FC<JobViewProps> = ({
                                <TableCell align="right" sx={{ fontWeight: 'bold' }}>Qty</TableCell>
                                <TableCell align="right" sx={{ fontWeight: 'bold' }}>Unit Price</TableCell>
                                <TableCell align="right" sx={{ fontWeight: 'bold' }}>Total Amount</TableCell>
+                               <TableCell sx={{ fontWeight: 'bold' }}>Invoiced %</TableCell>
                                <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
                              </TableRow>
                            </TableHead>
@@ -1340,7 +1440,10 @@ export const JobView: React.FC<JobViewProps> = ({
                                  key={index} 
                                  hover 
                                  sx={{ 
-                                   '&:hover': { bgcolor: 'grey.50' }
+                                   backgroundColor: (item.invoiced_percentage || 0) >= 100 ? '#fef3c7' : 'inherit',
+                                   '&:hover': {
+                                     backgroundColor: (item.invoiced_percentage || 0) >= 100 ? '#fde68a' : 'grey.50'
+                                   }
                                  }}
                                >
                                  <TableCell>
@@ -1372,6 +1475,19 @@ export const JobView: React.FC<JobViewProps> = ({
                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                      {formatCurrency(item.total_amount)}
                                    </Typography>
+                                 </TableCell>
+                                 <TableCell>
+                                   <Chip 
+                                     label={`${item.invoiced_percentage || 0}%`} 
+                                     color="primary" 
+                                     size="small"
+                                     sx={{ 
+                                       backgroundColor: '#dbeafe',
+                                       color: '#1e40af',
+                                       fontWeight: 500,
+                                       fontSize: '0.75rem'
+                                     }}
+                                   />
                                  </TableCell>
                                  <TableCell>
                                    <Chip 

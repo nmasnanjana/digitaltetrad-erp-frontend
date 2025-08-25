@@ -27,6 +27,7 @@ export interface EricssonBoqItemData {
   total_amount: number;
   is_additional_work: boolean;
   rate_card_id?: number | null;
+  invoiced_percentage: number;
   uploaded_at?: string;
   uploaded_by?: string | null;
   createdAt: string;

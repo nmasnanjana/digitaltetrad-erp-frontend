@@ -30,6 +30,7 @@ import {
   MenuItem,
   Stack,
   OutlinedInput,
+  CircularProgress,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -37,10 +38,12 @@ import DownloadIcon from '@mui/icons-material/Download';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import { getAllInvoices, deleteInvoice, type InvoiceRecord } from '@/api/huawei-invoice-api';
+import { getAllEricssonInvoices, deleteEricssonInvoice, type EricssonInvoiceData } from '@/api/ericsson-invoice-api';
 import { getSettings } from '@/api/settingsApi';
 import { getAllCustomers } from '@/api/customer-api';
 import { useSettings } from '@/contexts/SettingsContext';
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
+import { generateEricssonInvoicePDF } from '@/utils/ericssonInvoicePdfGenerator';
 
 interface FilterState {
   customer: string;
@@ -54,10 +57,15 @@ export const ViewInvoices: React.FC = () => {
   const { formatCurrency, currencySymbol } = useSettings();
   
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [ericssonInvoices, setEricssonInvoices] = useState<EricssonInvoiceData[]>([]);
   const [filteredInvoices, setFilteredInvoices] = useState<InvoiceRecord[]>([]);
+  const [filteredEricssonInvoices, setFilteredEricssonInvoices] = useState<EricssonInvoiceData[]>([]);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedInvoiceDetails, setSelectedInvoiceDetails] = useState<InvoiceRecord[]>([]);
+  const [ericssonViewDialogOpen, setEricssonViewDialogOpen] = useState(false);
+  const [selectedEricssonInvoice, setSelectedEricssonInvoice] = useState<EricssonInvoiceData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingEricsson, setIsLoadingEricsson] = useState(false);
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -73,11 +81,12 @@ export const ViewInvoices: React.FC = () => {
 
   useEffect(() => {
     loadAllInvoices();
+    loadEricssonInvoices();
     loadSettings();
   }, []);
 
   useEffect(() => {
-    // Apply both search and filters
+    // Apply search and filters for Huawei invoices
     let filtered = invoices;
     
     // Apply search filter
@@ -128,12 +137,65 @@ export const ViewInvoices: React.FC = () => {
     setFilteredInvoices(filtered);
   }, [invoices, searchTerm, filters]);
 
+  useEffect(() => {
+    // Apply search and filters for Ericsson invoices
+    let filtered = ericssonInvoices;
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(invoice => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          invoice.invoice_number.toLowerCase().includes(searchLower) ||
+          invoice.job_title.toLowerCase().includes(searchLower) ||
+          invoice.customer_name.toLowerCase().includes(searchLower) ||
+          invoice.project.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+    
+    // Apply customer filter
+    if (filters.customer) {
+      filtered = filtered.filter(invoice => 
+        invoice.customer_name === filters.customer
+      );
+    }
+    
+    // Apply amount filters
+    if (filters.minAmount || filters.maxAmount) {
+      filtered = filtered.filter(invoice => {
+        const totalAmount = invoice.total_amount || 0;
+        const minAmount = filters.minAmount ? parseFloat(filters.minAmount) : 0;
+        const maxAmount = filters.maxAmount ? parseFloat(filters.maxAmount) : Infinity;
+        
+        return totalAmount >= minAmount && totalAmount <= maxAmount;
+      });
+    }
+    
+    // Apply date filters
+    if (filters.fromDate || filters.toDate) {
+      filtered = filtered.filter(invoice => {
+        if (!invoice.createdAt) return false;
+        const invoiceDate = new Date(invoice.createdAt);
+        const fromDate = filters.fromDate ? new Date(filters.fromDate) : new Date(0);
+        const toDate = filters.toDate ? new Date(filters.toDate) : new Date();
+        
+        return invoiceDate >= fromDate && invoiceDate <= toDate;
+      });
+    }
+    
+    setFilteredEricssonInvoices(filtered);
+  }, [ericssonInvoices, searchTerm, filters]);
+
   // Get unique customers for filter dropdown
-  const uniqueCustomers = Array.from(new Set(
-    invoices
+  const uniqueCustomers = Array.from(new Set([
+    ...invoices
       .map(invoice => invoice.huaweiPo?.job?.customer?.name)
+      .filter(Boolean),
+    ...ericssonInvoices
+      .map(invoice => invoice.customer_name)
       .filter(Boolean)
-  )).sort();
+  ])).sort();
 
   const clearSearch = () => {
     setSearchTerm('');
@@ -172,6 +234,19 @@ export const ViewInvoices: React.FC = () => {
     }
   };
 
+  const loadEricssonInvoices = async () => {
+    try {
+      setIsLoadingEricsson(true);
+      const response = await getAllEricssonInvoices();
+      setEricssonInvoices(response.data);
+    } catch (err) {
+      console.error('Error loading Ericsson invoices:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load Ericsson invoices');
+    } finally {
+      setIsLoadingEricsson(false);
+    }
+  };
+
   const loadSettings = async () => {
     try {
       const response = await getSettings();
@@ -191,6 +266,13 @@ export const ViewInvoices: React.FC = () => {
       console.error('Error loading invoice details:', err);
       setError(err instanceof Error ? err.message : 'Failed to load invoice details');
     }
+  };
+
+  const handleViewEricssonInvoice = (invoice: EricssonInvoiceData) => {
+    console.log('Viewing Ericsson invoice:', invoice);
+    console.log('Ericsson invoice items:', invoice.items);
+    setSelectedEricssonInvoice(invoice);
+    setEricssonViewDialogOpen(true);
   };
 
   const handleDeleteInvoice = async (id: number) => {
@@ -275,7 +357,8 @@ export const ViewInvoices: React.FC = () => {
       totalAmount,
       created_at: invoices[0].createdAt,
       customer_name: invoices[0].huaweiPo?.job?.customer?.name || 'Unknown',
-      job_name: invoices[0].huaweiPo?.job?.name || 'Unknown'
+      job_name: invoices[0].huaweiPo?.job?.name || 'Unknown',
+      po_no: invoices[0].huaweiPo?.poNo || 'N/A'
     };
   }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
@@ -289,12 +372,12 @@ export const ViewInvoices: React.FC = () => {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             View and manage all invoices across all customers
           </Typography>
-          
+
           {/* Search Bar */}
           <TextField
             fullWidth
             variant="outlined"
-            placeholder="Search by invoice number, PO number, item code, description, or job name..."
+            placeholder="Search by invoice number, customer, job, project, or any invoice details..."
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); }}
             InputProps={{
@@ -451,80 +534,225 @@ export const ViewInvoices: React.FC = () => {
           </CardContent>
         </Card> : null}
 
-      {/* Invoices List */}
+      {/* Unified Invoices List */}
       <Card sx={{ mt: 1.5 }}>
         <CardContent sx={{ p: 2 }}>
           <Typography variant="h6" gutterBottom>
-            Invoice Summary ({invoiceSummaries.length} invoices)
+            All Invoices ({invoiceSummaries.length + filteredEricssonInvoices.length} total)
           </Typography>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Invoice Number</TableCell>
-                  <TableCell>Customer</TableCell>
-                  <TableCell>Job</TableCell>
-                  <TableCell>Total Records</TableCell>
-                  <TableCell>Total Amount</TableCell>
-                  <TableCell>Created Date</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {invoiceSummaries.map((summary) => (
-                  <TableRow key={summary.invoiceNo}>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight="bold">
-                        {summary.invoiceNo}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {summary.customer_name}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {summary.job_name}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={summary.total_records} color="primary" size="small" />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight="bold" color="primary">
-                        {formatCurrency(summary.totalAmount)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(summary.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <IconButton
-                          color="primary"
-                          size="small"
-                          onClick={() => handleViewInvoice(summary.invoiceNo)}
-                        >
-                          <VisibilityIcon />
-                        </IconButton>
-                        <IconButton
-                          color="error"
-                          size="small"
-                          onClick={() => {
-                            const firstInvoice = groupedInvoices[summary.invoiceNo][0];
-                            handleDeleteInvoice(firstInvoice.id);
-                          }}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Box>
-                    </TableCell>
+          {(isLoading || isLoadingEricsson) ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Invoice Number</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Customer</TableCell>
+                    <TableCell>Job</TableCell>
+                    <TableCell>Project/PO</TableCell>
+                    <TableCell>Total Amount</TableCell>
+                    <TableCell>Created Date</TableCell>
+                    <TableCell>Actions</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {/* Huawei Invoices */}
+                  {invoiceSummaries.map((summary) => (
+                    <TableRow key={`huawei-${summary.invoiceNo}`}>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="bold">
+                          {summary.invoiceNo}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip label="Huawei" color="primary" size="small" />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {summary.customer_name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {summary.job_name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                          PO: {summary.po_no || 'N/A'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="bold" color="primary">
+                          {formatCurrency(summary.totalAmount)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {new Date(summary.created_at).toLocaleDateString()}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <IconButton
+                            color="primary"
+                            size="small"
+                            onClick={() => handleViewInvoice(summary.invoiceNo)}
+                          >
+                            <VisibilityIcon />
+                          </IconButton>
+                          <IconButton
+                            color="primary"
+                            size="small"
+                            onClick={async () => {
+                              try {
+                                const invoiceDetails = invoices.filter(inv => inv.invoiceNo === summary.invoiceNo);
+                                const settingsResponse = await getSettings();
+                                if (!settingsResponse.data) {
+                                  throw new Error('Settings not found');
+                                }
+                                
+                                // Get Huawei customer data
+                                const customersResponse = await getAllCustomers();
+                                const customers = customersResponse.data;
+                                const huaweiCustomer = customers.find((customer: any) => 
+                                  customer.name.toLowerCase().includes('huawei')
+                                );
+                                
+                                if (!huaweiCustomer) {
+                                  throw new Error('Huawei customer not found');
+                                }
+                                
+                                await generateInvoicePDF({
+                                  invoiceDetails,
+                                  settings: settingsResponse.data,
+                                  huaweiCustomer
+                                });
+                              } catch (error) {
+                                console.error('Error generating PDF:', error);
+                                setError('Failed to generate PDF');
+                              }
+                            }}
+                          >
+                            <DownloadIcon />
+                          </IconButton>
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={() => {
+                              const firstInvoice = groupedInvoices[summary.invoiceNo][0];
+                              handleDeleteInvoice(firstInvoice.id);
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  
+                  {/* Ericsson Invoices */}
+                  {filteredEricssonInvoices.map((invoice) => (
+                    <TableRow key={`ericsson-${invoice.id}`}>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="bold">
+                          {invoice.invoice_number}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip label="Ericsson" color="secondary" size="small" />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {invoice.customer_name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {invoice.job_title}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                          {invoice.project}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="bold" color="primary">
+                          {formatCurrency(invoice.total_amount)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() : '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <IconButton
+                            color="primary"
+                            size="small"
+                            onClick={() => handleViewEricssonInvoice(invoice)}
+                          >
+                            <VisibilityIcon />
+                          </IconButton>
+                          <IconButton
+                            color="primary"
+                            size="small"
+                            onClick={() => {
+                              // Generate PDF for this invoice
+                              const invoiceData = {
+                                invoiceNumber: invoice.invoice_number,
+                                jobId: invoice.job_id,
+                                jobTitle: invoice.job_title,
+                                customerName: invoice.customer_name,
+                                customerAddress: invoice.customer_address,
+                                project: invoice.project,
+                                siteId: invoice.site_id,
+                                siteName: invoice.site_name,
+                                purchaseOrderNumber: invoice.purchase_order_number,
+                                items: invoice.items || [],
+                                removeMaterials: [],
+                                surplusMaterials: [],
+                                subtotal: invoice.subtotal,
+                                vatAmount: invoice.vat_amount,
+                                sslAmount: invoice.ssl_amount,
+                                totalAmount: invoice.total_amount,
+                              };
+                              generateEricssonInvoicePDF(invoiceData);
+                            }}
+                          >
+                            <DownloadIcon />
+                          </IconButton>
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={async () => {
+                              if (window.confirm('Are you sure you want to delete this invoice?')) {
+                                try {
+                                  await deleteEricssonInvoice(invoice.id?.toString() || '');
+                                  setSuccess('Invoice deleted successfully');
+                                  loadEricssonInvoices();
+                                } catch (error) {
+                                  setError('Failed to delete invoice');
+                                }
+                              }
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </CardContent>
       </Card>
 
@@ -782,6 +1010,288 @@ export const ViewInvoices: React.FC = () => {
           {selectedInvoiceDetails.length > 0 && (
             <Button onClick={handleDownloadPDF} startIcon={<DownloadIcon />} disabled={isDownloadingPDF}>
               {isDownloadingPDF ? 'Downloading...' : 'Download PDF'}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* View Ericsson Invoice Dialog */}
+      <Dialog 
+        open={ericssonViewDialogOpen} 
+        onClose={() => setEricssonViewDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h6">
+            Ericsson Invoice Details
+            {selectedEricssonInvoice && (
+              <Typography variant="subtitle1" color="primary" sx={{ mt: 1 }}>
+                {selectedEricssonInvoice.invoice_number}
+              </Typography>
+            )}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {selectedEricssonInvoice ? (
+            <Box>
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Invoice Number
+                  </Typography>
+                  <Typography variant="body1" fontWeight="bold">
+                    {selectedEricssonInvoice.invoice_number}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Job ID
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedEricssonInvoice.job_id}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Job Title
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedEricssonInvoice.job_title}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Customer
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedEricssonInvoice.customer_name}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Project
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedEricssonInvoice.project}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Site ID
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedEricssonInvoice.site_id}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Site Name
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedEricssonInvoice.site_name}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Purchase Order Number
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedEricssonInvoice.purchase_order_number}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Created Date
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedEricssonInvoice.createdAt ? new Date(selectedEricssonInvoice.createdAt).toLocaleString() : 'N/A'}
+                  </Typography>
+                </Grid>
+              </Grid>
+
+              {/* Financial Summary */}
+              <Box sx={{ 
+                mb: 3, 
+                p: 3, 
+                backgroundColor: '#f0fdf4',
+                borderRadius: 2, 
+                border: '1px solid', 
+                borderColor: '#bbf7d0'
+              }}>
+                <Typography variant="subtitle1" gutterBottom color="text.primary" fontWeight="500" sx={{ mb: 2 }}>
+                  Financial Summary
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Subtotal
+                      </Typography>
+                      <Typography variant="h6" fontWeight="600" color="text.primary">
+                        {formatCurrency(selectedEricssonInvoice.subtotal)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        VAT ({selectedEricssonInvoice.vat_percentage}%)
+                      </Typography>
+                      <Typography variant="h6" fontWeight="600" color="#1e40af">
+                        {formatCurrency(selectedEricssonInvoice.vat_amount)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        SSL ({selectedEricssonInvoice.ssl_percentage}%)
+                      </Typography>
+                      <Typography variant="h6" fontWeight="600" color="#1e40af">
+                        {formatCurrency(selectedEricssonInvoice.ssl_amount)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Total Amount
+                      </Typography>
+                      <Typography variant="h6" fontWeight="600" color="#059669">
+                        {formatCurrency(selectedEricssonInvoice.total_amount)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Invoice Items */}
+              <Typography variant="h6" gutterBottom>
+                Invoice Items
+              </Typography>
+              
+              {selectedEricssonInvoice.items && selectedEricssonInvoice.items.length > 0 ? (
+                <TableContainer component={Paper}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Service Number</TableCell>
+                        <TableCell>Item Description</TableCell>
+                        <TableCell>Unit</TableCell>
+                        <TableCell>Quantity</TableCell>
+                        <TableCell>Unit Price</TableCell>
+                        <TableCell>Total Amount</TableCell>
+                        <TableCell>Invoice %</TableCell>
+                        <TableCell>Invoiced Amount</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {selectedEricssonInvoice.items.map((item: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell>{item.service_number}</TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                              {item.item_description}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>{item.unit}</TableCell>
+                          <TableCell>{item.qty}</TableCell>
+                          <TableCell>{formatCurrency(item.unit_price)}</TableCell>
+                          <TableCell>{formatCurrency(item.total_amount)}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={`${item.need_to_invoice_percentage || 0}%`} 
+                              color="primary" 
+                              size="small" 
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="600" color="#059669">
+                              {formatCurrency((item.total_amount || 0) * (item.need_to_invoice_percentage || 0) / 100)}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 2 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    No items found for this invoice
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {selectedEricssonInvoice.items === null 
+                      ? "This invoice was created before items were saved to the database. Items data is not available."
+                      : "No items were included in this invoice."
+                    }
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Loading invoice details...
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEricssonViewDialogOpen(false)}>
+            Close
+          </Button>
+          {selectedEricssonInvoice && (
+            <Button 
+              onClick={() => {
+                const invoiceData = {
+                  invoiceNumber: selectedEricssonInvoice.invoice_number,
+                  jobId: selectedEricssonInvoice.job_id,
+                  jobTitle: selectedEricssonInvoice.job_title,
+                  customerName: selectedEricssonInvoice.customer_name,
+                  customerAddress: selectedEricssonInvoice.customer_address,
+                  project: selectedEricssonInvoice.project,
+                  siteId: selectedEricssonInvoice.site_id,
+                  siteName: selectedEricssonInvoice.site_name,
+                  purchaseOrderNumber: selectedEricssonInvoice.purchase_order_number,
+                  items: selectedEricssonInvoice.items || [],
+                  removeMaterials: [],
+                  surplusMaterials: [],
+                  subtotal: selectedEricssonInvoice.subtotal,
+                  vatAmount: selectedEricssonInvoice.vat_amount,
+                  sslAmount: selectedEricssonInvoice.ssl_amount,
+                  totalAmount: selectedEricssonInvoice.total_amount,
+                };
+                generateEricssonInvoicePDF(invoiceData);
+              }} 
+              startIcon={<DownloadIcon />}
+            >
+              Download PDF
             </Button>
           )}
         </DialogActions>
