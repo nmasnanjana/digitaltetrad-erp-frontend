@@ -98,15 +98,16 @@ export const ViewInvoices: React.FC = () => {
           invoice.huaweiPo?.poNo?.toLowerCase().includes(searchLower) ||
           invoice.huaweiPo?.itemCode?.toLowerCase().includes(searchLower) ||
           invoice.huaweiPo?.itemDescription?.toLowerCase().includes(searchLower) ||
-          invoice.huaweiPo?.job?.name?.toLowerCase().includes(searchLower)
+          invoice.huaweiPo?.job?.name?.toLowerCase().includes(searchLower) ||
+          invoice.huaweiPo?.customer?.name?.toLowerCase().includes(searchLower)
         );
       });
     }
     
     // Apply customer filter
-    if (filters.customer) {
-      filtered = filtered.filter(invoice => 
-        invoice.huaweiPo?.job?.customer?.name === filters.customer
+        if (filters.customer) {
+      filtered = filtered.filter(invoice =>
+        invoice.huaweiPo?.customer?.name === filters.customer
       );
     }
     
@@ -190,7 +191,7 @@ export const ViewInvoices: React.FC = () => {
   // Get unique customers for filter dropdown
   const uniqueCustomers = Array.from(new Set([
     ...invoices
-      .map(invoice => invoice.huaweiPo?.job?.customer?.name)
+      .map(invoice => invoice.huaweiPo?.customer?.name)
       .filter(Boolean),
     ...ericssonInvoices
       .map(invoice => invoice.customer_name)
@@ -219,12 +220,12 @@ export const ViewInvoices: React.FC = () => {
   const loadAllInvoices = async () => {
     try {
       setIsLoading(true);
+      console.log('Loading all invoices...');
       const response = await getAllInvoices();
-      console.log('All invoices response:', response);
-      console.log('First invoice structure:', response[0]);
+      console.log('Response from getAllInvoices:', response);
+      console.log('First invoice in response:', response[0]);
       console.log('First invoice huaweiPo:', response[0]?.huaweiPo);
-      console.log('First invoice job:', response[0]?.huaweiPo?.job);
-      console.log('First invoice customer:', response[0]?.huaweiPo?.job?.customer);
+
       setInvoices(response);
     } catch (err) {
       console.error('Error loading invoices:', err);
@@ -260,6 +261,7 @@ export const ViewInvoices: React.FC = () => {
   const handleViewInvoice = async (invoiceNo: string) => {
     try {
       const details = invoices.filter(invoice => invoice.invoiceNo === invoiceNo);
+      
       setSelectedInvoiceDetails(details);
       setViewDialogOpen(true);
     } catch (err) {
@@ -351,14 +353,17 @@ export const ViewInvoices: React.FC = () => {
       return sum + totalAmount;
     }, 0);
 
+    const firstInvoice = invoices[0];
+    
+
     return {
       invoiceNo,
       total_records: invoices.length,
       totalAmount,
-      created_at: invoices[0].createdAt,
-      customer_name: invoices[0].huaweiPo?.job?.customer?.name || 'Unknown',
-      job_name: invoices[0].huaweiPo?.job?.name || 'Unknown',
-      po_no: invoices[0].huaweiPo?.poNo || 'N/A'
+      created_at: firstInvoice.createdAt,
+      customer_name: firstInvoice.huaweiPo?.customer?.name || 'Unknown',
+      job_name: firstInvoice.huaweiPo?.job?.name || 'Unknown',
+      po_no: firstInvoice.huaweiPo?.poNo || 'N/A'
     };
   }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
@@ -593,7 +598,7 @@ export const ViewInvoices: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2">
-                          {new Date(summary.created_at).toLocaleDateString()}
+                          {summary.created_at ? new Date(summary.created_at).toLocaleDateString() : 'N/A'}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -1292,6 +1297,272 @@ export const ViewInvoices: React.FC = () => {
               startIcon={<DownloadIcon />}
             >
               Download PDF
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* View Huawei Invoice Dialog */}
+      <Dialog 
+        open={viewDialogOpen} 
+        onClose={() => setViewDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h6">
+            Huawei Invoice Details
+            {selectedInvoiceDetails.length > 0 && (
+              <Typography variant="subtitle1" color="primary" sx={{ mt: 1 }}>
+                {selectedInvoiceDetails[0].invoiceNo}
+              </Typography>
+            )}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {selectedInvoiceDetails.length > 0 ? (
+            <Box>
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Invoice Number
+                  </Typography>
+                  <Typography variant="body1" fontWeight="bold">
+                    {selectedInvoiceDetails[0].invoiceNo}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Total Records
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedInvoiceDetails.length}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    VAT Percentage
+                  </Typography>
+                  <Typography variant="body1" fontWeight="bold" color="#1e40af">
+                    {selectedInvoiceDetails[0].vatPercentage}%
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Created Date
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedInvoiceDetails[0].createdAt ? new Date(selectedInvoiceDetails[0].createdAt).toLocaleString() : 'N/A'}
+                  </Typography>
+                </Grid>
+              </Grid>
+
+              {/* Financial Summary */}
+              <Box sx={{ 
+                mb: 3, 
+                p: 3, 
+                backgroundColor: '#f0fdf4',
+                borderRadius: 2, 
+                border: '1px solid', 
+                borderColor: '#bbf7d0'
+              }}>
+                <Typography variant="subtitle1" gutterBottom color="text.primary" fontWeight="500" sx={{ mb: 2 }}>
+                  Financial Summary
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Subtotal
+                      </Typography>
+                      <Typography variant="h6" fontWeight="600" color="text.primary">
+                        {(() => {
+                          const subtotal = selectedInvoiceDetails.reduce((sum, item) => {
+                            const subtotalAmount = typeof item.subtotalAmount === 'string' ? parseFloat(item.subtotalAmount) : 
+                                                 typeof item.subtotalAmount === 'number' ? item.subtotalAmount : 0;
+                            return sum + subtotalAmount;
+                          }, 0);
+                          return formatCurrency(subtotal);
+                        })()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        VAT ({selectedInvoiceDetails[0].vatPercentage}%)
+                      </Typography>
+                      <Typography variant="h6" fontWeight="600" color="#1e40af">
+                        {(() => {
+                          const vatTotal = selectedInvoiceDetails.reduce((sum, item) => {
+                            const vatAmount = typeof item.vatAmount === 'string' ? parseFloat(item.vatAmount) : 
+                                            typeof item.vatAmount === 'number' ? item.vatAmount : 0;
+                            return sum + vatAmount;
+                          }, 0);
+                          return formatCurrency(vatTotal);
+                        })()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Total Amount
+                      </Typography>
+                      <Typography variant="h6" fontWeight="600" color="#059669">
+                        {(() => {
+                          const total = selectedInvoiceDetails.reduce((sum, item) => {
+                            const totalAmount = typeof item.totalAmount === 'string' ? parseFloat(item.totalAmount) : 
+                                              typeof item.totalAmount === 'number' ? item.totalAmount : 0;
+                            return sum + totalAmount;
+                          }, 0);
+                          return formatCurrency(total);
+                        })()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Invoice Date
+                      </Typography>
+                      <Typography variant="h6" fontWeight="600" color="text.primary">
+                        {selectedInvoiceDetails[0].createdAt ? new Date(selectedInvoiceDetails[0].createdAt).toLocaleDateString() : 'N/A'}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Invoice Items */}
+              <Typography variant="h6" gutterBottom>
+                Invoice Items
+              </Typography>
+              
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>PO NO.</TableCell>
+                      <TableCell>Line NO.</TableCell>
+                      <TableCell>Item Code</TableCell>
+                      <TableCell>Item Description</TableCell>
+                      <TableCell>Unit Price</TableCell>
+                      <TableCell>Requested Qty</TableCell>
+                      <TableCell>Invoiced %</TableCell>
+                      <TableCell>Subtotal</TableCell>
+                      <TableCell>VAT Amount</TableCell>
+                      <TableCell>Total Amount</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {selectedInvoiceDetails.map((item) => {
+                      // Convert unitPrice from decimal string to number
+                      const unitPriceStr = item.huaweiPo?.unitPrice;
+                      const unitPrice = typeof unitPriceStr === 'string' ? parseFloat(unitPriceStr) : 
+                                       typeof unitPriceStr === 'number' ? unitPriceStr : 0;
+                      
+                      // Convert requestedQuantity from decimal string to number
+                      const qtyStr = item.huaweiPo?.requestedQuantity;
+                      const requestedQty = typeof qtyStr === 'string' ? parseFloat(qtyStr) : 
+                                         typeof qtyStr === 'number' ? qtyStr : 0;
+                      
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.huaweiPo?.poNo || 'N/A'}</TableCell>
+                          <TableCell>{item.huaweiPo?.lineNo || 'N/A'}</TableCell>
+                          <TableCell>{item.huaweiPo?.itemCode || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                              {item.huaweiPo?.itemDescription || 'N/A'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>{formatCurrency(unitPrice)}</TableCell>
+                          <TableCell>{requestedQty}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={`${item.invoicedPercentage}%`} 
+                              color="primary" 
+                              size="small" 
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="500" color="text.primary">
+                              {(() => {
+                                const subtotalAmount = typeof item.subtotalAmount === 'string' ? parseFloat(item.subtotalAmount) : 
+                                                     typeof item.subtotalAmount === 'number' ? item.subtotalAmount : 0;
+                                return formatCurrency(subtotalAmount);
+                              })()}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="500" color="#1e40af">
+                              {(() => {
+                                const vatAmount = typeof item.vatAmount === 'string' ? parseFloat(item.vatAmount) : 
+                                                typeof item.vatAmount === 'number' ? item.vatAmount : 0;
+                                return formatCurrency(vatAmount);
+                              })()}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="600" color="#059669">
+                              {(() => {
+                                const totalAmount = typeof item.totalAmount === 'string' ? parseFloat(item.totalAmount) : 
+                                                  typeof item.totalAmount === 'number' ? item.totalAmount : 0;
+                                return formatCurrency(totalAmount);
+                              })()}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Loading invoice details...
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setViewDialogOpen(false)}>
+            Close
+          </Button>
+          {selectedInvoiceDetails.length > 0 && (
+            <Button 
+              onClick={handleDownloadPDF}
+              startIcon={<DownloadIcon />}
+              disabled={isDownloadingPDF}
+            >
+              {isDownloadingPDF ? 'Generating PDF...' : 'Download PDF'}
             </Button>
           )}
         </DialogActions>
