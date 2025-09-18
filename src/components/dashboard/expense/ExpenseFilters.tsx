@@ -72,7 +72,8 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
           getAllOperationTypes(),
           getAllExpenseTypes(),
         ]);
-        setJobs(jobsResponse.data);
+        // Handle paginated response from getAllJobs
+        setJobs(jobsResponse.data.jobs);
         setOperationTypes(operationTypesResponse.data);
         setExpenseTypes(expenseTypesResponse.data);
       } catch (error) {

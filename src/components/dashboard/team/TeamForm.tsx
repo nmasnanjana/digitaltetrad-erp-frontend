@@ -37,7 +37,7 @@ const TeamForm: React.FC<TeamFormProps> = ({
     const loadUsers = async () => {
       try {
         const response = await getAllUsers();
-        setUsers(response.data);
+        setUsers(response.data.users);
       } catch (err) {
         setError('Failed to load users');
       }

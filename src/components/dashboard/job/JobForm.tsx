@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { createJob, updateJob } from '@/api/job-api';
 import { type Job } from '@/types/job';
-import { getAllTeams } from '@/api/teamApi';
+import { getAllTeams, type TeamPaginationResponse } from '@/api/teamApi';
 import { getAllCustomers } from '@/api/customer-api';
 import { type Team } from '@/types/team';
 import { type Customer } from '@/types/customer';
@@ -55,7 +55,8 @@ const JobForm: React.FC<JobFormProps> = ({
           getAllTeams(),
           getAllCustomers(),
         ]);
-        setTeams(teamsResponse.data);
+        // Handle paginated response from getAllTeams
+        setTeams(teamsResponse.data.teams);
         setCustomers(customersResponse.data);
       } catch (err) {
         setError('Failed to load teams and customers');

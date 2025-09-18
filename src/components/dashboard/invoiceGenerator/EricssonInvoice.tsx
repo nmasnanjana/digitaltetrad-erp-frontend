@@ -153,7 +153,7 @@ export const EricssonInvoice: React.FC = () => {
       setIsLoading(true);
       const response = await getAllJobs();
       // Filter only Ericsson jobs
-      const ericssonJobs = response.data.filter((job: Job) => 
+      const ericssonJobs = response.data.jobs.filter((job: Job) => 
         job.customer?.name?.toLowerCase().includes('ericsson')
       );
       setJobs(ericssonJobs);

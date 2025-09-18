@@ -43,10 +43,42 @@ export interface JobFilters {
     status?: string;
     type?: string;
     customerId?: number;
+    page?: number;
+    limit?: number;
+    search?: string;
 }
 
-export const getAllJobs = (filters?: JobFilters): Promise<{ data: Job[] }> =>
-    API.get<Job[]>('/jobs', { params: filters });
+export interface JobPaginationResponse {
+  jobs: Job[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalCount: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+export const getAllJobs = (filters?: JobFilters): Promise<{ data: JobPaginationResponse }> => {
+    const params = new URLSearchParams();
+    
+    // Add existing filters
+    if (filters?.createdStartDate) params.append('createdStartDate', filters.createdStartDate);
+    if (filters?.createdEndDate) params.append('createdEndDate', filters.createdEndDate);
+    if (filters?.completedStartDate) params.append('completedStartDate', filters.completedStartDate);
+    if (filters?.completedEndDate) params.append('completedEndDate', filters.completedEndDate);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.type) params.append('type', filters.type);
+    if (filters?.customerId) params.append('customer_id', filters.customerId.toString());
+    
+    // Add pagination parameters
+    if (filters?.page) params.append('page', filters.page.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    if (filters?.search) params.append('search', filters.search);
+    
+    return API.get<JobPaginationResponse>(`/jobs?${params.toString()}`);
+};
 
 export const getJobById = (id: string): Promise<{ data: Job }> =>
     API.get<Job>(`/jobs/${id}`);

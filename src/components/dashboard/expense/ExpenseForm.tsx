@@ -79,7 +79,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
         ]);
         setExpenseTypes(expenseTypesResponse.data);
         setOperationTypes(operationTypesResponse.data);
-        setJobs(jobsResponse.data);
+        // Handle paginated response from getAllJobs
+        setJobs(jobsResponse.data.jobs);
       } catch (err) {
         setError('Failed to load data');
       }

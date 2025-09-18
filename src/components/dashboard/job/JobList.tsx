@@ -23,10 +23,12 @@ import {
   DialogActions,
   Alert,
   Chip,
+  CircularProgress,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
 import JobForm from './JobForm';
 import { JobFilters } from './JobFilters';
+import { Pagination } from './Pagination';
 import { useRouter } from 'next/navigation';
 
 export const ListJob: React.FC = () => {
@@ -40,6 +42,18 @@ export const ListJob: React.FC = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [filters, setFilters] = useState<JobFiltersType>({});
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    limit: 10,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
 
   const loadCustomers = async () => {
     try {
@@ -53,8 +67,13 @@ export const ListJob: React.FC = () => {
   const loadJobs = async () => {
     try {
       setLoading(true);
-      const response = await getAllJobs(filters);
-      setJobs(response.data);
+      const response = await getAllJobs({
+        ...filters,
+        page: currentPage,
+        limit
+      });
+      setJobs(response.data.jobs);
+      setPagination(response.data.pagination);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load jobs');
@@ -89,11 +108,21 @@ export const ListJob: React.FC = () => {
 
   const handleFilterChange = (newFilters: JobFiltersType) => {
     setFilters(newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
+  const handleLimitChange = (newLimit: number) => {
+    setLimit(newLimit);
+    setCurrentPage(1); // Reset to first page when changing limit
   };
 
   useEffect(() => {
     loadJobs();
-  }, [filters]);
+  }, [filters, currentPage, limit]);
 
   useEffect(() => {
     loadCustomers();
@@ -170,55 +199,80 @@ export const ListJob: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {jobs.map((job) => (
-              <TableRow key={job.id}>
-                <TableCell>{job.name}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={job.status}
-                    color={getStatusColor(job.status)}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={job.type}
-                    color={getTypeColor(job.type)}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>{job.team?.name || '-'}</TableCell>
-                <TableCell>{job.customer?.name || '-'}</TableCell>
-                <TableCell>{job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '-'}</TableCell>
-                <TableCell>{job.completed_at ? new Date(job.completed_at).toLocaleDateString() : '-'}</TableCell>
-                <TableCell align="right">
-                  <IconButton
-                    color="primary"
-                    onClick={() => { router.push(`/dashboard/job/${job.id}/view`); }}
-                  >
-                    <VisibilityIcon />
-                  </IconButton>
-                  <IconButton
-                    color="primary"
-                    onClick={() => { handleEdit(job); }}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    color="error"
-                    onClick={() => {
-                      setSelectedJob(job);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={8} align="center">
+                  <CircularProgress />
                 </TableCell>
               </TableRow>
-            ))}
+            ) : jobs.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} align="center">
+                  No jobs found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              jobs.map((job) => (
+                <TableRow key={job.id}>
+                  <TableCell>{job.name}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={job.status}
+                      color={getStatusColor(job.status)}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={job.type}
+                      color={getTypeColor(job.type)}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>{job.team?.name || '-'}</TableCell>
+                  <TableCell>{job.customer?.name || '-'}</TableCell>
+                  <TableCell>{job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '-'}</TableCell>
+                  <TableCell>{job.completed_at ? new Date(job.completed_at).toLocaleDateString() : '-'}</TableCell>
+                  <TableCell align="right">
+                    <IconButton
+                      color="primary"
+                      onClick={() => { router.push(`/dashboard/job/${job.id}/view`); }}
+                    >
+                      <VisibilityIcon />
+                    </IconButton>
+                    <IconButton
+                      color="primary"
+                      onClick={() => { handleEdit(job); }}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      color="error"
+                      onClick={() => {
+                        setSelectedJob(job);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Pagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        totalCount={pagination.totalCount}
+        limit={limit}
+        hasNextPage={pagination.hasNextPage}
+        hasPrevPage={pagination.hasPrevPage}
+        onPageChange={handlePageChange}
+        onLimitChange={handleLimitChange}
+      />
 
       <Dialog open={deleteDialogOpen} onClose={() => { setDeleteDialogOpen(false); }}>
         <DialogTitle>Delete Job</DialogTitle>

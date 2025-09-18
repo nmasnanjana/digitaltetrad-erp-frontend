@@ -69,7 +69,8 @@ export const ExpenseList: React.FC = () => {
       ]);
       setExpenses(expensesResponse.data);
       setExpenseTypes(expenseTypesResponse.data);
-      setJobs(jobsResponse.data);
+      // Handle paginated response from getAllJobs
+      setJobs(jobsResponse.data.jobs);
       setOperationTypes(operationTypesResponse.data);
       setError(null);
     } catch (err) {
