@@ -39,6 +39,7 @@ export interface PathConfig {
     invoiceGenerator: string;
     viewInvoices: string;
     ericssonRateCard: string;
+    zteRateCard: string;
   };
   errors: {
     notFound: string;
@@ -86,6 +87,7 @@ export const paths: PathConfig = {
     invoiceGenerator: '/dashboard/invoice-generator',
     viewInvoices: '/dashboard/view-invoices',
     ericssonRateCard: '/dashboard/ericsson-rate-card',
+    zteRateCard: '/dashboard/zte-rate-card',
   },
   errors: { notFound: '/errors/404' },
 } as const;

@@ -23,5 +23,6 @@ export const navItems = [
   { key: 'invoiceGenerator', title: 'Invoice Generator', href: paths.dashboard.invoiceGenerator, icon: 'invoice' },
   { key: 'viewInvoices', title: 'Invoices', href: paths.dashboard.viewInvoices, icon: 'receipt' },
   { key: 'ericssonRateCard', title: 'Ericsson Rate Cards', href: paths.dashboard.ericssonRateCard, icon: 'receipt' },
+  { key: 'zteRateCard', title: 'ZTE Rate Cards', href: paths.dashboard.zteRateCard, icon: 'receipt' },
   { key: 'settings', title: 'Settings', href: paths.dashboard.settings, icon: 'settings' },
 ] satisfies NavItemConfig[];
