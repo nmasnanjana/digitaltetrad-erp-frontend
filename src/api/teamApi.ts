@@ -15,8 +15,26 @@ API.interceptors.request.use((config) => {
     return config;
 });
 
-export const getAllTeams = () =>
-    API.get<Team[]>('/teams');
+export interface TeamPaginationResponse {
+  teams: Team[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalCount: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+export const getAllTeams = (page: number = 1, limit: number = 10, search: string = ''): Promise<{ data: TeamPaginationResponse }> => {
+    const params = new URLSearchParams();
+    if (page) params.append('page', page.toString());
+    if (limit) params.append('limit', limit.toString());
+    if (search) params.append('search', search);
+    
+    return API.get<TeamPaginationResponse>(`/teams?${params.toString()}`);
+};
 
 export const getTeamById = (id: string) =>
     API.get<Team>(`/teams/${id}`);
@@ -40,9 +58,9 @@ API.interceptors.response.use(
         } else if (error.request) {
             console.error('Error request:', error.request);
             return Promise.reject(new Error('No response received from server'));
-        } 
+        } else {
             console.error('Error message:', error.message);
             return Promise.reject(error);
-        
+        }
     }
 ); 

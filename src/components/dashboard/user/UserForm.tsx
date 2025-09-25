@@ -34,11 +34,15 @@ const UserForm: React.FC<Props> = ({ onSubmit, initialData = {}, mode = 'create'
   const fetchRoles = async () => {
     try {
       const response = await authClient.getAllRoles();
-      if (response.data) {
+      if (response.data && Array.isArray(response.data)) {
         setRoles(response.data);
+      } else {
+        setRoles([]);
+        setError('No roles available. Please contact administrator.');
       }
     } catch (error) {
       console.error('Error fetching roles:', error);
+      setRoles([]);
       setError('Failed to load roles. Please try again later.');
     }
   };
@@ -140,11 +144,13 @@ const UserForm: React.FC<Props> = ({ onSubmit, initialData = {}, mode = 'create'
                 onChange={handleSelectChange}
               label="Role"
               >
-                {roles.map((role) => (
+                {roles && roles.length > 0 ? roles.map((role) => (
                   <MenuItem key={role.id} value={role.id}>
                     {role.name}
-                </MenuItem>
-              ))}
+                  </MenuItem>
+                )) : (
+                  <MenuItem disabled>No roles available</MenuItem>
+                )}
               </Select>
             </FormControl>
           </Grid>

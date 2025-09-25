@@ -98,6 +98,56 @@ export const deleteExpense = (id: string): Promise<{ data: unknown }> =>
 export const reviewExpense = (id: string, data: { status: string; reviewer_comment?: string; reviewed_by: string }): Promise<{ data: Expense }> =>
     API.post(`/expenses/${id}/review`, data);
 
+export const approveExpense = (id: number, data: { approved: boolean; comment?: string }): Promise<{ data: Expense }> => {
+    // Get the current user ID from localStorage or sessionStorage
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    let reviewed_by = '';
+    
+    if (token) {
+        try {
+            // Decode JWT token to get user ID
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            reviewed_by = payload.id;
+        } catch (error) {
+            console.error('Error decoding token:', error);
+            throw new Error('Invalid token');
+        }
+    } else {
+        throw new Error('No authentication token found');
+    }
+
+    return reviewExpense(id.toString(), {
+        status: 'approved',
+        reviewer_comment: data.comment,
+        reviewed_by
+    });
+};
+
+export const rejectExpense = (id: number, data: { comment?: string }): Promise<{ data: Expense }> => {
+    // Get the current user ID from localStorage or sessionStorage
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    let reviewed_by = '';
+    
+    if (token) {
+        try {
+            // Decode JWT token to get user ID
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            reviewed_by = payload.id;
+        } catch (error) {
+            console.error('Error decoding token:', error);
+            throw new Error('Invalid token');
+        }
+    } else {
+        throw new Error('No authentication token found');
+    }
+
+    return reviewExpense(id.toString(), {
+        status: 'denied',
+        reviewer_comment: data.comment,
+        reviewed_by
+    });
+};
+
 // Expense Payments
 export const markAsPaid = (id: string, data: { paid: boolean }): Promise<{ data: Expense }> =>
     API.put(`/expenses/${id}/payment`, data);

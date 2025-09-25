@@ -18,8 +18,10 @@ API.interceptors.request.use((config) => {
 export const login = (username: string, password: string) =>
     API.post('/users/login', { username, password });
 
-export const getAllUsers = () =>
-    API.get<User[]>('/users/all');
+export const getAllUsers = (page: number = 1, limit: number = 10, search: string = '') =>
+    API.get<{users: User[], pagination: any}>('/users/all', {
+        params: { page, limit, search }
+    });
 
 export const getUserById = (id: string) =>
     API.get<User>(`/users/${id}`);

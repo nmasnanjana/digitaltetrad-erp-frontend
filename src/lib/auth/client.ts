@@ -205,8 +205,8 @@ class AuthClientImpl implements AuthClient {
 
   async getAllRoles() {
     try {
-      const roles = await this.request<Role[]>('/roles');
-      return { data: roles, error: null };
+      const response = await this.request<{ roles: Role[]; pagination: any }>('/roles');
+      return { data: response.roles, error: null };
     } catch (error) {
       return { data: null, error: error instanceof Error ? error.message : 'Failed to get roles' };
     }

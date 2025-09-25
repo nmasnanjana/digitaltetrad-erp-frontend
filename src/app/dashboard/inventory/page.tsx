@@ -139,15 +139,19 @@ export default function InventoryPage() {
             component="main"
             sx={{
                 flexGrow: 1,
-                py: 8
+                py: { xs: 2, sm: 4, md: 6, lg: 8 }
             }}
         >
             <Container maxWidth="xl">
                 <Stack spacing={3}>
                     <Stack
-                        direction="row"
+                        direction="column"
                         justifyContent="space-between"
-                        spacing={4}
+                        spacing={{ xs: 2, sm: 4 }}
+                        sx={{
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            alignItems: { xs: 'stretch', sm: 'center' }
+                        }}
                     >
                         <Stack spacing={1}>
                             <Typography variant="h4">
@@ -158,6 +162,10 @@ export default function InventoryPage() {
                             startIcon={<AddIcon />}
                             variant="contained"
                             onClick={() => { handleOpen(); }}
+                            sx={{ 
+                                width: { xs: '100%', sm: 'auto' },
+                                order: { xs: -1, sm: 0 }
+                            }}
                         >
                             Add Item
                         </Button>
@@ -168,19 +176,24 @@ export default function InventoryPage() {
                         </Alert> : null}
 
                     <Card>
-                        <TableContainer component={Paper}>
+                        <TableContainer component={Paper} sx={{ 
+                            overflowX: 'auto',
+                            '& .MuiTable-root': {
+                                minWidth: { xs: 600, sm: 800, md: 1000 }
+                            }
+                        }}>
                             <Table>
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell>Name</TableCell>
-                                        <TableCell>Description</TableCell>
-                                        <TableCell>Serial Number</TableCell>
-                                        <TableCell>Quantity</TableCell>
-                                        <TableCell>Unit Price</TableCell>
-                                        <TableCell>Return Item</TableCell>
-                                        <TableCell>AR Status</TableCell>
-                                        <TableCell>MRN Status</TableCell>
-                                        <TableCell>Actions</TableCell>
+                                        <TableCell sx={{ minWidth: { xs: 100, sm: 120 } }}>Name</TableCell>
+                                        <TableCell sx={{ minWidth: { xs: 120, sm: 150 }, display: { xs: 'none', md: 'table-cell' } }}>Description</TableCell>
+                                        <TableCell sx={{ minWidth: { xs: 100, sm: 120 }, display: { xs: 'none', lg: 'table-cell' } }}>Serial Number</TableCell>
+                                        <TableCell sx={{ minWidth: { xs: 80, sm: 100 } }}>Quantity</TableCell>
+                                        <TableCell sx={{ minWidth: { xs: 80, sm: 100 } }}>Unit Price</TableCell>
+                                        <TableCell sx={{ minWidth: { xs: 80, sm: 100 }, display: { xs: 'none', md: 'table-cell' } }}>Return Item</TableCell>
+                                        <TableCell sx={{ minWidth: { xs: 80, sm: 100 }, display: { xs: 'none', lg: 'table-cell' } }}>AR Status</TableCell>
+                                        <TableCell sx={{ minWidth: { xs: 80, sm: 100 }, display: { xs: 'none', lg: 'table-cell' } }}>MRN Status</TableCell>
+                                        <TableCell sx={{ minWidth: { xs: 100, sm: 120 } }}>Actions</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -204,13 +217,23 @@ export default function InventoryPage() {
                                         inventory.map((item) => (
                                             <TableRow key={item.id}>
                                                 <TableCell>{item.name}</TableCell>
-                                                <TableCell>{item.description}</TableCell>
-                                                <TableCell>{item.serialNumber}</TableCell>
+                                                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                                                  {item.description}
+                                                </TableCell>
+                                                <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
+                                                  {item.serialNumber}
+                                                </TableCell>
                                                 <TableCell>{item.quantity}</TableCell>
                                                 <TableCell>${item.unitPrice}</TableCell>
-                                                <TableCell>{item.isReturnItem ? 'Yes' : 'No'}</TableCell>
-                                                <TableCell>{item.arStatus}</TableCell>
-                                                <TableCell>{item.mrnStatus}</TableCell>
+                                                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                                                  {item.isReturnItem ? 'Yes' : 'No'}
+                                                </TableCell>
+                                                <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
+                                                  {item.arStatus}
+                                                </TableCell>
+                                                <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
+                                                  {item.mrnStatus}
+                                                </TableCell>
                                                 <TableCell>
                                                     <IconButton onClick={() => { handleOpen(item); }}>
                                                         <EditIcon />

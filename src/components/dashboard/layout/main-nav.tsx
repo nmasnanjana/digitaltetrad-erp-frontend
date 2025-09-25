@@ -49,8 +49,13 @@ export function MainNav(): React.JSX.Element {
       >
         <Stack
           direction="row"
-          spacing={2}
-          sx={{ alignItems: 'center', justifyContent: 'space-between', minHeight: '64px', px: 2 }}
+          spacing={{ xs: 1, sm: 2 }}
+          sx={{ 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            minHeight: { xs: '56px', sm: '64px' }, 
+            px: { xs: 1, sm: 2 } 
+          }}
         >
           <Stack sx={{ alignItems: 'center' }} direction="row" spacing={2}>
             <IconButton

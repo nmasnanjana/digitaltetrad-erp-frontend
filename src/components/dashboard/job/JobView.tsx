@@ -26,15 +26,37 @@ import {
   LinearProgress,
   TextField,
   IconButton,
+  CardHeader,
+  Avatar,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Badge,
+  Stack,
+  Alert,
+  Tooltip
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { getExpensesByJob } from '@/api/expense-api';
 import { uploadHuaweiPoExcel, getHuaweiPosByJobId, deleteHuaweiPoByJobId, downloadHuaweiPoFile, createHuaweiPo, updateHuaweiPo, deleteHuaweiPo } from '@/api/huawei-po-api';
+import { uploadEricssonBoqExcel, getEricssonBoqByJobId, deleteEricssonBoqByJobId } from '@/api/ericsson-boq-api';
+import { EricssonBoqUploadDialog } from '@/components/dashboard/ericsson-boq/EricssonBoqUploadDialog';
 import { useSettings } from '@/contexts/SettingsContext';
 import * as XLSX from 'xlsx';
 import LockIcon from '@mui/icons-material/Lock';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import BusinessIcon from '@mui/icons-material/Business';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
+import AddCircleIcon from '@mui/icons-material/AddCircle';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import InfoIcon from '@mui/icons-material/Info';
+import WarningIcon from '@mui/icons-material/Warning';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 interface HuaweiPoData {
   id: number;
@@ -267,6 +289,12 @@ export const JobView: React.FC<JobViewProps> = ({
   const [huaweiPoLoading, setHuaweiPoLoading] = useState(true);
   const [huaweiPoError, setHuaweiPoError] = useState<string | null>(null);
 
+  // Ericsson BOQ data states
+  const [ericssonBoqData, setEricssonBoqData] = useState<any>(null);
+  const [ericssonBoqLoading, setEricssonBoqLoading] = useState(false);
+  const [ericssonBoqError, setEricssonBoqError] = useState<string | null>(null);
+  const [boqUploadDialogOpen, setBoqUploadDialogOpen] = useState(false);
+
   // Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -329,6 +357,14 @@ export const JobView: React.FC<JobViewProps> = ({
     loadHuaweiPoData();
   }, [job.id]);
 
+  // Load Ericsson BOQ data for Ericsson jobs
+  useEffect(() => {
+    console.log('useEffect triggered for Ericsson BOQ, isEricssonJob:', isEricssonJob(), 'job.id:', job.id);
+    if (isEricssonJob()) {
+      loadEricssonBoqData();
+    }
+  }, [job.id]);
+
   const getStatusColor = (status: Job['status']) => {
     switch (status) {
       case 'open':
@@ -380,6 +416,34 @@ export const JobView: React.FC<JobViewProps> = ({
       setSelectedFile(file);
       processExcelFile(file);
     }
+  };
+
+
+
+  const loadEricssonBoqData = async () => {
+    if (!isEricssonJob()) return;
+
+    try {
+      setEricssonBoqLoading(true);
+      setEricssonBoqError(null);
+      
+      const response = await getEricssonBoqByJobId(job.id);
+      setEricssonBoqData(response.data);
+    } catch (error) {
+      console.error('Error loading Ericsson BOQ data:', error);
+      if (error instanceof Error && error.message.includes('404')) {
+        // BOQ not found, which is normal for new jobs
+        setEricssonBoqData(null);
+      } else {
+        setEricssonBoqError(error instanceof Error ? error.message : 'Failed to load BOQ data');
+      }
+    } finally {
+      setEricssonBoqLoading(false);
+    }
+  };
+
+  const handleBoqUploadSuccess = () => {
+    loadEricssonBoqData();
   };
 
   const processExcelFile = async (file: File) => {
@@ -575,6 +639,13 @@ export const JobView: React.FC<JobViewProps> = ({
     return job.customer?.name?.toLowerCase() === 'huawei';
   };
 
+  // Check if job is associated with Ericsson customer
+  const isEricssonJob = () => {
+    const isEricsson = job.customer?.name?.toLowerCase() === 'ericsson';
+    console.log('isEricssonJob check:', { customerName: job.customer?.name, isEricsson });
+    return isEricsson;
+  };
+
   // Helper function to check if any PO has been invoiced
   const hasInvoicedPos = () => {
     return huaweiPoData.some(po => {
@@ -598,6 +669,28 @@ export const JobView: React.FC<JobViewProps> = ({
   // Helper function to check if all POs are frozen
   const areAllPosFrozen = () => {
     return huaweiPoData.length > 0 && getFrozenPoCount() === huaweiPoData.length;
+  };
+
+  // Helper function to check if any BOQ items have been invoiced
+  const hasInvoicedBoqItems = () => {
+    return ericssonBoqData?.items?.some((item: any) => {
+      const invoicedPercentage = item.invoiced_percentage || 0;
+      return invoicedPercentage > 0;
+    }) || false;
+  };
+
+  // Helper function to count frozen BOQ items
+  const getFrozenBoqItemCount = () => {
+    return ericssonBoqData?.items?.filter((item: any) => {
+      const invoicedPercentage = item.invoiced_percentage || 0;
+      return invoicedPercentage > 0;
+    }).length || 0;
+  };
+
+  // Helper function to check if all BOQ items are frozen
+  const areAllBoqItemsFrozen = () => {
+    return ericssonBoqData?.items && ericssonBoqData.items.length > 0 && 
+           getFrozenBoqItemCount() === ericssonBoqData.items.length;
   };
 
   // Individual PO management functions
@@ -1018,6 +1111,557 @@ export const JobView: React.FC<JobViewProps> = ({
           </Box>
         )}
 
+        {/* Ericsson BOQ Data Section - Only for Ericsson jobs */}
+        {isEricssonJob() && (
+          <Box sx={{ mt: 4 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Ericsson BOQ
+              </Typography>
+              {ericssonBoqData && (
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    onClick={async () => {
+                      if (window.confirm('Are you sure you want to delete the BOQ data for this job?')) {
+                        try {
+                          await deleteEricssonBoqByJobId(job.id);
+                          setEricssonBoqData(null);
+                          alert('BOQ data deleted successfully');
+                        } catch (error: any) {
+                          console.error('Error deleting BOQ data:', error);
+                          if (error.response?.data?.error) {
+                            alert(`Failed to delete BOQ data: ${error.response.data.error}`);
+                          } else {
+                            alert('Failed to delete BOQ data');
+                          }
+                        }
+                      }
+                    }}
+                    disabled={hasInvoicedBoqItems()}
+                    title={hasInvoicedBoqItems() ? "Cannot delete - some BOQ items have been invoiced" : ""}
+                  >
+                    Delete BOQ
+                  </Button>
+                </Box>
+              )}
+            </Box>
+            
+            {ericssonBoqLoading ? (
+              <Card sx={{ mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
+                <CardContent>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Avatar sx={{ bgcolor: 'primary.main' }}>
+                      <UploadFileIcon />
+                    </Avatar>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="h6" gutterBottom>
+                        Loading Ericsson BOQ Data
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Please wait while we fetch the BOQ information...
+                      </Typography>
+                      <LinearProgress sx={{ mt: 1 }} />
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {ericssonBoqError ? (
+              <Card sx={{ mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
+                <CardContent>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Avatar sx={{ bgcolor: 'error.main' }}>
+                      <WarningIcon />
+                    </Avatar>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="h6" color="error.main" gutterBottom>
+                        Error Loading BOQ Data
+                      </Typography>
+                      <Typography variant="body2" color="error.main">
+                        {ericssonBoqError}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {!ericssonBoqLoading && !ericssonBoqError && ericssonBoqData && (
+              (() => {
+                console.log('Rendering Ericsson BOQ data:', ericssonBoqData);
+                return (
+                  <Box>
+                    {/* Warning message for invoiced BOQ items */}
+                    {hasInvoicedBoqItems() && (
+                      <Box sx={{ mb: 2, p: 1.5, bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200', borderRadius: 1 }}>
+                        <Typography variant="body2" color="info.dark" sx={{ fontSize: '0.875rem' }}>
+                          <strong>Note:</strong> {areAllBoqItemsFrozen() 
+                            ? `All ${getFrozenBoqItemCount()} BOQ item(s) are frozen due to invoicing. No modifications are allowed.`
+                            : `${getFrozenBoqItemCount()} BOQ item(s) are frozen due to invoicing. These cannot be modified or deleted.`
+                          }
+                        </Typography>
+                      </Box>
+                    )}
+                    {/* Summary Cards */}
+                    <Grid container spacing={2} sx={{ mb: 3 }}>
+                      {/* BOQ Summary */}
+                      {ericssonBoqData.items && ericssonBoqData.items.length > 0 && (
+                        <Grid item xs={12}>
+                          <Card sx={{ mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
+                            <CardContent>
+                              <Typography variant="h6" gutterBottom>
+                                BOQ Summary
+                              </Typography>
+                              <Grid container spacing={2}>
+                                <Grid item xs={12} sm={6} md={3}>
+                                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Total Items
+                                    </Typography>
+                                    <Typography variant="h6" fontWeight="bold">
+                                      {ericssonBoqData.items.length}
+                                    </Typography>
+                                  </Box>
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={3}>
+                                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'blue.50', borderRadius: 1 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Total BOQ Value
+                                    </Typography>
+                                    <Typography variant="h6" fontWeight="bold" color="primary">
+                                      {formatCurrency(ericssonBoqData.items.reduce((sum: number, item: any) => sum + (item.total_amount || 0), 0))}
+                                    </Typography>
+                                  </Box>
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={3}>
+                                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'green.50', borderRadius: 1 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Previously Invoiced
+                                    </Typography>
+                                    <Typography variant="h6" fontWeight="bold" color="success.main">
+                                      {formatCurrency(ericssonBoqData.items.reduce((sum: number, item: any) => {
+                                        const invoicedPercentage = item.invoiced_percentage || 0;
+                                        return sum + ((item.total_amount || 0) * invoicedPercentage / 100);
+                                      }, 0))}
+                                    </Typography>
+                                  </Box>
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={3}>
+                                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'orange.50', borderRadius: 1 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Available for Invoice
+                                    </Typography>
+                                    <Typography variant="h6" fontWeight="bold" color="warning.main">
+                                      {formatCurrency(ericssonBoqData.items.reduce((sum: number, item: any) => {
+                                        const invoicedPercentage = item.invoiced_percentage || 0;
+                                        return sum + ((item.total_amount || 0) * (100 - invoicedPercentage) / 100);
+                                      }, 0))}
+                                    </Typography>
+                                  </Box>
+                                </Grid>
+                              </Grid>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      )}
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Card sx={{ border: '1px solid', borderColor: 'grey.200' }}>
+                          <CardContent>
+                            <Stack direction="row" spacing={2} alignItems="center">
+                              <Avatar sx={{ bgcolor: 'primary.main' }}>
+                                <AssignmentIcon />
+                              </Avatar>
+                              <Box>
+                                <Typography variant="h5" fontWeight="bold">
+                                  {ericssonBoqData.items?.length || 0}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  BOQ Items
+                                </Typography>
+                              </Box>
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Card sx={{ border: '1px solid', borderColor: 'grey.200' }}>
+                          <CardContent>
+                            <Stack direction="row" spacing={2} alignItems="center">
+                              <Avatar sx={{ bgcolor: 'primary.main' }}>
+                                <RemoveCircleIcon />
+                              </Avatar>
+                              <Box>
+                                <Typography variant="h5" fontWeight="bold">
+                                  {ericssonBoqData.removeMaterials?.length || 0}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  Remove Materials
+                                </Typography>
+                              </Box>
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Card sx={{ border: '1px solid', borderColor: 'grey.200' }}>
+                          <CardContent>
+                            <Stack direction="row" spacing={2} alignItems="center">
+                              <Avatar sx={{ bgcolor: 'primary.main' }}>
+                                <AddCircleIcon />
+                              </Avatar>
+                              <Box>
+                                <Typography variant="h5" fontWeight="bold">
+                                  {ericssonBoqData.surplusMaterials?.length || 0}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  Surplus Materials
+                                </Typography>
+                              </Box>
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Card sx={{ border: '1px solid', borderColor: 'grey.200' }}>
+                          <CardContent>
+                            <Stack direction="row" spacing={2} alignItems="center">
+                              <Avatar sx={{ bgcolor: 'primary.main' }}>
+                                <AttachMoneyIcon />
+                              </Avatar>
+                              <Box>
+                                <Typography variant="h5" fontWeight="bold">
+                                  {formatCurrency(
+                                    ericssonBoqData.items?.reduce((sum: number, item: any) => sum + (item.total_amount || 0), 0) || 0
+                                  )}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  Total Value
+                                </Typography>
+                              </Box>
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    </Grid>
+
+                    {/* Project Information Card */}
+                    <Card sx={{ mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
+                      <CardHeader
+                        avatar={
+                          <Avatar sx={{ bgcolor: 'primary.main' }}>
+                            <BusinessIcon />
+                          </Avatar>
+                        }
+                        title="Project Information"
+                        titleTypographyProps={{ variant: 'h6', fontWeight: 'bold' }}
+                      />
+                      <CardContent>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6} md={3}>
+                            <Stack spacing={1}>
+                              <Typography variant="caption" color="text.secondary">
+                                Project Name
+                              </Typography>
+                              <Typography variant="body1" fontWeight="medium">
+                                {ericssonBoqData.project}
+                              </Typography>
+                            </Stack>
+                          </Grid>
+                          <Grid item xs={12} sm={6} md={3}>
+                            <Stack spacing={1}>
+                              <Typography variant="caption" color="text.secondary">
+                                Site ID
+                              </Typography>
+                              <Typography variant="body1" fontWeight="medium">
+                                {ericssonBoqData.site_id}
+                              </Typography>
+                            </Stack>
+                          </Grid>
+                          <Grid item xs={12} sm={6} md={3}>
+                            <Stack spacing={1}>
+                              <Typography variant="caption" color="text.secondary">
+                                Site Name
+                              </Typography>
+                              <Typography variant="body1" fontWeight="medium">
+                                {ericssonBoqData.site_name}
+                              </Typography>
+                            </Stack>
+                          </Grid>
+                          <Grid item xs={12} sm={6} md={3}>
+                            <Stack spacing={1}>
+                              <Typography variant="caption" color="text.secondary">
+                                Purchase Order
+                              </Typography>
+                              <Typography variant="body1" fontWeight="medium">
+                                {ericssonBoqData.purchase_order_number}
+                              </Typography>
+                            </Stack>
+                          </Grid>
+                        </Grid>
+                      </CardContent>
+                    </Card>
+                
+                {ericssonBoqData.items && ericssonBoqData.items.length > 0 && (
+                  <Card sx={{ mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
+                    <CardHeader
+                      avatar={
+                        <Avatar sx={{ bgcolor: 'primary.main' }}>
+                          <AssignmentIcon />
+                        </Avatar>
+                      }
+                      title="BOQ Items"
+                      titleTypographyProps={{ variant: 'h6', fontWeight: 'bold' }}
+                      subheader={`${ericssonBoqData.items.length} items with total value of ${formatCurrency(
+                        ericssonBoqData.items.reduce((sum: number, item: any) => sum + (item.total_amount || 0), 0)
+                      )}`}
+                    />
+                    <CardContent sx={{ p: 0 }}>
+                      <TableContainer sx={{ maxHeight: 400 }}>
+                        <Table stickyHeader>
+                                                     <TableHead>
+                             <TableRow>
+                               <TableCell sx={{ fontWeight: 'bold' }}>Service Number</TableCell>
+                               <TableCell sx={{ fontWeight: 'bold' }}>Item Description</TableCell>
+                               <TableCell sx={{ fontWeight: 'bold' }}>UOM</TableCell>
+                               <TableCell align="right" sx={{ fontWeight: 'bold' }}>Qty</TableCell>
+                               <TableCell align="right" sx={{ fontWeight: 'bold' }}>Unit Price</TableCell>
+                               <TableCell align="right" sx={{ fontWeight: 'bold' }}>Total Amount</TableCell>
+                               <TableCell sx={{ fontWeight: 'bold' }}>Invoiced %</TableCell>
+                               <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
+                             </TableRow>
+                           </TableHead>
+                           <TableBody>
+                             {ericssonBoqData.items.map((item: any, index: number) => (
+                               <TableRow 
+                                 key={index} 
+                                 hover 
+                                 sx={{ 
+                                   backgroundColor: (item.invoiced_percentage || 0) >= 100 ? '#fef3c7' : 'inherit',
+                                   '&:hover': {
+                                     backgroundColor: (item.invoiced_percentage || 0) >= 100 ? '#fde68a' : 'grey.50'
+                                   }
+                                 }}
+                               >
+                                 <TableCell>
+                                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                     {item.service_number}
+                                   </Typography>
+                                 </TableCell>
+                                 <TableCell>
+                                   <Typography variant="body2" sx={{ maxWidth: 300 }}>
+                                     {item.item_description}
+                                   </Typography>
+                                 </TableCell>
+                                 <TableCell>
+                                   <Typography variant="body2">
+                                     {item.uom}
+                                   </Typography>
+                                 </TableCell>
+                                 <TableCell align="right">
+                                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                     {item.qty}
+                                   </Typography>
+                                 </TableCell>
+                                 <TableCell align="right">
+                                   <Typography variant="body2" color="text.secondary">
+                                     {formatCurrency(item.unit_price)}
+                                   </Typography>
+                                 </TableCell>
+                                 <TableCell align="right">
+                                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                     {formatCurrency(item.total_amount)}
+                                   </Typography>
+                                 </TableCell>
+                                 <TableCell>
+                                   <Chip 
+                                     label={`${item.invoiced_percentage || 0}%`} 
+                                     color="primary" 
+                                     size="small"
+                                     sx={{ 
+                                       backgroundColor: '#dbeafe',
+                                       color: '#1e40af',
+                                       fontWeight: 500,
+                                       fontSize: '0.75rem'
+                                     }}
+                                   />
+                                 </TableCell>
+                                 <TableCell>
+                                   <Chip 
+                                     label={item.is_additional_work ? 'Additional Work' : 'Regular'} 
+                                     size="small" 
+                                     variant="outlined"
+                                   />
+                                 </TableCell>
+                               </TableRow>
+                             ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {ericssonBoqData.removeMaterials && ericssonBoqData.removeMaterials.length > 0 && (
+                  <Card sx={{ mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
+                    <CardHeader
+                      avatar={
+                        <Avatar sx={{ bgcolor: 'primary.main' }}>
+                          <RemoveCircleIcon />
+                        </Avatar>
+                      }
+                      title="Remove Materials"
+                      titleTypographyProps={{ variant: 'h6', fontWeight: 'bold' }}
+                      subheader={`${ericssonBoqData.removeMaterials.length} materials to be removed`}
+                    />
+                    <CardContent sx={{ p: 0 }}>
+                      <TableContainer sx={{ maxHeight: 300 }}>
+                        <Table stickyHeader>
+                                                     <TableHead>
+                             <TableRow>
+                               <TableCell sx={{ fontWeight: 'bold' }}>SL.No</TableCell>
+                               <TableCell sx={{ fontWeight: 'bold' }}>Material Description</TableCell>
+                               <TableCell sx={{ fontWeight: 'bold' }}>Qty</TableCell>
+                               <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
+                             </TableRow>
+                           </TableHead>
+                           <TableBody>
+                             {ericssonBoqData.removeMaterials.map((material: any, index: number) => (
+                               <TableRow 
+                                 key={index} 
+                                 hover 
+                                 sx={{ 
+                                   '&:hover': { bgcolor: 'grey.50' }
+                                 }}
+                               >
+                                 <TableCell>
+                                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                     {material.sl_no}
+                                   </Typography>
+                                 </TableCell>
+                                 <TableCell>
+                                   <Typography variant="body2" sx={{ maxWidth: 400 }}>
+                                     {material.material_description}
+                                   </Typography>
+                                 </TableCell>
+                                 <TableCell>
+                                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                     {material.qty}
+                                   </Typography>
+                                 </TableCell>
+                                 <TableCell>
+                                   <Typography variant="body2" color="text.secondary">
+                                     {material.remarks || '-'}
+                                   </Typography>
+                                 </TableCell>
+                               </TableRow>
+                             ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {ericssonBoqData.surplusMaterials && ericssonBoqData.surplusMaterials.length > 0 && (
+                  <Card sx={{ mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
+                    <CardHeader
+                      avatar={
+                        <Avatar sx={{ bgcolor: 'primary.main' }}>
+                          <AddCircleIcon />
+                        </Avatar>
+                      }
+                      title="Surplus Materials"
+                      titleTypographyProps={{ variant: 'h6', fontWeight: 'bold' }}
+                      subheader={`${ericssonBoqData.surplusMaterials.length} surplus materials available`}
+                    />
+                    <CardContent sx={{ p: 0 }}>
+                      <TableContainer sx={{ maxHeight: 300 }}>
+                        <Table stickyHeader>
+                                                     <TableHead>
+                             <TableRow>
+                               <TableCell sx={{ fontWeight: 'bold' }}>SL.No</TableCell>
+                               <TableCell sx={{ fontWeight: 'bold' }}>Material Description</TableCell>
+                               <TableCell sx={{ fontWeight: 'bold' }}>Qty</TableCell>
+                               <TableCell sx={{ fontWeight: 'bold' }}>Remarks</TableCell>
+                             </TableRow>
+                           </TableHead>
+                           <TableBody>
+                             {ericssonBoqData.surplusMaterials.map((material: any, index: number) => (
+                               <TableRow 
+                                 key={index} 
+                                 hover 
+                                 sx={{ 
+                                   '&:hover': { bgcolor: 'grey.50' }
+                                 }}
+                               >
+                                 <TableCell>
+                                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                     {material.sl_no}
+                                   </Typography>
+                                 </TableCell>
+                                 <TableCell>
+                                   <Typography variant="body2" sx={{ maxWidth: 400 }}>
+                                     {material.material_description}
+                                   </Typography>
+                                 </TableCell>
+                                 <TableCell>
+                                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                     {material.qty}
+                                   </Typography>
+                                 </TableCell>
+                                 <TableCell>
+                                   <Typography variant="body2" color="text.secondary">
+                                     {material.remarks || '-'}
+                                   </Typography>
+                                 </TableCell>
+                               </TableRow>
+                             ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </CardContent>
+                  </Card>
+                )}
+              </Box>
+                );
+              })()
+            )}
+
+            {!ericssonBoqLoading && !ericssonBoqError && !ericssonBoqData && (
+              <Card sx={{ mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
+                <CardContent>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Avatar sx={{ bgcolor: 'primary.main' }}>
+                      <InfoIcon />
+                    </Avatar>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="h6" gutterBottom>
+                        No BOQ Data Available
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        No Ericsson BOQ data found for this job. Upload an Excel file to get started.
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<UploadFileIcon />}
+                        onClick={() => setBoqUploadDialogOpen(true)}
+                        sx={{ mt: 1 }}
+                      >
+                        Upload BOQ File
+                      </Button>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </Card>
+            )}
+          </Box>
+        )}
+
         <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
           {getNextStatus(job.status) && (
             <Button
@@ -1043,6 +1687,18 @@ export const JobView: React.FC<JobViewProps> = ({
               Upload PO
             </Button>
           )}
+          {isEricssonJob() && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<UploadFileIcon />}
+              onClick={() => {
+                setBoqUploadDialogOpen(true);
+              }}
+            >
+              Upload BOQ File
+            </Button>
+          )}
           <input
             id="excel-file-input"
             type="file"
@@ -1050,6 +1706,7 @@ export const JobView: React.FC<JobViewProps> = ({
             style={{ display: 'none' }}
             onChange={handleFileUpload}
           />
+
           <Button
             variant="contained"
             color="primary"
@@ -1378,6 +2035,14 @@ export const JobView: React.FC<JobViewProps> = ({
             /> : null}
         </DialogContent>
       </Dialog>
+
+      {/* Ericsson BOQ Upload Dialog */}
+      <EricssonBoqUploadDialog
+        open={boqUploadDialogOpen}
+        onClose={() => setBoqUploadDialogOpen(false)}
+        onSuccess={handleBoqUploadSuccess}
+        jobId={job.id}
+      />
     </Card>
   );
 };

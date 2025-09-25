@@ -6,7 +6,7 @@ import { Box } from '@mui/material';
 
 function CustomerPage() {
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
       <ListCustomer />
     </Box>
   );

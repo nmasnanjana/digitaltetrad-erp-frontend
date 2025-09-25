@@ -42,12 +42,12 @@ export interface InvoiceRecord {
     requestedQuantity: number;
     invoicedPercentage: number;
     job?: {
-      id: string;
+      id: number;
       name: string;
-      customer?: {
-        id: string;
-        name: string;
-      };
+    };
+    customer?: {
+      id: number;
+      name: string;
     };
   };
 }
@@ -79,8 +79,11 @@ export const createInvoice = async (data: CreateInvoiceRequest): Promise<CreateI
 export const getAllInvoices = async (): Promise<InvoiceRecord[]> => {
   const response = await apiClient.get<any[]>('/huawei-invoices');
   
-  // Transform snake_case to camelCase
-  return response.data.map(item => ({
+  console.log('Raw API response:', response.data);
+  console.log('First invoice raw data:', response.data[0]);
+  console.log('First invoice huaweiPo (camelCase):', response.data[0]?.huaweiPo);
+  
+  const transformedData = response.data.map(item => ({
     id: item.id,
     invoiceNo: item.invoice_no,
     huaweiPoId: item.huawei_po_id,
@@ -89,27 +92,39 @@ export const getAllInvoices = async (): Promise<InvoiceRecord[]> => {
     vatAmount: parseFloat(item.vat_amount) || 0,
     subtotalAmount: parseFloat(item.subtotal_amount) || 0,
     totalAmount: parseFloat(item.total_amount) || 0,
-    createdAt: item.created_at,
-    updatedAt: item.updated_at,
-    huaweiPo: item.huawei_po ? {
-      id: item.huawei_po.id,
-      poNo: item.huawei_po.po_no,
-      lineNo: item.huawei_po.line_no,
-      itemCode: item.huawei_po.item_code,
-      itemDescription: item.huawei_po.item_description,
-      unitPrice: parseFloat(item.huawei_po.unit_price) || 0,
-      requestedQuantity: parseInt(item.huawei_po.requested_quantity) || 0,
-      invoicedPercentage: parseFloat(item.huawei_po.invoiced_percentage) || 0,
-      job: item.huawei_po.job ? {
-        id: item.huawei_po.job.id,
-        name: item.huawei_po.job.name,
-        customer: item.huawei_po.job.customer ? {
-          id: item.huawei_po.job.customer.id,
-          name: item.huawei_po.job.customer.name
-        } : undefined
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    huaweiPo: item.huaweiPo ? {
+      id: item.huaweiPo.id,
+      poNo: item.huaweiPo.po_no,
+      lineNo: item.huaweiPo.line_no,
+      itemCode: item.huaweiPo.item_code,
+      itemDescription: item.huaweiPo.item_description,
+      unitPrice: parseFloat(item.huaweiPo.unit_price) || 0,
+      requestedQuantity: parseInt(item.huaweiPo.requested_quantity) || 0,
+      invoicedPercentage: parseFloat(item.huaweiPo.invoiced_percentage) || 0,
+      job: item.huaweiPo.job ? {
+        id: item.huaweiPo.job.id,
+        name: item.huaweiPo.job.name
+      } : undefined,
+      customer: item.huaweiPo.customer ? {
+        id: item.huaweiPo.customer.id,
+        name: item.huaweiPo.customer.name
       } : undefined
     } : undefined
   }));
+  
+  console.log('Transformed invoices:', transformedData.map(item => ({
+    id: item.id,
+    huaweiPo: item.huaweiPo ? {
+      id: item.huaweiPo.id,
+      poNo: item.huaweiPo.poNo,
+      job: item.huaweiPo.job,
+      customer: item.huaweiPo.customer
+    } : null
+  })));
+  
+  return transformedData;
 };
 
 // Get invoice by ID
@@ -127,24 +142,24 @@ export const getInvoiceById = async (id: number): Promise<InvoiceRecord> => {
     vatAmount: parseFloat(item.vat_amount) || 0,
     subtotalAmount: parseFloat(item.subtotal_amount) || 0,
     totalAmount: parseFloat(item.total_amount) || 0,
-    createdAt: item.created_at,
-    updatedAt: item.updated_at,
-    huaweiPo: item.huawei_po ? {
-      id: item.huawei_po.id,
-      poNo: item.huawei_po.po_no,
-      lineNo: item.huawei_po.line_no,
-      itemCode: item.huawei_po.item_code,
-      itemDescription: item.huawei_po.item_description,
-      unitPrice: parseFloat(item.huawei_po.unit_price) || 0,
-      requestedQuantity: parseInt(item.huawei_po.requested_quantity) || 0,
-      invoicedPercentage: parseFloat(item.huawei_po.invoiced_percentage) || 0,
-      job: item.huawei_po.job ? {
-        id: item.huawei_po.job.id,
-        name: item.huawei_po.job.name,
-        customer: item.huawei_po.job.customer ? {
-          id: item.huawei_po.job.customer.id,
-          name: item.huawei_po.job.customer.name
-        } : undefined
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    huaweiPo: item.huaweiPo ? {
+      id: item.huaweiPo.id,
+      poNo: item.huaweiPo.po_no,
+      lineNo: item.huaweiPo.line_no,
+      itemCode: item.huaweiPo.item_code,
+      itemDescription: item.huaweiPo.item_description,
+      unitPrice: parseFloat(item.huaweiPo.unit_price) || 0,
+      requestedQuantity: parseInt(item.huaweiPo.requested_quantity) || 0,
+      invoicedPercentage: parseFloat(item.huaweiPo.invoiced_percentage) || 0,
+      job: item.huaweiPo.job ? {
+        id: item.huaweiPo.job.id,
+        name: item.huaweiPo.job.name
+      } : undefined,
+      customer: item.huaweiPo.customer ? {
+        id: item.huaweiPo.customer.id,
+        name: item.huaweiPo.customer.name
       } : undefined
     } : undefined
   };
@@ -164,24 +179,24 @@ export const getInvoicesByInvoiceNo = async (invoiceNo: string): Promise<Invoice
     vatAmount: parseFloat(item.vat_amount) || 0,
     subtotalAmount: parseFloat(item.subtotal_amount) || 0,
     totalAmount: parseFloat(item.total_amount) || 0,
-    createdAt: item.created_at,
-    updatedAt: item.updated_at,
-    huaweiPo: item.huawei_po ? {
-      id: item.huawei_po.id,
-      poNo: item.huawei_po.po_no,
-      lineNo: item.huawei_po.line_no,
-      itemCode: item.huawei_po.item_code,
-      itemDescription: item.huawei_po.item_description,
-      unitPrice: parseFloat(item.huawei_po.unit_price) || 0,
-      requestedQuantity: parseInt(item.huawei_po.requested_quantity) || 0,
-      invoicedPercentage: parseFloat(item.huawei_po.invoiced_percentage) || 0,
-      job: item.huawei_po.job ? {
-        id: item.huawei_po.job.id,
-        name: item.huawei_po.job.name,
-        customer: item.huawei_po.job.customer ? {
-          id: item.huawei_po.job.customer.id,
-          name: item.huawei_po.job.customer.name
-        } : undefined
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    huaweiPo: item.huaweiPo ? {
+      id: item.huaweiPo.id,
+      poNo: item.huaweiPo.po_no,
+      lineNo: item.huaweiPo.line_no,
+      itemCode: item.huaweiPo.item_code,
+      itemDescription: item.huaweiPo.item_description,
+      unitPrice: parseFloat(item.huaweiPo.unit_price) || 0,
+      requestedQuantity: parseInt(item.huaweiPo.requested_quantity) || 0,
+      invoicedPercentage: parseFloat(item.huaweiPo.invoiced_percentage) || 0,
+      job: item.huaweiPo.job ? {
+        id: item.huaweiPo.job.id,
+        name: item.huaweiPo.job.name
+      } : undefined,
+      customer: item.huaweiPo.customer ? {
+        id: item.huaweiPo.customer.id,
+        name: item.huaweiPo.customer.name
       } : undefined
     } : undefined
   }));
