@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, Tabs, Tab } from '@mui/material';
 import { HuaweiInvoice } from './HuaweiInvoice';
 import { EricssonInvoice } from './EricssonInvoice';
+import { ZteInvoice } from './ZteInvoice';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -38,6 +39,7 @@ export const InvoiceGenerator: React.FC = () => {
         <Tabs value={tabValue} onChange={handleTabChange} aria-label="invoice generator tabs">
           <Tab label="Huawei Invoice" id="invoice-tab-0" aria-controls="invoice-tabpanel-0" />
           <Tab label="Ericsson Invoice" id="invoice-tab-1" aria-controls="invoice-tabpanel-1" />
+          <Tab label="ZTE Invoice" id="invoice-tab-2" aria-controls="invoice-tabpanel-2" />
         </Tabs>
       </Box>
       
@@ -47,6 +49,10 @@ export const InvoiceGenerator: React.FC = () => {
       
       <TabPanel value={tabValue} index={1}>
         <EricssonInvoice />
+      </TabPanel>
+      
+      <TabPanel value={tabValue} index={2}>
+        <ZteInvoice />
       </TabPanel>
     </Box>
   );

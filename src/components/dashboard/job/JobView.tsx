@@ -41,6 +41,7 @@ import { useRouter } from 'next/navigation';
 import { getExpensesByJob } from '@/api/expense-api';
 import { uploadHuaweiPoExcel, getHuaweiPosByJobId, deleteHuaweiPoByJobId, downloadHuaweiPoFile, createHuaweiPo, updateHuaweiPo, deleteHuaweiPo } from '@/api/huawei-po-api';
 import { uploadEricssonBoqExcel, getEricssonBoqByJobId, deleteEricssonBoqByJobId } from '@/api/ericsson-boq-api';
+import { uploadZtePoExcel, getZtePosByJobId, deleteZtePosByJobId, downloadZtePoFile, createZtePo, updateZtePo, deleteZtePo, type ZtePoData } from '@/api/zte-po-api';
 import { EricssonBoqUploadDialog } from '@/components/dashboard/ericsson-boq/EricssonBoqUploadDialog';
 import { useSettings } from '@/contexts/SettingsContext';
 import * as XLSX from 'xlsx';
@@ -57,6 +58,7 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import InfoIcon from '@mui/icons-material/Info';
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import DownloadIcon from '@mui/icons-material/Download';
 
 interface HuaweiPoData {
   id: number;
@@ -279,7 +281,7 @@ export const JobView: React.FC<JobViewProps> = ({
   
   // Upload dialog states
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [excelData, setExcelData] = useState<HuaweiPoData[]>([]);
+  const [excelData, setExcelData] = useState<any[]>([]);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -294,6 +296,11 @@ export const JobView: React.FC<JobViewProps> = ({
   const [ericssonBoqLoading, setEricssonBoqLoading] = useState(false);
   const [ericssonBoqError, setEricssonBoqError] = useState<string | null>(null);
   const [boqUploadDialogOpen, setBoqUploadDialogOpen] = useState(false);
+
+  // ZTE PO data states
+  const [ztePoData, setZtePoData] = useState<ZtePoData[]>([]);
+  const [ztePoLoading, setZtePoLoading] = useState(true);
+  const [ztePoError, setZtePoError] = useState<string | null>(null);
 
   // Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -363,6 +370,32 @@ export const JobView: React.FC<JobViewProps> = ({
     if (isEricssonJob()) {
       loadEricssonBoqData();
     }
+  }, [job.id]);
+
+  // Load ZTE PO data for ZTE jobs
+  useEffect(() => {
+    const loadZtePoData = async () => {
+      if (!isZteJob()) {
+        setZtePoLoading(false);
+        return;
+      }
+
+      try {
+        setZtePoLoading(true);
+        console.log('Loading ZTE PO data for job:', job.id);
+        const response = await getZtePosByJobId(job.id);
+        console.log('ZTE PO response:', response);
+        setZtePoData(response);
+        setZtePoError(null);
+      } catch (err) {
+        console.error('Error loading ZTE PO data:', err);
+        setZtePoError(err instanceof Error ? err.message : 'Failed to load ZTE PO data');
+      } finally {
+        setZtePoLoading(false);
+      }
+    };
+
+    loadZtePoData();
   }, [job.id]);
 
   const getStatusColor = (status: Job['status']) => {
@@ -465,46 +498,81 @@ export const JobView: React.FC<JobViewProps> = ({
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
       setProcessingProgress(80);
 
-      // Extract headers from first row
-      const headers = jsonData[0] as string[];
-      
-      // Find column indices
-      const columnMap = {
-        site_code: headers.findIndex(h => h?.toLowerCase().includes('site code')),
-        site_id: headers.findIndex(h => h?.toLowerCase().includes('site id')),
-        site_name: headers.findIndex(h => h?.toLowerCase().includes('site name')),
-        po_no: headers.findIndex(h => h?.toLowerCase().includes('po no')),
-        line_no: headers.findIndex(h => h?.toLowerCase().includes('po line no')),
-        item_code: headers.findIndex(h => h?.toLowerCase().includes('item code')),
-        item_description: headers.findIndex(h => h?.toLowerCase().includes('item description')),
-        unit_price: headers.findIndex(h => h?.toLowerCase().includes('unit price')),
-        requested_quantity: headers.findIndex(h => h?.toLowerCase().includes('requested qty')),
-      };
+      if (isHuaweiJob()) {
+        // Process Huawei data
+        const headers = jsonData[0] as string[];
+        
+        // Find column indices for Huawei
+        const columnMap = {
+          site_code: headers.findIndex(h => h?.toLowerCase().includes('site code')),
+          site_id: headers.findIndex(h => h?.toLowerCase().includes('site id')),
+          site_name: headers.findIndex(h => h?.toLowerCase().includes('site name')),
+          po_no: headers.findIndex(h => h?.toLowerCase().includes('po no')),
+          line_no: headers.findIndex(h => h?.toLowerCase().includes('po line no')),
+          item_code: headers.findIndex(h => h?.toLowerCase().includes('item code')),
+          item_description: headers.findIndex(h => h?.toLowerCase().includes('item description')),
+          unit_price: headers.findIndex(h => h?.toLowerCase().includes('unit price')),
+          requested_quantity: headers.findIndex(h => h?.toLowerCase().includes('requested qty')),
+        };
 
-      // Process data rows (skip header row)
-      const processedData: HuaweiPoData[] = [];
-      for (let i = 1; i < jsonData.length; i++) {
-        const row = jsonData[i] as any[];
-        if (row && row.some(cell => cell !== undefined && cell !== null && cell !== '')) {
-          processedData.push({
-            id: 0, // Temporary ID for new data
-            customerId: job.customer_id,
-            siteCode: row[columnMap.site_code]?.toString() || '',
-            siteId: row[columnMap.site_id]?.toString() || '',
-            siteName: row[columnMap.site_name]?.toString() || '',
-            poNo: row[columnMap.po_no]?.toString() || '',
-            lineNo: row[columnMap.line_no]?.toString() || '',
-            itemCode: row[columnMap.item_code]?.toString() || '',
-            itemDescription: row[columnMap.item_description]?.toString() || '',
-            unitPrice: parseFloat(row[columnMap.unit_price]) || 0,
-            requestedQuantity: parseInt(row[columnMap.requested_quantity]) || 0,
-            invoicedPercentage: 0, // Default value for new PO data
-            uploadedAt: undefined
-          });
+        // Process data rows (skip header row)
+        const processedData: any[] = [];
+        for (let i = 1; i < jsonData.length; i++) {
+          const row = jsonData[i] as any[];
+          if (row && row.some(cell => cell !== undefined && cell !== null && cell !== '')) {
+            processedData.push({
+              id: 0, // Temporary ID for new data
+              customerId: job.customer_id,
+              siteCode: row[columnMap.site_code]?.toString() || '',
+              siteId: row[columnMap.site_id]?.toString() || '',
+              siteName: row[columnMap.site_name]?.toString() || '',
+              poNo: row[columnMap.po_no]?.toString() || '',
+              lineNo: row[columnMap.line_no]?.toString() || '',
+              itemCode: row[columnMap.item_code]?.toString() || '',
+              itemDescription: row[columnMap.item_description]?.toString() || '',
+              unitPrice: parseFloat(row[columnMap.unit_price]) || 0,
+              requestedQuantity: parseInt(row[columnMap.requested_quantity]) || 0,
+              invoicedPercentage: 0, // Default value for new PO data
+              uploadedAt: undefined
+            });
+          }
         }
+        setExcelData(processedData);
+      } else if (isZteJob()) {
+        // Process ZTE data - data starts from row 2 (index 1), row 1 is headers
+        const processedData: any[] = [];
+        for (let i = 1; i < jsonData.length; i++) {
+          const row = jsonData[i] as any[];
+          if (row && row.length > 0 && row[8]) { // Skip rows where only item column is populated (column I = index 8)
+            processedData.push({
+              id: 0, // Temporary ID for new data
+              customerId: job.customer_id,
+              po_line_no: row[1]?.toString() || '', // B
+              purchasing_area: row[2]?.toString() || '', // C
+              site_code: row[4]?.toString() || '', // E
+              site_name: row[5]?.toString() || '', // F
+              logic_site_code: row[6]?.toString() || '', // G
+              logic_site_name: row[7]?.toString() || '', // H
+              item_code: row[8]?.toString() || '', // I
+              item_name: row[9]?.toString() || '', // J
+              unit: row[10]?.toString() || '', // K
+              po_quantity: parseInt(row[11]) || 0, // L
+              confirmed_quantity: parseInt(row[12]) || 0, // M
+              settlement_quantity: parseInt(row[13]) || 0, // N
+              quantity_bill: parseInt(row[15]) || 0, // P
+              quantity_cancelled: parseInt(row[16]) || 0, // Q
+              unit_price: parseFloat(row[17]) || 0, // R
+              tax_rate: parseFloat(row[18]) || 0, // S
+              subtotal_excluding_tax: parseFloat(row[19]) || 0, // T
+              subtotal_including_tax: parseFloat(row[21]) || 0, // V
+              pr_line_number: row[22]?.toString() || '', // W
+              description: row[23]?.toString() || '', // X
+            });
+          }
+        }
+        setExcelData(processedData);
       }
 
-      setExcelData(processedData);
       setProcessingProgress(100);
     } catch (error) {
       console.error('Error processing Excel file:', error);
@@ -514,15 +582,15 @@ export const JobView: React.FC<JobViewProps> = ({
     }
   };
 
-  const handleDataEdit = (index: number, field: keyof HuaweiPoData, value: string | number) => {
+  const handleDataEdit = (index: number, field: string, value: string | number) => {
     const updatedData = [...excelData];
     updatedData[index] = { ...updatedData[index], [field]: value };
     setExcelData(updatedData);
   };
 
   const handleSubmitData = async () => {
-    if (!selectedFile || !isHuaweiJob()) {
-      console.error('No file selected or not a Huawei job');
+    if (!selectedFile || (!isHuaweiJob() && !isZteJob())) {
+      console.error('No file selected or not a Huawei/ZTE job');
       return;
     }
 
@@ -531,17 +599,32 @@ export const JobView: React.FC<JobViewProps> = ({
       setProcessingProgress(0);
 
       // Upload file and data to backend
-      const response = await uploadHuaweiPoExcel(
-        job.id,
-        job.customer_id,
-        selectedFile
-      );
+      let response;
+      if (isHuaweiJob()) {
+        response = await uploadHuaweiPoExcel(
+          job.id,
+          job.customer_id,
+          selectedFile
+        );
+      } else if (isZteJob()) {
+        response = await uploadZtePoExcel(
+          job.id,
+          job.customer_id,
+          selectedFile
+        );
+      }
 
       console.log('Upload successful:', response);
       
       // Show success message (you can add a toast notification here)
-      const actionText = huaweiPoData.length === 0 ? 'uploaded' : 'updated';
-      alert(`Successfully ${actionText} ${response.data.recordsImported} records for job ${job.id}`);
+      const actionText = (isHuaweiJob() ? huaweiPoData.length === 0 : ztePoData.length === 0) ? 'uploaded' : 'updated';
+      let recordCount = 0;
+      if (isHuaweiJob()) {
+        recordCount = (response as any)?.data?.recordsImported || 0;
+      } else if (isZteJob()) {
+        recordCount = (response as any)?.processedCount || 0;
+      }
+      alert(`Successfully ${actionText} ${recordCount} records for job ${job.id}`);
       
       // Close dialog and reset state
       setUploadDialogOpen(false);
@@ -549,7 +632,7 @@ export const JobView: React.FC<JobViewProps> = ({
       setSelectedFile(null);
       setProcessingProgress(0);
       
-      // Refresh Huawei PO data to show the newly uploaded data
+      // Refresh data to show the newly uploaded data
       if (isHuaweiJob()) {
         try {
           const huaweiPoResponse = await getHuaweiPosByJobId(job.id);
@@ -557,6 +640,14 @@ export const JobView: React.FC<JobViewProps> = ({
           setHuaweiPoError(null);
         } catch (err) {
           console.error('Error refreshing Huawei PO data:', err);
+        }
+      } else if (isZteJob()) {
+        try {
+          const ztePoResponse = await getZtePosByJobId(job.id);
+          setZtePoData(ztePoResponse);
+          setZtePoError(null);
+        } catch (err) {
+          console.error('Error refreshing ZTE PO data:', err);
         }
       }
       
@@ -634,6 +725,117 @@ export const JobView: React.FC<JobViewProps> = ({
     }
   };
 
+  // ZTE PO Upload Handler
+  const handleZtePoUpload = async () => {
+    if (!selectedFile || !isZteJob()) {
+      console.error('No file selected or not a ZTE job');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      setProcessingProgress(0);
+
+      const response = await uploadZtePoExcel(
+        job.id,
+        job.customer_id,
+        selectedFile
+      );
+
+      setProcessingProgress(100);
+      const actionText = ztePoData.length === 0 ? 'uploaded' : 'updated';
+      alert(`Successfully ${actionText} ZTE PO data: ${response.processedCount} records processed`);
+
+      // Refresh ZTE PO data to show the newly uploaded data
+      if (isZteJob()) {
+        try {
+          const ztePoResponse = await getZtePosByJobId(job.id);
+          setZtePoData(ztePoResponse);
+          setZtePoError(null);
+        } catch (err) {
+          console.error('Error refreshing ZTE PO data:', err);
+        }
+      }
+
+      setUploadDialogOpen(false);
+      setSelectedFile(null);
+      setExcelData([]);
+    } catch (error) {
+      console.error('Error uploading ZTE PO file:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload file';
+      alert(`Upload failed: ${errorMessage}`);
+    } finally {
+      setIsProcessing(false);
+      setProcessingProgress(0);
+    }
+  };
+
+  // ZTE PO Delete Handler
+  const handleDeleteZtePo = async () => {
+    if (!isZteJob()) {
+      console.error('Not a ZTE job');
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      
+      const response = await deleteZtePosByJobId(job.id);
+      
+      console.log('Delete successful:', response);
+      
+      // Show success message
+      alert(`Successfully deleted ZTE PO records for job ${job.id}`);
+      
+      // Close dialog
+      setDeleteDialogOpen(false);
+      
+      // Refresh ZTE PO data (should be empty now)
+      setZtePoData([]);
+      setZtePoError(null);
+      
+    } catch (error) {
+      console.error('Error deleting ZTE PO data:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete ZTE PO data';
+      alert(`Delete failed: ${errorMessage}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // ZTE PO Download Handler
+  const handleDownloadZtePo = async () => {
+    if (!isZteJob()) {
+      console.error('Not a ZTE job');
+      return;
+    }
+
+    try {
+      setIsDownloading(true);
+      
+      const blob = await downloadZtePoFile(job.id);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `zte_po_${job.id}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log('Download successful');
+      
+    } catch (error) {
+      console.error('Error downloading ZTE PO file:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to download file';
+      alert(`Download failed: ${errorMessage}`);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   // Check if job is associated with Huawei customer
   const isHuaweiJob = () => {
     return job.customer?.name?.toLowerCase() === 'huawei';
@@ -644,6 +846,13 @@ export const JobView: React.FC<JobViewProps> = ({
     const isEricsson = job.customer?.name?.toLowerCase() === 'ericsson';
     console.log('isEricssonJob check:', { customerName: job.customer?.name, isEricsson });
     return isEricsson;
+  };
+
+  // Check if job is associated with ZTE customer
+  const isZteJob = () => {
+    const isZte = job.customer?.name?.toLowerCase() === 'zte';
+    console.log('isZteJob check:', { customerName: job.customer?.name, isZte });
+    return isZte;
   };
 
   // Helper function to check if any PO has been invoiced
@@ -674,16 +883,14 @@ export const JobView: React.FC<JobViewProps> = ({
   // Helper function to check if any BOQ items have been invoiced
   const hasInvoicedBoqItems = () => {
     return ericssonBoqData?.items?.some((item: any) => {
-      const invoicedPercentage = item.invoiced_percentage || 0;
-      return invoicedPercentage > 0;
+      return item.is_invoiced || false;
     }) || false;
   };
 
   // Helper function to count frozen BOQ items
   const getFrozenBoqItemCount = () => {
     return ericssonBoqData?.items?.filter((item: any) => {
-      const invoicedPercentage = item.invoiced_percentage || 0;
-      return invoicedPercentage > 0;
+      return item.is_invoiced || false;
     }).length || 0;
   };
 
@@ -1111,6 +1318,120 @@ export const JobView: React.FC<JobViewProps> = ({
           </Box>
         )}
 
+        {/* ZTE PO Data Section - Only for ZTE jobs */}
+        {isZteJob() && (
+          <Card sx={{ mb: 3 }}>
+            <CardHeader
+              title="ZTE Purchase Orders"
+              action={
+                ztePoData.length > 0 && (
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={handleDownloadZtePo}
+                      disabled={isDownloading}
+                      startIcon={<DownloadIcon />}
+                    >
+                      {isDownloading ? 'Downloading...' : 'Download'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={() => setDeleteDialogOpen(true)}
+                      disabled={isDeleting}
+                      startIcon={<DeleteIcon />}
+                    >
+                      Delete All
+                    </Button>
+                  </Box>
+                )
+              }
+            />
+            {ztePoLoading ? <Box sx={{ mt: 2 }}>
+              <LinearProgress />
+              <Typography variant="body2" sx={{ mt: 1, textAlign: 'center' }}>
+                Loading ZTE PO data...
+              </Typography>
+            </Box> : null}
+            {ztePoError ? <Box sx={{ mt: 2 }}>
+              <Alert severity="error">
+                Error loading ZTE PO data: {ztePoError}
+              </Alert>
+            </Box> : null}
+            {!ztePoLoading && !ztePoError && ztePoData.length > 0 && (
+              <CardContent>
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>PO Line No</TableCell>
+                        <TableCell>Purchasing Area</TableCell>
+                        <TableCell>Site Code</TableCell>
+                        <TableCell>Site Name</TableCell>
+                        <TableCell>Item Code</TableCell>
+                        <TableCell>Item Name</TableCell>
+                        <TableCell>Unit</TableCell>
+                        <TableCell>PO Quantity</TableCell>
+                        <TableCell>Confirmed Qty</TableCell>
+                        <TableCell>Settlement Qty</TableCell>
+                        <TableCell>Quantity Bill</TableCell>
+                        <TableCell>Quantity Cancelled</TableCell>
+                        <TableCell>Unit Price</TableCell>
+                        <TableCell>Tax Rate</TableCell>
+                        <TableCell>Subtotal (Ex Tax)</TableCell>
+                        <TableCell>Subtotal (Inc Tax)</TableCell>
+                        <TableCell>PR Line Number</TableCell>
+                        <TableCell>Description</TableCell>
+                        <TableCell>Status</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {ztePoData.map((po, index) => (
+                        <TableRow key={po.id || index}>
+                          <TableCell>{po.po_line_no}</TableCell>
+                          <TableCell>{po.purchasing_area}</TableCell>
+                          <TableCell>{po.site_code}</TableCell>
+                          <TableCell>{po.site_name}</TableCell>
+                          <TableCell>{po.item_code}</TableCell>
+                          <TableCell>{po.item_name}</TableCell>
+                          <TableCell>{po.unit}</TableCell>
+                          <TableCell>{po.po_quantity}</TableCell>
+                          <TableCell>{po.confirmed_quantity}</TableCell>
+                          <TableCell>{po.settlement_quantity}</TableCell>
+                          <TableCell>{po.quantity_bill}</TableCell>
+                          <TableCell>{po.quantity_cancelled}</TableCell>
+                          <TableCell>{formatCurrency(po.unit_price)}</TableCell>
+                          <TableCell>{po.tax_rate}%</TableCell>
+                          <TableCell>{formatCurrency(po.subtotal_excluding_tax)}</TableCell>
+                          <TableCell>{formatCurrency(po.subtotal_including_tax)}</TableCell>
+                          <TableCell>{po.pr_line_number}</TableCell>
+                          <TableCell>{po.description || '-'}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={po.is_invoiced ? "Invoiced" : "Pending"} 
+                              color={po.is_invoiced ? "success" : "warning"} 
+                              size="small" 
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            )}
+            {!ztePoLoading && !ztePoError && ztePoData.length === 0 && (
+              <CardContent>
+                <Alert severity="info">
+                  No ZTE PO data found for this job. Upload an Excel file to get started.
+                </Alert>
+              </CardContent>
+            )}
+          </Card>
+        )}
+
         {/* Ericsson BOQ Data Section - Only for Ericsson jobs */}
         {isEricssonJob() && (
           <Box sx={{ mt: 4 }}>
@@ -1244,8 +1565,7 @@ export const JobView: React.FC<JobViewProps> = ({
                                     </Typography>
                                     <Typography variant="h6" fontWeight="bold" color="success.main">
                                       {formatCurrency(ericssonBoqData.items.reduce((sum: number, item: any) => {
-                                        const invoicedPercentage = item.invoiced_percentage || 0;
-                                        return sum + ((item.total_amount || 0) * invoicedPercentage / 100);
+                                        return sum + (item.is_invoiced ? (item.total_amount || 0) : 0);
                                       }, 0))}
                                     </Typography>
                                   </Box>
@@ -1257,8 +1577,7 @@ export const JobView: React.FC<JobViewProps> = ({
                                     </Typography>
                                     <Typography variant="h6" fontWeight="bold" color="warning.main">
                                       {formatCurrency(ericssonBoqData.items.reduce((sum: number, item: any) => {
-                                        const invoicedPercentage = item.invoiced_percentage || 0;
-                                        return sum + ((item.total_amount || 0) * (100 - invoicedPercentage) / 100);
+                                        return sum + (item.is_invoiced ? 0 : (item.total_amount || 0));
                                       }, 0))}
                                     </Typography>
                                   </Box>
@@ -1430,7 +1749,7 @@ export const JobView: React.FC<JobViewProps> = ({
                                <TableCell align="right" sx={{ fontWeight: 'bold' }}>Qty</TableCell>
                                <TableCell align="right" sx={{ fontWeight: 'bold' }}>Unit Price</TableCell>
                                <TableCell align="right" sx={{ fontWeight: 'bold' }}>Total Amount</TableCell>
-                               <TableCell sx={{ fontWeight: 'bold' }}>Invoiced %</TableCell>
+                               <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
                                <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
                              </TableRow>
                            </TableHead>
@@ -1440,9 +1759,9 @@ export const JobView: React.FC<JobViewProps> = ({
                                  key={index} 
                                  hover 
                                  sx={{ 
-                                   backgroundColor: (item.invoiced_percentage || 0) >= 100 ? '#fef3c7' : 'inherit',
+                                   backgroundColor: item.is_invoiced ? '#fef3c7' : 'inherit',
                                    '&:hover': {
-                                     backgroundColor: (item.invoiced_percentage || 0) >= 100 ? '#fde68a' : 'grey.50'
+                                     backgroundColor: item.is_invoiced ? '#fde68a' : 'grey.50'
                                    }
                                  }}
                                >
@@ -1478,15 +1797,9 @@ export const JobView: React.FC<JobViewProps> = ({
                                  </TableCell>
                                  <TableCell>
                                    <Chip 
-                                     label={`${item.invoiced_percentage || 0}%`} 
-                                     color="primary" 
+                                     label={item.is_invoiced ? "Invoiced" : "Pending"} 
+                                     color={item.is_invoiced ? "success" : "warning"} 
                                      size="small"
-                                     sx={{ 
-                                       backgroundColor: '#dbeafe',
-                                       color: '#1e40af',
-                                       fontWeight: 500,
-                                       fontSize: '0.75rem'
-                                     }}
                                    />
                                  </TableCell>
                                  <TableCell>
@@ -1687,6 +2000,18 @@ export const JobView: React.FC<JobViewProps> = ({
               Upload PO
             </Button>
           )}
+          {isZteJob() && ztePoData.length === 0 && (
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={() => {
+                // Trigger file input
+                document.getElementById('excel-file-input')?.click();
+              }}
+            >
+              Upload ZTE PO
+            </Button>
+          )}
           {isEricssonJob() && (
             <Button
               variant="contained"
@@ -1745,7 +2070,8 @@ export const JobView: React.FC<JobViewProps> = ({
         fullWidth
       >
         <DialogTitle>
-          {huaweiPoData.length === 0 ? 'Upload PO Excel File' : 'PO Variations - Update Existing PO Data'}
+          {isHuaweiJob() && (huaweiPoData.length === 0 ? 'Upload PO Excel File' : 'PO Variations - Update Existing PO Data')}
+          {isZteJob() && (ztePoData.length === 0 ? 'Upload ZTE PO Excel File' : 'ZTE PO Variations - Update Existing PO Data')}
         </DialogTitle>
         <DialogContent>
           {isProcessing ? <Box sx={{ mb: 2 }}>
@@ -1761,12 +2087,25 @@ export const JobView: React.FC<JobViewProps> = ({
           {!isProcessing && excelData.length > 0 && (
             <Box>
               <Typography variant="h6" gutterBottom>
-                {huaweiPoData.length === 0 ? 'Extracted Data' : 'PO Variations Data'} ({excelData.length} rows)
+                {isHuaweiJob() 
+                  ? (huaweiPoData.length === 0 ? 'Extracted Data' : 'PO Variations Data')
+                  : isZteJob()
+                  ? (ztePoData.length === 0 ? 'Extracted ZTE PO Data' : 'ZTE PO Variations Data')
+                  : (huaweiPoData.length === 0 ? 'Extracted Data' : 'PO Variations Data')
+                } ({excelData.length} rows)
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                {huaweiPoData.length === 0 
-                  ? 'Review and edit the data before submitting' 
-                  : 'Review and edit the PO variations before updating existing data'
+                {isHuaweiJob() 
+                  ? (huaweiPoData.length === 0 
+                      ? 'Review and edit the data before submitting' 
+                      : 'Review and edit the PO variations before updating existing data')
+                  : isZteJob()
+                  ? (ztePoData.length === 0 
+                      ? 'Review and edit the ZTE PO data before submitting' 
+                      : 'Review and edit the ZTE PO variations before updating existing data')
+                  : (huaweiPoData.length === 0 
+                      ? 'Review and edit the data before submitting' 
+                      : 'Review and edit the PO variations before updating existing data')
                 }
               </Typography>
               
@@ -1774,105 +2113,430 @@ export const JobView: React.FC<JobViewProps> = ({
                 <Table stickyHeader size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>Site Code</TableCell>
-                      <TableCell>Site ID</TableCell>
-                      <TableCell>Site Name</TableCell>
-                      <TableCell>PO NO.</TableCell>
-                      <TableCell>PO Line NO.</TableCell>
-                      <TableCell>Item Code</TableCell>
-                      <TableCell>Item Description</TableCell>
-                      <TableCell>Unit Price</TableCell>
-                      <TableCell>Requested Qty</TableCell>
+                      {isHuaweiJob() ? (
+                        <>
+                          <TableCell>Site Code</TableCell>
+                          <TableCell>Site ID</TableCell>
+                          <TableCell>Site Name</TableCell>
+                          <TableCell>PO NO.</TableCell>
+                          <TableCell>PO Line NO.</TableCell>
+                          <TableCell>Item Code</TableCell>
+                          <TableCell>Item Description</TableCell>
+                          <TableCell>Unit Price</TableCell>
+                          <TableCell>Requested Qty</TableCell>
+                        </>
+                      ) : isZteJob() ? (
+                        <>
+                          <TableCell>PO Line No</TableCell>
+                          <TableCell>Purchasing Area</TableCell>
+                          <TableCell>Site Code</TableCell>
+                          <TableCell>Site Name</TableCell>
+                          <TableCell>Logic Site Code</TableCell>
+                          <TableCell>Logic Site Name</TableCell>
+                          <TableCell>Item Code</TableCell>
+                          <TableCell>Item Name</TableCell>
+                          <TableCell>Unit</TableCell>
+                          <TableCell>PO Quantity</TableCell>
+                          <TableCell>Confirmed Quantity</TableCell>
+                          <TableCell>Settlement Quantity</TableCell>
+                          <TableCell>Quantity Bill</TableCell>
+                          <TableCell>Quantity Cancelled</TableCell>
+                          <TableCell>Unit Price</TableCell>
+                          <TableCell>Tax Rate</TableCell>
+                          <TableCell>Subtotal (Excl Tax)</TableCell>
+                          <TableCell>Subtotal (Incl Tax)</TableCell>
+                          <TableCell>PR Line Number</TableCell>
+                          <TableCell>Description</TableCell>
+                        </>
+                      ) : (
+                        <>
+                          <TableCell>Site Code</TableCell>
+                          <TableCell>Site ID</TableCell>
+                          <TableCell>Site Name</TableCell>
+                          <TableCell>PO NO.</TableCell>
+                          <TableCell>PO Line NO.</TableCell>
+                          <TableCell>Item Code</TableCell>
+                          <TableCell>Item Description</TableCell>
+                          <TableCell>Unit Price</TableCell>
+                          <TableCell>Requested Qty</TableCell>
+                        </>
+                      )}
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {excelData.map((row, index) => (
                       <TableRow key={index}>
-                        <TableCell>
-                          <TextField
-                            size="small"
-                            value={row.siteCode}
-                            onChange={(e) => { handleDataEdit(index, 'siteCode', e.target.value); }}
-                            variant="standard"
-                            disabled={isProcessing}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            size="small"
-                            value={row.siteId}
-                            onChange={(e) => { handleDataEdit(index, 'siteId', e.target.value); }}
-                            variant="standard"
-                            disabled={isProcessing}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            size="small"
-                            value={row.siteName}
-                            onChange={(e) => { handleDataEdit(index, 'siteName', e.target.value); }}
-                            variant="standard"
-                            disabled={isProcessing}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            size="small"
-                            value={row.poNo}
-                            onChange={(e) => { handleDataEdit(index, 'poNo', e.target.value); }}
-                            variant="standard"
-                            disabled={isProcessing}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            size="small"
-                            value={row.lineNo}
-                            onChange={(e) => { handleDataEdit(index, 'lineNo', e.target.value); }}
-                            variant="standard"
-                            disabled={isProcessing}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            size="small"
-                            value={row.itemCode}
-                            onChange={(e) => { handleDataEdit(index, 'itemCode', e.target.value); }}
-                            variant="standard"
-                            disabled={isProcessing}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            size="small"
-                            value={row.itemDescription}
-                            onChange={(e) => { handleDataEdit(index, 'itemDescription', e.target.value); }}
-                            variant="standard"
-                            multiline
-                            maxRows={2}
-                            disabled={isProcessing}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            size="small"
-                            type="number"
-                            value={row.unitPrice}
-                            onChange={(e) => { handleDataEdit(index, 'unitPrice', parseFloat(e.target.value) || 0); }}
-                            variant="standard"
-                            disabled={isProcessing}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            size="small"
-                            type="number"
-                            value={row.requestedQuantity}
-                            onChange={(e) => { handleDataEdit(index, 'requestedQuantity', parseInt(e.target.value) || 0); }}
-                            variant="standard"
-                            disabled={isProcessing}
-                          />
-                        </TableCell>
+                        {isHuaweiJob() ? (
+                          <>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.siteCode}
+                                onChange={(e) => { handleDataEdit(index, 'siteCode', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.siteId}
+                                onChange={(e) => { handleDataEdit(index, 'siteId', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.siteName}
+                                onChange={(e) => { handleDataEdit(index, 'siteName', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.poNo}
+                                onChange={(e) => { handleDataEdit(index, 'poNo', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.lineNo}
+                                onChange={(e) => { handleDataEdit(index, 'lineNo', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.itemCode}
+                                onChange={(e) => { handleDataEdit(index, 'itemCode', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.itemDescription}
+                                onChange={(e) => { handleDataEdit(index, 'itemDescription', e.target.value); }}
+                                variant="standard"
+                                multiline
+                                maxRows={2}
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.unitPrice}
+                                onChange={(e) => { handleDataEdit(index, 'unitPrice', parseFloat(e.target.value) || 0); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.requestedQuantity}
+                                onChange={(e) => { handleDataEdit(index, 'requestedQuantity', parseInt(e.target.value) || 0); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                          </>
+                        ) : isZteJob() ? (
+                          <>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.po_line_no}
+                                onChange={(e) => { handleDataEdit(index, 'po_line_no', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.purchasing_area}
+                                onChange={(e) => { handleDataEdit(index, 'purchasing_area', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.site_code}
+                                onChange={(e) => { handleDataEdit(index, 'site_code', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.site_name}
+                                onChange={(e) => { handleDataEdit(index, 'site_name', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.logic_site_code}
+                                onChange={(e) => { handleDataEdit(index, 'logic_site_code', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.logic_site_name}
+                                onChange={(e) => { handleDataEdit(index, 'logic_site_name', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.item_code}
+                                onChange={(e) => { handleDataEdit(index, 'item_code', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.item_name}
+                                onChange={(e) => { handleDataEdit(index, 'item_name', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.unit}
+                                onChange={(e) => { handleDataEdit(index, 'unit', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.po_quantity}
+                                onChange={(e) => { handleDataEdit(index, 'po_quantity', parseInt(e.target.value) || 0); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.confirmed_quantity}
+                                onChange={(e) => { handleDataEdit(index, 'confirmed_quantity', parseInt(e.target.value) || 0); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.settlement_quantity}
+                                onChange={(e) => { handleDataEdit(index, 'settlement_quantity', parseInt(e.target.value) || 0); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.quantity_bill}
+                                onChange={(e) => { handleDataEdit(index, 'quantity_bill', parseInt(e.target.value) || 0); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.quantity_cancelled}
+                                onChange={(e) => { handleDataEdit(index, 'quantity_cancelled', parseInt(e.target.value) || 0); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.unit_price}
+                                onChange={(e) => { handleDataEdit(index, 'unit_price', parseFloat(e.target.value) || 0); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.tax_rate}
+                                onChange={(e) => { handleDataEdit(index, 'tax_rate', parseFloat(e.target.value) || 0); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.subtotal_excluding_tax}
+                                onChange={(e) => { handleDataEdit(index, 'subtotal_excluding_tax', parseFloat(e.target.value) || 0); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.subtotal_including_tax}
+                                onChange={(e) => { handleDataEdit(index, 'subtotal_including_tax', parseFloat(e.target.value) || 0); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.pr_line_number}
+                                onChange={(e) => { handleDataEdit(index, 'pr_line_number', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.description}
+                                onChange={(e) => { handleDataEdit(index, 'description', e.target.value); }}
+                                variant="standard"
+                                multiline
+                                maxRows={2}
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                          </>
+                        ) : (
+                          <>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.siteCode}
+                                onChange={(e) => { handleDataEdit(index, 'siteCode', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.siteId}
+                                onChange={(e) => { handleDataEdit(index, 'siteId', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.siteName}
+                                onChange={(e) => { handleDataEdit(index, 'siteName', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.poNo}
+                                onChange={(e) => { handleDataEdit(index, 'poNo', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.lineNo}
+                                onChange={(e) => { handleDataEdit(index, 'lineNo', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.itemCode}
+                                onChange={(e) => { handleDataEdit(index, 'itemCode', e.target.value); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={row.itemDescription}
+                                onChange={(e) => { handleDataEdit(index, 'itemDescription', e.target.value); }}
+                                variant="standard"
+                                multiline
+                                maxRows={2}
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.unitPrice}
+                                onChange={(e) => { handleDataEdit(index, 'unitPrice', parseFloat(e.target.value) || 0); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={row.requestedQuantity}
+                                onChange={(e) => { handleDataEdit(index, 'requestedQuantity', parseInt(e.target.value) || 0); }}
+                                variant="standard"
+                                disabled={isProcessing}
+                              />
+                            </TableCell>
+                          </>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1910,8 +2574,18 @@ export const JobView: React.FC<JobViewProps> = ({
               disabled={isProcessing}
             >
               {isProcessing 
-                ? (huaweiPoData.length === 0 ? 'Uploading...' : 'Updating...') 
-                : (huaweiPoData.length === 0 ? 'Submit Data' : 'Update PO Data')
+                ? (isHuaweiJob() 
+                    ? (huaweiPoData.length === 0 ? 'Uploading...' : 'Updating...')
+                    : isZteJob()
+                    ? (ztePoData.length === 0 ? 'Uploading...' : 'Updating...')
+                    : (huaweiPoData.length === 0 ? 'Uploading...' : 'Updating...')
+                  )
+                : (isHuaweiJob() 
+                    ? (huaweiPoData.length === 0 ? 'Submit Data' : 'Update PO Data')
+                    : isZteJob()
+                    ? (ztePoData.length === 0 ? 'Submit ZTE PO Data' : 'Update ZTE PO Data')
+                    : (huaweiPoData.length === 0 ? 'Submit Data' : 'Update PO Data')
+                  )
               }
             </Button>
           )}
@@ -1920,9 +2594,11 @@ export const JobView: React.FC<JobViewProps> = ({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => { setDeleteDialogOpen(false); }}>
-        <DialogTitle>Delete Huawei PO Data</DialogTitle>
+        <DialogTitle>
+          {isHuaweiJob() ? 'Delete Huawei PO Data' : isZteJob() ? 'Delete ZTE PO Data' : 'Delete Data'}
+        </DialogTitle>
         <DialogContent>
-          {hasInvoicedPos() ? (
+          {isHuaweiJob() && hasInvoicedPos() ? (
             <Box>
               <Typography variant="body1" color="error" gutterBottom>
                 {areAllPosFrozen() 
@@ -1960,13 +2636,14 @@ export const JobView: React.FC<JobViewProps> = ({
           ) : (
             <Box>
               <Typography variant="body1" gutterBottom>
-                Are you sure you want to delete all Huawei PO data for this job?
+                {isHuaweiJob() && `Are you sure you want to delete all Huawei PO data for this job?`}
+                {isZteJob() && `Are you sure you want to delete all ZTE PO data for this job?`}
               </Typography>
               <Typography variant="body2" color="error" sx={{ mt: 2 }}>
                 This action will:
               </Typography>
               <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
-                <li>Delete all {huaweiPoData.length} PO records from the database</li>
+                <li>Delete all {isHuaweiJob() ? huaweiPoData.length : ztePoData.length} PO records from the database</li>
                 <li>Remove the uploaded Excel file from the server</li>
                 <li>This action cannot be undone</li>
               </ul>
@@ -1975,11 +2652,11 @@ export const JobView: React.FC<JobViewProps> = ({
         </DialogContent>
         <DialogActions>
           <Button onClick={() => { setDeleteDialogOpen(false); }} disabled={isDeleting}>
-            {hasInvoicedPos() ? 'Close' : 'Cancel'}
+            {(isHuaweiJob() && hasInvoicedPos()) ? 'Close' : 'Cancel'}
           </Button>
-          {!hasInvoicedPos() && (
+          {!(isHuaweiJob() && hasInvoicedPos()) && (
             <Button 
-              onClick={handleDeleteHuaweiPo} 
+              onClick={isHuaweiJob() ? handleDeleteHuaweiPo : handleDeleteZtePo} 
               color="error" 
               variant="contained"
               disabled={isDeleting}

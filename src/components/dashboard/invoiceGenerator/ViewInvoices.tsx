@@ -39,6 +39,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import { getAllInvoices, deleteInvoice, type InvoiceRecord } from '@/api/huawei-invoice-api';
 import { getAllEricssonInvoices, deleteEricssonInvoice, type EricssonInvoiceData } from '@/api/ericsson-invoice-api';
+import { getAllZteInvoices, deleteZteInvoice, type ZteInvoiceData } from '@/api/zte-invoice-api';
 import { getSettings } from '@/api/settingsApi';
 import { getAllCustomers } from '@/api/customer-api';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -58,14 +59,19 @@ export const ViewInvoices: React.FC = () => {
   
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [ericssonInvoices, setEricssonInvoices] = useState<EricssonInvoiceData[]>([]);
+  const [zteInvoices, setZteInvoices] = useState<ZteInvoiceData[]>([]);
   const [filteredInvoices, setFilteredInvoices] = useState<InvoiceRecord[]>([]);
   const [filteredEricssonInvoices, setFilteredEricssonInvoices] = useState<EricssonInvoiceData[]>([]);
+  const [filteredZteInvoices, setFilteredZteInvoices] = useState<ZteInvoiceData[]>([]);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedInvoiceDetails, setSelectedInvoiceDetails] = useState<InvoiceRecord[]>([]);
   const [ericssonViewDialogOpen, setEricssonViewDialogOpen] = useState(false);
   const [selectedEricssonInvoice, setSelectedEricssonInvoice] = useState<EricssonInvoiceData | null>(null);
+  const [zteViewDialogOpen, setZteViewDialogOpen] = useState(false);
+  const [selectedZteInvoice, setSelectedZteInvoice] = useState<ZteInvoiceData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingEricsson, setIsLoadingEricsson] = useState(false);
+  const [isLoadingZte, setIsLoadingZte] = useState(false);
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +88,7 @@ export const ViewInvoices: React.FC = () => {
   useEffect(() => {
     loadAllInvoices();
     loadEricssonInvoices();
+    loadZteInvoices();
     loadSettings();
   }, []);
 
@@ -188,6 +195,58 @@ export const ViewInvoices: React.FC = () => {
     setFilteredEricssonInvoices(filtered);
   }, [ericssonInvoices, searchTerm, filters]);
 
+  useEffect(() => {
+    // Apply search and filters for ZTE invoices
+    let filtered = zteInvoices;
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(invoice => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          invoice.invoice_no.toLowerCase().includes(searchLower) ||
+          invoice.ztePo?.po_line_no?.toLowerCase().includes(searchLower) ||
+          invoice.ztePo?.item_code?.toLowerCase().includes(searchLower) ||
+          invoice.ztePo?.item_name?.toLowerCase().includes(searchLower) ||
+          invoice.ztePo?.job?.name?.toLowerCase().includes(searchLower) ||
+          invoice.ztePo?.job?.customer?.name?.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+    
+    // Apply customer filter
+    if (filters.customer) {
+      filtered = filtered.filter(invoice =>
+        invoice.ztePo?.job?.customer?.name === filters.customer
+      );
+    }
+    
+    // Apply amount filters
+    if (filters.minAmount || filters.maxAmount) {
+      filtered = filtered.filter(invoice => {
+        const totalAmount = invoice.total_amount || 0;
+        const minAmount = filters.minAmount ? parseFloat(filters.minAmount) : 0;
+        const maxAmount = filters.maxAmount ? parseFloat(filters.maxAmount) : Infinity;
+        
+        return totalAmount >= minAmount && totalAmount <= maxAmount;
+      });
+    }
+    
+    // Apply date filters
+    if (filters.fromDate || filters.toDate) {
+      filtered = filtered.filter(invoice => {
+        if (!invoice.createdAt) return false;
+        const invoiceDate = new Date(invoice.createdAt);
+        const fromDate = filters.fromDate ? new Date(filters.fromDate) : new Date(0);
+        const toDate = filters.toDate ? new Date(filters.toDate) : new Date();
+        
+        return invoiceDate >= fromDate && invoiceDate <= toDate;
+      });
+    }
+    
+    setFilteredZteInvoices(filtered);
+  }, [zteInvoices, searchTerm, filters]);
+
   // Get unique customers for filter dropdown
   const uniqueCustomers = Array.from(new Set([
     ...invoices
@@ -195,6 +254,9 @@ export const ViewInvoices: React.FC = () => {
       .filter(Boolean),
     ...ericssonInvoices
       .map(invoice => invoice.customer_name)
+      .filter(Boolean),
+    ...zteInvoices
+      .map(invoice => invoice.ztePo?.job?.customer?.name)
       .filter(Boolean)
   ])).sort();
 
@@ -245,6 +307,19 @@ export const ViewInvoices: React.FC = () => {
       setError(err instanceof Error ? err.message : 'Failed to load Ericsson invoices');
     } finally {
       setIsLoadingEricsson(false);
+    }
+  };
+
+  const loadZteInvoices = async () => {
+    try {
+      setIsLoadingZte(true);
+      const response = await getAllZteInvoices();
+      setZteInvoices(response.data);
+    } catch (err) {
+      console.error('Error loading ZTE invoices:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load ZTE invoices');
+    } finally {
+      setIsLoadingZte(false);
     }
   };
 
@@ -754,6 +829,76 @@ export const ViewInvoices: React.FC = () => {
                       </TableCell>
                     </TableRow>
                   ))}
+                  
+                  {/* ZTE Invoices */}
+                  {filteredZteInvoices.map((invoice) => (
+                    <TableRow key={`zte-${invoice.id}`}>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="bold">
+                          {invoice.invoice_no}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip label="ZTE" color="info" size="small" />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {invoice.ztePo?.job?.customer?.name || 'N/A'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {invoice.ztePo?.job?.name || 'N/A'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {invoice.ztePo?.po_line_no || 'N/A'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="bold">
+                          {formatCurrency(invoice.total_amount)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                          {new Date(invoice.createdAt || '').toLocaleDateString()}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <IconButton
+                            color="primary"
+                            size="small"
+                            onClick={() => {
+                              setSelectedZteInvoice(invoice);
+                              setZteViewDialogOpen(true);
+                            }}
+                          >
+                            <VisibilityIcon />
+                          </IconButton>
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={async () => {
+                              if (window.confirm('Are you sure you want to delete this invoice?')) {
+                                try {
+                                  await deleteZteInvoice(invoice.id);
+                                  setSuccess('Invoice deleted successfully');
+                                  loadZteInvoices();
+                                } catch (error) {
+                                  setError('Failed to delete invoice');
+                                }
+                              }
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -1213,8 +1358,8 @@ export const ViewInvoices: React.FC = () => {
                         <TableCell>Quantity</TableCell>
                         <TableCell>Unit Price</TableCell>
                         <TableCell>Total Amount</TableCell>
-                        <TableCell>Invoice %</TableCell>
-                        <TableCell>Invoiced Amount</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell>Amount</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1232,14 +1377,14 @@ export const ViewInvoices: React.FC = () => {
                           <TableCell>{formatCurrency(item.total_amount)}</TableCell>
                           <TableCell>
                             <Chip 
-                              label={`${item.need_to_invoice_percentage || 0}%`} 
-                              color="primary" 
+                              label="Invoiced" 
+                              color="success" 
                               size="small" 
                             />
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2" fontWeight="600" color="#059669">
-                              {formatCurrency((item.total_amount || 0) * (item.need_to_invoice_percentage || 0) / 100)}
+                              {formatCurrency(item.total_amount || 0)}
                             </Typography>
                           </TableCell>
                         </TableRow>
@@ -1299,6 +1444,196 @@ export const ViewInvoices: React.FC = () => {
               Download PDF
             </Button>
           )}
+        </DialogActions>
+      </Dialog>
+
+      {/* View ZTE Invoice Dialog */}
+      <Dialog 
+        open={zteViewDialogOpen} 
+        onClose={() => setZteViewDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h6">
+            ZTE Invoice Details
+            {selectedZteInvoice && (
+              <Typography variant="subtitle1" color="primary" sx={{ mt: 1 }}>
+                {selectedZteInvoice.invoice_no}
+              </Typography>
+            )}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {selectedZteInvoice ? (
+            <Box>
+              {/* Invoice Information */}
+              <Grid container spacing={3} sx={{ mb: 3 }}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Invoice Number
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedZteInvoice.invoice_no}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Customer
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedZteInvoice.ztePo?.job?.customer?.name || 'N/A'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Job
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedZteInvoice.ztePo?.job?.name || 'N/A'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Site Code
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedZteInvoice.ztePo?.site_code || 'N/A'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Item Code
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedZteInvoice.ztePo?.item_code || 'N/A'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Created Date
+                  </Typography>
+                  <Typography variant="body1">
+                    {selectedZteInvoice.createdAt ? new Date(selectedZteInvoice.createdAt).toLocaleString() : 'N/A'}
+                  </Typography>
+                </Grid>
+              </Grid>
+
+              {/* Financial Summary */}
+              <Box sx={{ 
+                mb: 3, 
+                p: 3, 
+                backgroundColor: '#f0fdf4',
+                borderRadius: 2, 
+                border: '1px solid', 
+                borderColor: '#bbf7d0'
+              }}>
+                <Typography variant="subtitle1" gutterBottom color="text.primary" fontWeight="500" sx={{ mb: 2 }}>
+                  Financial Summary
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Subtotal
+                      </Typography>
+                      <Typography variant="h6" fontWeight="600" color="text.primary">
+                        {formatCurrency(selectedZteInvoice.subtotal_amount)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        VAT ({selectedZteInvoice.vat_percentage}%)
+                      </Typography>
+                      <Typography variant="h6" fontWeight="600" color="text.primary">
+                        {formatCurrency(selectedZteInvoice.vat_amount)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ 
+                      p: 2, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Total Amount
+                      </Typography>
+                      <Typography variant="h6" fontWeight="600" color="primary.main">
+                        {formatCurrency(selectedZteInvoice.total_amount)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              {/* Item Details */}
+              <Typography variant="subtitle1" gutterBottom color="text.primary" fontWeight="500" sx={{ mb: 2 }}>
+                Item Details
+              </Typography>
+              <TableContainer component={Paper} sx={{ mb: 3 }}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>PO Line No</TableCell>
+                      <TableCell>Item Name</TableCell>
+                      <TableCell>Unit Price</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Subtotal</TableCell>
+                      <TableCell>VAT</TableCell>
+                      <TableCell>Total</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>{selectedZteInvoice.ztePo?.po_line_no || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                          {selectedZteInvoice.ztePo?.item_name || 'N/A'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{formatCurrency(selectedZteInvoice.ztePo?.unit_price || 0)}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label="Invoiced" 
+                          color="success" 
+                          size="small" 
+                        />
+                      </TableCell>
+                      <TableCell>{formatCurrency(selectedZteInvoice.subtotal_amount)}</TableCell>
+                      <TableCell>{formatCurrency(selectedZteInvoice.vat_amount)}</TableCell>
+                      <TableCell>{formatCurrency(selectedZteInvoice.total_amount)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          ) : (
+            <Typography>
+              Loading invoice details...
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setZteViewDialogOpen(false)}>
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
 
