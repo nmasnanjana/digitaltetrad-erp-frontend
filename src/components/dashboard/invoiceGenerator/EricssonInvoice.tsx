@@ -28,6 +28,7 @@ import {
   InputAdornment,
   LinearProgress,
   FormControl,
+  Pagination,
   InputLabel,
   Select,
   MenuItem,
@@ -35,6 +36,7 @@ import {
 import UploadIcon from '@mui/icons-material/Upload';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
 import BusinessIcon from '@mui/icons-material/Business';
 import { getAllJobs } from '@/api/job-api';
@@ -77,8 +79,7 @@ interface EricssonBoqItemData {
   unit_price: number;
   total_amount: number;
   is_additional_work: boolean;
-  invoiced_percentage?: number;
-  need_to_invoice_percentage?: number;
+  is_invoiced?: boolean;
 }
 
 interface EricssonBoqRemoveMaterialData {
@@ -141,12 +142,31 @@ export const EricssonInvoice: React.FC = () => {
   const [isLoadingRecent, setIsLoadingRecent] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedInvoiceForView, setSelectedInvoiceForView] = useState<any>(null);
+  
+  // Pagination and search states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
 
   // Load jobs on component mount
   useEffect(() => {
     loadJobs();
     loadRecentInvoices();
   }, []);
+
+  // Filter jobs based on search term
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredJobs(jobs);
+    } else {
+      const filtered = jobs.filter(job => 
+        job.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredJobs(filtered);
+    }
+    setCurrentPage(1); // Reset to first page when search changes
+  }, [jobs, searchTerm]);
 
   const loadJobs = async () => {
     try {
@@ -156,7 +176,31 @@ export const EricssonInvoice: React.FC = () => {
       const ericssonJobs = response.data.jobs.filter((job: Job) => 
         job.customer?.name?.toLowerCase().includes('ericsson')
       );
-      setJobs(ericssonJobs);
+      
+      // Filter out jobs that are already fully invoiced
+      const availableJobs = [];
+      for (const job of ericssonJobs) {
+        try {
+          const boqResponse = await getEricssonBoqByJobId(job.id);
+          const boqData = boqResponse.data;
+          if (boqData && boqData.items && boqData.items.length > 0) {
+            // Check if there are any uninvoiced items
+            const hasUninvoicedItems = boqData.items.some((item: any) => !item.is_invoiced);
+            if (hasUninvoicedItems) {
+              availableJobs.push(job);
+            }
+          } else {
+            // If no BOQ data exists, include the job
+            availableJobs.push(job);
+          }
+        } catch (error) {
+          console.error(`Error checking Ericsson BOQ data for job ${job.id}:`, error);
+          // If we can't check the BOQ data, include the job to be safe
+          availableJobs.push(job);
+        }
+      }
+      
+      setJobs(availableJobs);
     } catch (error) {
       console.error('Error loading jobs:', error);
       setError('Failed to load jobs');
@@ -192,6 +236,17 @@ export const EricssonInvoice: React.FC = () => {
     setJobSelectionDialogOpen(true);
   };
 
+  // Pagination functions
+  const itemsPerPage = 10;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentJobs = filteredJobs.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(filteredJobs.length / itemsPerPage);
+
+  const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
+    setCurrentPage(page);
+  };
+
   const handleJobSelect = async (job: Job) => {
     try {
       setIsLoading(true);
@@ -205,8 +260,7 @@ export const EricssonInvoice: React.FC = () => {
       if (boqData.items) {
         boqData.items = boqData.items.map(item => ({
           ...item,
-          invoiced_percentage: 0,
-          need_to_invoice_percentage: 0
+          is_invoiced: false
         }));
       }
       
@@ -247,10 +301,7 @@ export const EricssonInvoice: React.FC = () => {
       return;
     }
 
-    if (!validatePercentages()) {
-      setError('Please fix percentage validation errors before saving');
-      return;
-    }
+    // No need for percentage validation since we always bill 100%
 
     try {
       setIsSaving(true);
@@ -258,7 +309,7 @@ export const EricssonInvoice: React.FC = () => {
       
       // Calculate totals based on percentages
       const subtotal = ericssonBoqData.items?.reduce((sum, item) => {
-        const percentage = item.need_to_invoice_percentage || 0;
+        const percentage = 100; // Always bill 100% for Ericsson
         return sum + ((item.total_amount || 0) * percentage / 100);
       }, 0) || 0;
       const vatAmount = (subtotal * vatPercentage) / 100;
@@ -293,6 +344,7 @@ export const EricssonInvoice: React.FC = () => {
       // Close the dialog and refresh recent invoices
       setInvoiceDialogOpen(false);
       await loadRecentInvoices();
+      await loadJobs(); // Refresh job list to remove fully invoiced jobs
       
       // Reset form
       setSelectedJob(null);
@@ -325,7 +377,7 @@ export const EricssonInvoice: React.FC = () => {
       
       // Calculate totals based on percentages
       const subtotal = ericssonBoqData.items?.reduce((sum, item) => {
-        const percentage = item.need_to_invoice_percentage || 0;
+        const percentage = 100; // Always bill 100% for Ericsson
         return sum + ((item.total_amount || 0) * percentage / 100);
       }, 0) || 0;
       const vatAmount = (subtotal * vatPercentage) / 100;
@@ -363,47 +415,9 @@ export const EricssonInvoice: React.FC = () => {
     }
   };
 
-  const handlePercentageChange = (index: number, value: number) => {
-    if (!ericssonBoqData || !ericssonBoqData.items) return;
-    
-    const updatedItems = [...ericssonBoqData.items];
-    updatedItems[index] = {
-      ...updatedItems[index],
-      need_to_invoice_percentage: value
-    };
-    
-    setEricssonBoqData({
-      ...ericssonBoqData,
-      items: updatedItems
-    });
-  };
+  // No need for percentage editing since we always bill 100%
 
-  const validatePercentages = (): boolean => {
-    if (!ericssonBoqData || !ericssonBoqData.items) return true;
-    
-    return ericssonBoqData.items.every(item => {
-      const currentInvoiced = item.invoiced_percentage || 0;
-      const newInvoice = item.need_to_invoice_percentage || 0;
-      return (currentInvoiced + newInvoice) <= 100;
-    });
-  };
-
-  const getValidationErrors = (): string[] => {
-    const errors: string[] = [];
-    if (!ericssonBoqData || !ericssonBoqData.items) return errors;
-    
-    ericssonBoqData.items.forEach((item, index) => {
-      const currentInvoiced = item.invoiced_percentage || 0;
-      const newInvoice = item.need_to_invoice_percentage || 0;
-      const total = currentInvoiced + newInvoice;
-      
-      if (total > 100) {
-        errors.push(`Item ${index + 1} (${item.service_number}): Total percentage ${total.toFixed(2)}% exceeds 100%`);
-      }
-    });
-    
-    return errors;
-  };
+  // No need for percentage validation since we always bill 100%
 
   const handleCloseInvoiceDialog = () => {
     setInvoiceDialogOpen(false);
@@ -464,49 +478,79 @@ export const EricssonInvoice: React.FC = () => {
       >
         <DialogTitle>Select Ericsson Job</DialogTitle>
         <DialogContent>
+          {/* Search Bar */}
+          <TextField
+            fullWidth
+            placeholder="Search by Job ID or Title..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{ mb: 2 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+          
           {isLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
               <CircularProgress />
             </Box>
-          ) : jobs.length === 0 ? (
+          ) : filteredJobs.length === 0 ? (
             <Alert severity="info">
-              No Ericsson jobs found. Please create Ericsson jobs first.
+              {searchTerm ? 'No Ericsson jobs found matching your search.' : 'No Ericsson jobs found. Please create Ericsson jobs first.'}
             </Alert>
           ) : (
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Job ID</TableCell>
-                    <TableCell>Title</TableCell>
-                    <TableCell>Customer</TableCell>
-                    <TableCell>Action</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {jobs.map((job) => (
-                    <TableRow key={job.id} hover>
-                                             <TableCell>
-                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                           {job.id}
-                         </Typography>
-                       </TableCell>
-                       <TableCell>{job.name}</TableCell>
-                      <TableCell>{job.customer?.name}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => handleJobSelect(job)}
-                        >
-                          Select
-                        </Button>
-                      </TableCell>
+            <>
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Job ID</TableCell>
+                      <TableCell>Title</TableCell>
+                      <TableCell>Customer</TableCell>
+                      <TableCell>Action</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {currentJobs.map((job) => (
+                      <TableRow key={job.id} hover>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {job.id}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{job.name}</TableCell>
+                        <TableCell>{job.customer?.name}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => handleJobSelect(job)}
+                          >
+                            Select
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                  <Pagination
+                    count={totalPages}
+                    page={currentPage}
+                    onChange={handlePageChange}
+                    color="primary"
+                  />
+                </Box>
+              )}
+            </>
           )}
         </DialogContent>
         <DialogActions>
@@ -659,8 +703,7 @@ export const EricssonInvoice: React.FC = () => {
                           </Typography>
                           <Typography variant="h6" fontWeight="bold" color="success.main">
                             {formatCurrency(ericssonBoqData.items.reduce((sum, item) => {
-                              const invoicedPercentage = item.invoiced_percentage || 0;
-                              return sum + ((item.total_amount || 0) * invoicedPercentage / 100);
+                              return sum + (item.is_invoiced ? (item.total_amount || 0) : 0);
                             }, 0))}
                           </Typography>
                         </Box>
@@ -672,8 +715,7 @@ export const EricssonInvoice: React.FC = () => {
                           </Typography>
                           <Typography variant="h6" fontWeight="bold" color="warning.main">
                             {formatCurrency(ericssonBoqData.items.reduce((sum, item) => {
-                              const invoicedPercentage = item.invoiced_percentage || 0;
-                              return sum + ((item.total_amount || 0) * (100 - invoicedPercentage) / 100);
+                              return sum + (item.is_invoiced ? 0 : (item.total_amount || 0));
                             }, 0))}
                           </Typography>
                         </Box>
@@ -701,8 +743,7 @@ export const EricssonInvoice: React.FC = () => {
                             <TableCell align="right">Unit Price</TableCell>
                             <TableCell align="right">Total Amount</TableCell>
                             <TableCell>Type</TableCell>
-                            <TableCell>Invoiced %</TableCell>
-                            <TableCell>Invoice %</TableCell>
+                            <TableCell>Status</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -711,9 +752,9 @@ export const EricssonInvoice: React.FC = () => {
                               key={index} 
                               hover
                               sx={{
-                                backgroundColor: (item.invoiced_percentage || 0) >= 100 ? '#fef3c7' : 'inherit',
+                                backgroundColor: item.is_invoiced ? '#fef3c7' : 'inherit',
                                 '&:hover': {
-                                  backgroundColor: (item.invoiced_percentage || 0) >= 100 ? '#fde68a' : undefined
+                                  backgroundColor: item.is_invoiced ? '#fde68a' : undefined
                                 }
                               }}
                             >
@@ -752,69 +793,10 @@ export const EricssonInvoice: React.FC = () => {
                               </TableCell>
                               <TableCell>
                                 <Chip 
-                                  label={`${item.invoiced_percentage || 0}%`} 
-                                  color="primary" 
+                                  label={item.is_invoiced ? "Invoiced" : "Pending"} 
+                                  color={item.is_invoiced ? "success" : "warning"} 
                                   size="small"
-                                  sx={{ 
-                                    backgroundColor: '#dbeafe',
-                                    color: '#1e40af',
-                                    fontWeight: 500,
-                                    fontSize: '0.75rem'
-                                  }}
                                 />
-                              </TableCell>
-                              <TableCell>
-                                <TextField
-                                  size="small"
-                                  type="number"
-                                  value={item.need_to_invoice_percentage || 0}
-                                  onChange={(e) => { handlePercentageChange(index, parseFloat(e.target.value) || 0); }}
-                                  variant="standard"
-                                  disabled={isSaving}
-                                  inputProps={{
-                                    min: 0,
-                                    max: 100,
-                                    step: 0.01
-                                  }}
-                                  sx={{ 
-                                    width: 100,
-                                    '& .MuiInput-root': {
-                                      color: (() => {
-                                        const currentInvoiced = item.invoiced_percentage || 0;
-                                        const newInvoice = item.need_to_invoice_percentage || 0;
-                                        const total = currentInvoiced + newInvoice;
-                                        return total > 100 ? 'error.main' : 'inherit';
-                                      })()
-                                    }
-                                  }}
-                                />
-                                {(() => {
-                                  const currentInvoiced = item.invoiced_percentage || 0;
-                                  const newInvoice = item.need_to_invoice_percentage || 0;
-                                  const total = currentInvoiced + newInvoice;
-                                  const remaining = 100 - currentInvoiced;
-                                  
-                                  if (total > 100) {
-                                    return (
-                                      <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
-                                        Total: {total.toFixed(2)}% (exceeds 100%)
-                                      </Typography>
-                                    );
-                                  } else if (newInvoice > remaining) {
-                                    return (
-                                      <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
-                                        Only {remaining.toFixed(2)}% remaining
-                                      </Typography>
-                                    );
-                                  } else if (newInvoice > 0) {
-                                    return (
-                                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                                        Total: {total.toFixed(2)}%
-                                      </Typography>
-                                    );
-                                  }
-                                  return null;
-                                })()}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -822,20 +804,6 @@ export const EricssonInvoice: React.FC = () => {
                       </Table>
                     </TableContainer>
 
-                    {!validatePercentages() && (
-                      <Alert severity="warning" sx={{ mt: 2, borderRadius: 2, border: '1px solid', borderColor: 'orange.200' }}>
-                        <Typography variant="body2" component="div" color="text.primary">
-                          Please fix the following validation errors:
-                        </Typography>
-                        <Box component="ul" sx={{ mt: 1, mb: 0, pl: 2 }}>
-                          {getValidationErrors().map((error, index) => (
-                            <li key={index}>
-                              <Typography variant="body2" color="text.primary">{error}</Typography>
-                            </li>
-                          ))}
-                        </Box>
-                      </Alert>
-                    )}
                   </CardContent>
                 </Card>
               )}
@@ -854,7 +822,7 @@ export const EricssonInvoice: React.FC = () => {
                       <Typography variant="h6">
                         {formatCurrency(
                           ericssonBoqData.items?.reduce((sum, item) => {
-                            const percentage = item.need_to_invoice_percentage || 0;
+                            const percentage = 100; // Always bill 100% for Ericsson
                             return sum + ((item.total_amount || 0) * percentage / 100);
                           }, 0) || 0
                         )}
@@ -865,7 +833,7 @@ export const EricssonInvoice: React.FC = () => {
                       <Typography variant="h6">
                         {formatCurrency(
                           ((ericssonBoqData.items?.reduce((sum, item) => {
-                            const percentage = item.need_to_invoice_percentage || 0;
+                            const percentage = 100; // Always bill 100% for Ericsson
                             return sum + ((item.total_amount || 0) * percentage / 100);
                           }, 0) || 0) * vatPercentage) / 100
                         )}
@@ -876,7 +844,7 @@ export const EricssonInvoice: React.FC = () => {
                       <Typography variant="h6">
                         {formatCurrency(
                           ((ericssonBoqData.items?.reduce((sum, item) => {
-                            const percentage = item.need_to_invoice_percentage || 0;
+                            const percentage = 100; // Always bill 100% for Ericsson
                             return sum + ((item.total_amount || 0) * percentage / 100);
                           }, 0) || 0) * sslPercentage) / 100
                         )}
@@ -887,7 +855,7 @@ export const EricssonInvoice: React.FC = () => {
                       <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                         {formatCurrency(
                           (ericssonBoqData.items?.reduce((sum, item) => {
-                            const percentage = item.need_to_invoice_percentage || 0;
+                            const percentage = 100; // Always bill 100% for Ericsson
                             return sum + ((item.total_amount || 0) * percentage / 100);
                           }, 0) || 0) * (1 + vatPercentage / 100 + sslPercentage / 100)
                         )}
@@ -907,7 +875,7 @@ export const EricssonInvoice: React.FC = () => {
             variant="contained"
             color="primary"
             onClick={handleSaveInvoice}
-            disabled={!invoiceNumber || isSaving || !validatePercentages()}
+            disabled={!invoiceNumber || isSaving}
             startIcon={isSaving ? <CircularProgress size={20} /> : null}
           >
             {isSaving ? 'Saving...' : 'Save Invoice'}
@@ -1010,6 +978,7 @@ export const EricssonInvoice: React.FC = () => {
                                   await deleteEricssonInvoice(invoice.id.toString());
                                   setSuccess('Invoice deleted successfully');
                                   loadRecentInvoices();
+                                  loadJobs(); // Refresh job list to show jobs that are now available for invoicing
                                 } catch (error) {
                                   setError('Failed to delete invoice');
                                 }
@@ -1226,8 +1195,8 @@ export const EricssonInvoice: React.FC = () => {
                         <TableCell>Quantity</TableCell>
                         <TableCell>Unit Price</TableCell>
                         <TableCell>Total Amount</TableCell>
-                        <TableCell>Invoice %</TableCell>
-                        <TableCell>Invoiced Amount</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell>Amount</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1245,14 +1214,14 @@ export const EricssonInvoice: React.FC = () => {
                           <TableCell>{formatCurrency(item.total_amount)}</TableCell>
                           <TableCell>
                             <Chip 
-                              label={`${item.need_to_invoice_percentage || 0}%`} 
-                              color="primary" 
+                              label="Invoiced" 
+                              color="success" 
                               size="small" 
                             />
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2" fontWeight="600" color="#059669">
-                              {formatCurrency((item.total_amount || 0) * (item.need_to_invoice_percentage || 0) / 100)}
+                              {formatCurrency(item.total_amount || 0)}
                             </Typography>
                           </TableCell>
                         </TableRow>
